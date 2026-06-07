@@ -311,7 +311,7 @@
         else return `<span style="font-size:16px;font-weight:bold;">${name ? name.charAt(0).toUpperCase() : '?'}</span>`;
     }
 
-    // ==================== TON CONNECT (РАБОТАЕТ) ====================
+    // ==================== TON CONNECT ====================
     
     function initTonConnect() {
         if (tonConnectUI) return;
@@ -328,51 +328,13 @@
                 if (wallet) {
                     userWalletAddress = wallet.account.address;
                     document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-                    toast('✅ Кошелёк подключён! Теперь нажмите "Оплатить"');
+                    toast('✅ Кошелёк подключён!');
                 } else {
                     userWalletAddress = null;
                     document.getElementById('walletStatus').innerHTML = '';
                 }
             });
         } catch(e) { console.error(e); }
-    }
-    
-    async function sendPayment() {
-        if (!userWalletAddress) {
-            toast('❌ Сначала подключите кошелёк');
-            return;
-        }
-        let amount = parseFloat(document.getElementById('depositAmount').value);
-        if (!amount || amount <= 0) {
-            toast('❌ Введите сумму');
-            return;
-        }
-        if (selectedAsset === 'TON' && amount < 0.5) {
-            toast('❌ Минимум 0.5 TON');
-            return;
-        }
-        if (selectedAsset === 'USDT' && amount < 1) {
-            toast('❌ Минимум 1 USDT');
-            return;
-        }
-        const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
-        const nanoAmount = Math.floor(amount * 1e9);
-        const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 600,
-            messages: [{
-                address: ADMIN_WALLET,
-                amount: nanoAmount.toString(),
-                payload: `deposit_${uid}_${Math.floor(starsAmount)}`
-            }]
-        };
-        try {
-            await tonConnectUI.sendTransaction(transaction);
-            toast(`✅ Транзакция отправлена! Получите ${Math.floor(starsAmount)}⭐`);
-            closeDepositModal();
-            setTimeout(() => refreshBalance(), 10000);
-        } catch(e) {
-            toast('❌ Ошибка: ' + e.message);
-        }
     }
     
     function selectAsset(asset) {
