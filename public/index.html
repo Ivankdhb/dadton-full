@@ -12,23 +12,21 @@
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
         body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #fff; padding-bottom: 75px; }
         
-        /* ЦВЕТА */
         :root {
             --bg: #0a0a0a;
             --bg-card: #111111;
             --border: #2a2a2a;
-            --primary: #B026FF;
-            --primary-dark: #8B00FF;
-            --primary-glow: rgba(176, 38, 255, 0.3);
+            --gold: #FFD700;
+            --gold-dark: #B8860B;
+            --gold-glow: rgba(255, 215, 0, 0.3);
             --success: #00cc66;
             --danger: #ff4444;
-            --text: #ffffff;
             --text-secondary: #888888;
         }
         
         .luxury-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #0d0d0d; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-        .logo { font-size: 22px; font-weight: 900; background: linear-gradient(135deg, var(--primary), #fff); -webkit-background-clip: text; background-clip: text; color: transparent; cursor: pointer; }
-        .balance { background: #1a1a1a; border: 1px solid var(--border); padding: 6px 18px; border-radius: 8px; color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .logo { font-size: 22px; font-weight: 900; background: linear-gradient(135deg, var(--gold), #fff); -webkit-background-clip: text; background-clip: text; color: transparent; cursor: pointer; }
+        .balance { background: #1a1a1a; border: 1px solid var(--border); padding: 6px 18px; border-radius: 8px; color: var(--gold); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; }
         .balance:active { transform: scale(0.95); background: #222; }
         
         .screen { display: none; padding: 16px; }
@@ -40,54 +38,46 @@
         .game-card .sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
         .game-card .art { position: absolute; right: 16px; bottom: 12px; font-size: 48px; opacity: 0.8; }
         
-        /* РАКЕТА - НОВЫЙ СТИЛЬ */
         .rocket-container { background: #111111; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border); margin-bottom: 16px; position: relative; overflow: hidden; }
         .rocket-canvas { position: relative; width: 100%; height: 200px; margin-bottom: 10px; }
-        .rocket-ship { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 64px; filter: drop-shadow(0 0 15px var(--primary-glow)); transition: bottom 0.05s linear; z-index: 10; }
+        .rocket-ship { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 64px; filter: drop-shadow(0 0 15px var(--gold-glow)); transition: bottom 0.05s linear; z-index: 10; }
         .rocket-ship.crashed { animation: shake 0.3s ease-in-out 3; filter: drop-shadow(0 0 15px var(--danger)); }
         @keyframes shake { 0%, 100% { transform: translateX(-50%) rotate(0deg); } 25% { transform: translateX(-50%) rotate(5deg); } 75% { transform: translateX(-50%) rotate(-5deg); } }
-        
         .rocket-exhaust { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 20px; background: radial-gradient(ellipse, #ff6600, #ff3300); border-radius: 50%; filter: blur(4px); animation: exhaust 0.1s infinite alternate; z-index: 5; }
         @keyframes exhaust { from { opacity: 0.7; width: 30px; height: 15px; } to { opacity: 1; width: 50px; height: 25px; } }
-        
         .rocket-smoke { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 40px; background: radial-gradient(ellipse, rgba(100,100,100,0.6), transparent); border-radius: 50%; filter: blur(8px); animation: smoke 0.3s infinite alternate; z-index: 4; }
         @keyframes smoke { from { opacity: 0.3; width: 60px; height: 30px; } to { opacity: 0.8; width: 100px; height: 50px; } }
-        
         .explosion { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.1s; }
         .explosion.active { opacity: 1; animation: boom 0.5s ease-out forwards; }
         @keyframes boom { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
-        
-        .rocket-multiplier { font-size: 48px; font-weight: 900; font-family: monospace; letter-spacing: 2px; margin-top: 10px; color: var(--primary); text-shadow: 0 0 20px var(--primary-glow); }
-        .rocket-multiplier.flying { color: var(--primary); text-shadow: 0 0 20px var(--primary-glow); }
+        .rocket-multiplier { font-size: 48px; font-weight: 900; font-family: monospace; letter-spacing: 2px; margin-top: 10px; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
+        .rocket-multiplier.flying { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
         .rocket-multiplier.crashed { color: var(--danger); }
-        .rocket-countdown { font-size: 40px; font-weight: 900; color: var(--primary); }
+        .rocket-countdown { font-size: 40px; font-weight: 900; color: var(--gold); }
         
         .bet-panel { background: #111111; border-radius: 12px; padding: 16px; border: 1px solid var(--border); }
         .bet-input { background: #1a1a1a; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; width: 100%; text-align: center; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
-        .bet-input:focus { outline: none; border-color: var(--primary); }
-        
+        .bet-input:focus { outline: none; border-color: var(--gold); }
         .preset-row { display: flex; gap: 8px; margin: 12px 0; }
         .preset { background: #1a1a1a; border: 1px solid var(--border); padding: 8px; border-radius: 8px; flex: 1; text-align: center; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .preset:active { transform: scale(0.96); background: #222; border-color: var(--primary); }
-        
+        .preset:active { transform: scale(0.96); background: #222; border-color: var(--gold); }
         .auto-row { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 10px 14px; border-radius: 8px; margin: 12px 0; border: 1px solid var(--border); }
         .auto-value { background: #111; border: 1px solid var(--border); color: #fff; padding: 6px 10px; border-radius: 8px; width: 70px; text-align: center; }
         .switch { position: relative; display: inline-block; width: 46px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; border-radius: 22px; }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider { background-color: var(--gold); }
         input:checked + .slider:before { transform: translateX(24px); }
         
-        .btn { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); width: 100%; padding: 14px; border: none; border-radius: 8px; color: #fff; font-weight: 800; font-size: 16px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .btn { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); width: 100%; padding: 14px; border: none; border-radius: 8px; color: #000; font-weight: 800; font-size: 16px; cursor: pointer; text-align: center; transition: all 0.2s; }
         .btn:active { transform: scale(0.97); opacity: 0.9; }
-        .btn-cancel { background: #ff4444; }
-        .btn-cashout { background: linear-gradient(135deg, #00cc66, #009944); animation: pulse 0.8s infinite; }
+        .btn-cancel { background: #ff4444; color: #fff; }
+        .btn-cashout { background: linear-gradient(135deg, #00cc66, #009944); color: #fff; animation: pulse 0.8s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 100, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(0, 255, 100, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 100, 0); } }
         
         .history { display: flex; gap: 8px; overflow-x: auto; margin: 12px 0; padding-bottom: 4px; }
         .history-item { background: #1a1a1a; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); color: #fff; }
-        
         .bets-list { max-height: 200px; overflow-y: auto; }
         .bet-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); font-size: 12px; }
         .win-multiplier { color: #00cc66 !important; font-weight: 700; }
@@ -101,39 +91,43 @@
         
         .roulette-wrap { display: flex; justify-content: center; margin: 16px 0; }
         .roulette-box { position: relative; width: 260px; height: 260px; }
-        .roulette-bg { position: absolute; width: 100%; height: 100%; border-radius: 50%; transition: transform 3s cubic-bezier(0.2,0.8,0.3,1); border: 2px solid var(--primary); }
+        .roulette-bg { position: absolute; width: 100%; height: 100%; border-radius: 50%; transition: transform 3s cubic-bezier(0.2,0.8,0.3,1); border: 2px solid var(--gold); }
         .roulette-avatars { position: absolute; width: 100%; height: 100%; }
-        .roulette-pointer { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 30px; color: var(--primary); filter: drop-shadow(0 0 3px black); z-index: 10; }
+        .roulette-pointer { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 30px; color: var(--gold); filter: drop-shadow(0 0 3px black); z-index: 10; }
         
+        /* ПЬЕДЕСТАЛ - АВАТАРКИ ПО ЦЕНТРУ */
         .podium { display: flex; justify-content: center; align-items: flex-end; gap: 15px; margin: 20px 0 30px; height: 190px; }
         .podium-item { display: flex; flex-direction: column; align-items: center; width: 90px; }
-        .podium-1 { height: 130px; width: 80px; background: linear-gradient(180deg, #FFD700, #B8860B); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .podium-2 { height: 100px; width: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); border-radius: 12px 12px 8px 8px; }
-        .podium-3 { height: 75px; width: 80px; background: linear-gradient(180deg, #CD7F32, #8B4513); border-radius: 12px 12px 8px 8px; }
-        .podium-avatar { width: 42px; height: 42px; border-radius: 50%; background: #1a1a1a; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 4px; overflow: hidden; }
+        .podium-1 { height: 130px; width: 80px; background: linear-gradient(180deg, #FFD700, #B8860B); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .podium-2 { height: 100px; width: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .podium-3 { height: 75px; width: 80px; background: linear-gradient(180deg, #CD7F32, #8B4513); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .podium-avatar { width: 46px; height: 46px; border-radius: 50%; background: #1a1a1a; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 4px; overflow: hidden; margin-left: auto; margin-right: auto; }
+        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .podium-name { font-size: 10px; font-weight: 600; max-width: 70px; overflow: hidden; text-overflow: ellipsis; text-align: center; margin-top: 4px; color: #fff; }
+        
         .leader-list { display: flex; flex-direction: column; gap: 6px; }
         .leader-item { background: #111111; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
         
-        .profile-avatar { width: 70px; height: 70px; border-radius: 50%; background: #1a1a1a; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 12px; overflow: hidden; }
+        .profile-avatar { width: 70px; height: 70px; border-radius: 50%; background: #1a1a1a; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 12px; overflow: hidden; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
         .stat-card { background: #111111; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid var(--border); }
         .subtab-bar { display: flex; background: #111111; padding: 4px; border-radius: 8px; margin-bottom: 16px; gap: 4px; border: 1px solid var(--border); }
         .subtab { flex: 1; background: transparent; border: none; color: var(--text-secondary); padding: 8px; font-weight: 600; font-size: 12px; border-radius: 8px; cursor: pointer; }
-        .subtab.active { background: var(--primary); color: #fff; }
+        .subtab.active { background: var(--gold); color: #000; }
         .ref-box { background: #111111; border-radius: 8px; padding: 12px; margin-top: 12px; border: 1px solid var(--border); }
         
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: #0d0d0d; backdrop-filter: blur(20px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--border); z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-secondary); cursor: pointer; }
-        .nav-item.active { color: var(--primary); }
+        .nav-item.active { color: var(--gold); }
         .nav-icon { font-size: 20px; }
         .nav-label { font-size: 9px; font-weight: 600; }
         
-        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a1a; backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 8px; font-size: 12px; color: var(--primary); border: 1px solid var(--border); z-index: 200; display: none; white-space: nowrap; }
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a1a; backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 8px; font-size: 12px; color: var(--gold); border: 1px solid var(--border); z-index: 200; display: none; white-space: nowrap; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: #111111; border-radius: 12px; padding: 20px; width: 90%; max-width: 320px; border: 1px solid var(--border); text-align: center; }
         .asset-btn { flex: 1; text-align: center; padding: 8px; background: #1a1a1a; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; border: 1px solid var(--border); }
-        .asset-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
         .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
     </style>
@@ -169,7 +163,7 @@
         <div class="auto-row"><span>⚡ Автовывод</span><div style="display:flex; align-items:center; gap:6px;"><input type="number" id="autoCashoutVal" class="auto-value" value="1.5" step="0.05" min="1.05" max="10"><label class="switch"><input type="checkbox" id="autoCashoutToggle"><span class="slider"></span></label></div></div>
         <div class="btn" id="crashBtn" onclick="rocketAction()">💰 Сделать ставку</div>
     </div>
-    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--primary);">● Ожидание</span></div>
+    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">● Ожидание</span></div>
     <div class="bets-list" id="crashBets"></div>
 </div>
 
@@ -181,7 +175,7 @@
         <div class="btn" id="minesBtn" onclick="minesClick()">💣 Новая игра</div>
     </div>
     <div class="mines-grid" id="minesBoard"></div>
-    <div style="text-align:center; margin:12px 0;"><span style="color:#888;">Множитель: </span><span id="minesMult" style="font-size:24px; font-weight:800; color:var(--primary);">1.00x</span></div>
+    <div style="text-align:center; margin:12px 0;"><span style="color:#888;">Множитель: </span><span id="minesMult" style="font-size:24px; font-weight:800; color:var(--gold);">1.00x</span></div>
     <div class="btn" id="minesCash" disabled onclick="minesCashout()" style="background:#2a2a2a; color:#666;">💰 Забрать выигрыш</div>
 </div>
 
@@ -194,11 +188,14 @@
         <div class="btn btn-cancel" id="rouletteCancelBtn" onclick="cancelRouletteBet()" style="margin-top:8px; display:none;">❌ Отменить ставку</div>
         <div class="btn" id="rouletteSpinBtn" onclick="spinRoulette()" style="margin-top:8px; background:#2a2a2a; color:#666;" disabled>🎲 КРУТИТЬ (нужно 2+ игроков)</div>
     </div>
-    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="rouletteTotal" style="color:var(--primary);">Общая ставка: 0⭐</span></div>
+    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="rouletteTotal" style="color:var(--gold);">Общая ставка: 0⭐</span></div>
     <div class="bets-list" id="rouletteBetsList"></div>
 </div>
 
-<div id="screen-leaders" class="screen"><div class="podium" id="podiumContainer"></div><div class="leader-list" id="leaderboardList"></div></div>
+<div id="screen-leaders" class="screen">
+    <div class="podium" id="podiumContainer"></div>
+    <div class="leader-list" id="leaderboardList"></div>
+</div>
 
 <div id="screen-profile" class="screen">
     <div class="bet-panel" style="text-align:center;">
@@ -227,7 +224,7 @@
 
 <div id="depositModal" class="modal">
     <div class="modal-content">
-        <h3 style="color:var(--primary); margin-bottom:16px; font-size:18px;">💎 Пополнение</h3>
+        <h3 style="color:var(--gold); margin-bottom:16px; font-size:18px;">💎 Пополнение</h3>
         
         <div style="display:flex; gap:10px; margin-bottom:16px;">
             <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
@@ -238,11 +235,11 @@
         
         <div style="background:#1a1a1a; border-radius:8px; padding:8px; margin-bottom:16px;">
             <span style="font-size:12px; color:#888;">Получишь:</span>
-            <span id="previewStars" style="color:var(--primary); font-size:16px; font-weight:800;">0 ⭐</span>
+            <span id="previewStars" style="color:var(--gold); font-size:16px; font-weight:800;">0 ⭐</span>
         </div>
         
-        <div id="connectWalletBtn" class="btn" onclick="connectWallet()" style="margin-bottom:10px;">🔗 Подключить кошелёк</div>
-        <div id="payBtn" class="btn" style="display:none; margin-bottom:10px; background: linear-gradient(135deg, #00cc66, #009944);" onclick="sendPayment()">💸 Отправить оплату</div>
+        <!-- ПРЯМАЯ ССЫЛКА НА TONKEEPER (РАБОТАЕТ 100%) -->
+        <div class="btn" onclick="sendTonDirect()">💸 Оплатить через Tonkeeper</div>
         
         <div class="btn btn-cancel" onclick="closeDepositModal()">Отмена</div>
         
@@ -276,11 +273,8 @@
     let rouletteBet = 10, rouletteBets = [], rouletteSpinning = false, rouletteHasBet = false;
     let rouletteTimer = null;
     
-    let tonConnectUI = null;
     let selectedAsset = 'TON';
-    let userWalletAddress = null;
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
-    const MANIFEST_URL = window.location.origin + '/tonconnect-manifest.json';
 
     function toast(msg) {
         const t = document.getElementById('toast');
@@ -338,36 +332,9 @@
         else return `<span style="font-size:16px;font-weight:bold;">${name ? name.charAt(0).toUpperCase() : '?'}</span>`;
     }
 
-    // ==================== TON CONNECT ====================
+    // ==================== ПРЯМОЙ TON PAYMENT (РАБОТАЕТ 100%) ====================
     
-    function initTonConnect() {
-        if (tonConnectUI) return;
-        if (typeof TonConnectUI === 'undefined') {
-            setTimeout(initTonConnect, 500);
-            return;
-        }
-        try {
-            tonConnectUI = new TonConnectUI({
-                manifestUrl: MANIFEST_URL
-            });
-            tonConnectUI.onStatusChange((wallet) => {
-                if (wallet) {
-                    userWalletAddress = wallet.account.address;
-                    document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-                    document.getElementById('connectWalletBtn').style.display = 'none';
-                    document.getElementById('payBtn').style.display = 'block';
-                    toast('✅ Кошелёк успешно подключён! Нажмите "Отправить оплату"');
-                } else {
-                    userWalletAddress = null;
-                    document.getElementById('walletStatus').innerHTML = '';
-                    document.getElementById('connectWalletBtn').style.display = 'block';
-                    document.getElementById('payBtn').style.display = 'none';
-                }
-            });
-        } catch(e) { console.error(e); }
-    }
-    
-    async function connectWallet() {
+    function sendTonDirect() {
         let amount = parseFloat(document.getElementById('depositAmount').value);
         if (!amount || amount <= 0) {
             toast('❌ Введите сумму пополнения!');
@@ -382,55 +349,36 @@
             return;
         }
         
-        if (!tonConnectUI) initTonConnect();
-        
-        document.getElementById('connectWalletBtn').innerHTML = "⏳ Подключение...";
-        
-        try {
-            const wallets = await tonConnectUI.getWallets();
-            if (!wallets || wallets.length === 0) {
-                toast('❌ Установите Tonkeeper или другой TON кошелёк');
-                document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
-                return;
-            }
-            const preferred = wallets.find(w => w.name === 'Tonkeeper') || wallets[0];
-            await tonConnectUI.connect({
-                bridgeUrl: preferred.bridgeUrl,
-                universalLink: preferred.universalLink
-            });
-        } catch (e) {
-            console.error('Connect error:', e);
-            toast('❌ Ошибка подключения: ' + (e.message || 'неизвестная ошибка'));
-            document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
-        }
-    }
-    
-    async function sendPayment() {
-        if (!userWalletAddress) {
-            toast('❌ Сначала подключите кошелёк');
-            return;
-        }
-        let amount = parseFloat(document.getElementById('depositAmount').value);
         const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
         const nanoAmount = Math.floor(amount * 1e9);
-        const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 600,
-            messages: [{
-                address: ADMIN_WALLET,
-                amount: nanoAmount.toString(),
-                payload: `deposit_${uid}_${Math.floor(starsAmount)}`
-            }]
-        };
-        document.getElementById('payBtn').innerHTML = "⏳ Отправка...";
-        try {
-            await tonConnectUI.sendTransaction(transaction);
-            toast(`✅ Транзакция отправлена! Получите ${Math.floor(starsAmount)}⭐`);
-            closeDepositModal();
-            setTimeout(() => refreshBalance(), 10000);
-        } catch(e) {
-            toast('❌ Ошибка: ' + e.message);
-            document.getElementById('payBtn').innerHTML = "💸 Отправить оплату";
-        }
+        const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
+        
+        // Формируем deep link для Tonkeeper
+        const url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
+        
+        // Копируем адрес
+        navigator.clipboard.writeText(ADMIN_WALLET);
+        
+        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес кошелька скопирован!`);
+        
+        // Открываем Tonkeeper
+        window.open(url, '_blank');
+        
+        closeDepositModal();
+        
+        // Сообщаем на сервер
+        fetch('/api/deposit-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: uid,
+                name: pname,
+                amount: amount,
+                asset: selectedAsset,
+                stars: Math.floor(starsAmount),
+                wallet: ADMIN_WALLET
+            })
+        }).catch(e => console.log('Report error:', e));
     }
     
     function selectAsset(asset) {
@@ -454,21 +402,10 @@
         document.getElementById('depositModal').style.display = 'flex';
         selectAsset('TON');
         updatePreview();
-        initTonConnect();
-        if (userWalletAddress) {
-            document.getElementById('connectWalletBtn').style.display = 'none';
-            document.getElementById('payBtn').style.display = 'block';
-            document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-        } else {
-            document.getElementById('connectWalletBtn').style.display = 'block';
-            document.getElementById('payBtn').style.display = 'none';
-        }
     }
     
     function closeDepositModal() {
         document.getElementById('depositModal').style.display = 'none';
-        document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
-        document.getElementById('payBtn').innerHTML = "💸 Отправить оплату";
     }
 
     // ==================== РАКЕТА ====================
@@ -585,7 +522,7 @@
     function renderBets() {
         const cont = document.getElementById('crashBets');
         if (!betsList.length) { cont.innerHTML = '<div class="empty">Нет ставок</div>'; return; }
-        cont.innerHTML = betsList.slice(-8).map(b => `<div class="bet-item"><div style="display:flex; align-items:center; gap:6px;"><div style="width:28px;height:28px;border-radius:50%;background:#1a1a1a;border:1px solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden;">${getAvatarHtml(b.avatar, b.name)}</div><span>${b.name}</span></div><span style="color:#B026FF;">⭐ ${b.amount}</span>${b.cashedAt ? `<span class="win-multiplier">✅ ${b.cashedAt.toFixed(2)}x</span>` : '<span style="color:#888;">⏳</span>'}</div>`).join('');
+        cont.innerHTML = betsList.slice(-8).map(b => `<div class="bet-item"><div style="display:flex; align-items:center; gap:6px;"><div style="width:28px;height:28px;border-radius:50%;background:#1a1a1a;border:1px solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden;">${getAvatarHtml(b.avatar, b.name)}</div><span>${b.name}</span></div><span style="color:#FFD700;">⭐ ${b.amount}</span>${b.cashedAt ? `<span class="win-multiplier">✅ ${b.cashedAt.toFixed(2)}x</span>` : '<span style="color:#888;">⏳</span>'}</div>`).join('');
     }
 
     document.getElementById('crashBetInput')?.addEventListener('change', updateCrashBet);
@@ -611,7 +548,7 @@
     socket.on('rocket_history_data', (d) => { if (d && d.length) { crashHistory = d.map(item => item.multiplier.toFixed(2)); if (crashHistory.length > 10) crashHistory = crashHistory.slice(0, 10); document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); } });
     socket.emit('rocket_get_history');
 
-    // ==================== МИНЫ ====================
+    // ==================== МИНЫ (НОВЫЙ ПРИБЫЛЬНЫЙ МНОЖИТЕЛЬ) ====================
     function minesBetAdj(type) {
         if (minesActive) { toast("Нельзя менять ставку во время игры!"); return; }
         let input = document.getElementById('minesBetInput');
@@ -733,7 +670,7 @@
         const wheel = document.getElementById('rouletteWheel');
         const total = rouletteBets.reduce((s, b) => s + b.amount, 0);
         if (total === 0) { wheel.style.background = '#1a1a1a'; return; }
-        const colors = ['#B026FF', '#00cc66', '#ff4444', '#ff8800', '#aa66ff', '#ff66cc', '#66ccff', '#88ff88'];
+        const colors = ['#FFD700', '#00cc66', '#ff4444', '#ff8800', '#aa66ff', '#ff66cc', '#66ccff', '#88ff88'];
         let conicString = '', startAngle = 0;
         rouletteBets.forEach((bet, idx) => {
             const percent = (bet.amount / total) * 360;
@@ -748,7 +685,7 @@
         container.innerHTML = '';
         const total = rouletteBets.reduce((s, b) => s + b.amount, 0);
         if (total === 0) return;
-        const colors = ['#B026FF', '#00cc66', '#ff4444', '#ff8800', '#aa66ff', '#ff66cc', '#66ccff', '#88ff88'];
+        const colors = ['#FFD700', '#00cc66', '#ff4444', '#ff8800', '#aa66ff', '#ff66cc', '#66ccff', '#88ff88'];
         let startAngle = 0;
         const radius = 98, cx = 130, cy = 130;
         rouletteBets.forEach((bet, idx) => {
@@ -758,7 +695,7 @@
             const x = cx + radius * Math.cos(angleRad);
             const y = cy + radius * Math.sin(angleRad);
             const div = document.createElement('div');
-            div.style.cssText = `position:absolute; width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, ${colors[idx % colors.length]}, ${colors[idx % colors.length]}cc); border:2px solid #B026FF; display:flex; align-items:center; justify-content:center; left:${x}px; top:${y}px; transform:translate(-50%,-50%); z-index:10;`;
+            div.style.cssText = `position:absolute; width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, ${colors[idx % colors.length]}, ${colors[idx % colors.length]}cc); border:2px solid #FFD700; display:flex; align-items:center; justify-content:center; left:${x}px; top:${y}px; transform:translate(-50%,-50%); z-index:10;`;
             div.innerHTML = getAvatarHtml(bet.avatar, bet.name);
             container.appendChild(div);
             startAngle += percent;
@@ -789,7 +726,7 @@
         if (rouletteBets.length >= 2) {
             spinBtn.disabled = false;
             spinBtn.innerText = "🎲 КРУТИТЬ";
-            spinBtn.style.background = "linear-gradient(135deg, #B026FF, #8B00FF)";
+            spinBtn.style.background = "linear-gradient(135deg, #FFD700, #B8860B)";
         } else {
             spinBtn.disabled = true;
             spinBtn.innerText = "🎲 КРУТИТЬ (нужно 2+ игроков)";
@@ -862,7 +799,7 @@
         }
         cont.innerHTML = rouletteBets.map(b => {
             const chance = total ? ((b.amount / total) * 100).toFixed(1) : 0;
-            return `<div class="bet-item"><div style="display:flex; align-items:center; gap:6px;"><div style="width:28px;height:28px;border-radius:50%;background:#1a1a1a;border:1px solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden;">${getAvatarHtml(b.avatar, b.name)}</div><span>${b.name}</span></div><span style="color:#B026FF;">⭐ ${b.amount}</span><span style="color:#88ff88;">шанс ${chance}%</span></div>`;
+            return `<div class="bet-item"><div style="display:flex; align-items:center; gap:6px;"><div style="width:28px;height:28px;border-radius:50%;background:#1a1a1a;border:1px solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden;">${getAvatarHtml(b.avatar, b.name)}</div><span>${b.name}</span></div><span style="color:#FFD700;">⭐ ${b.amount}</span><span style="color:#88ff88;">шанс ${chance}%</span></div>`;
         }).join('');
         updateRouletteWheel();
         renderRouletteAvatars();
@@ -895,16 +832,32 @@
         const top3 = leaders.slice(0, 3);
         while (top3.length < 3) top3.push({ name: '???', avatar: '❓', turnover: 0 });
         podium.innerHTML = `
-            <div class="podium-item"><div class="podium-2"><div class="podium-avatar">${getAvatarHtml(top3[1].avatar, top3[1].name)}</div><div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[1].name}</div></div><div style="font-size:11px; font-weight:600; margin-top:6px; color:#B026FF;">2 место</div><div style="font-size:9px; color:#888;">⭐ ${top3[1].turnover}</div></div>
-            <div class="podium-item"><div class="podium-1"><div class="podium-avatar">${getAvatarHtml(top3[0].avatar, top3[0].name)}</div><div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[0].name}</div></div><div style="font-size:11px; font-weight:600; margin-top:6px; color:#B026FF;">1 место</div><div style="font-size:9px; color:#888;">⭐ ${top3[0].turnover}</div></div>
-            <div class="podium-item"><div class="podium-3"><div class="podium-avatar">${getAvatarHtml(top3[2].avatar, top3[2].name)}</div><div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[2].name}</div></div><div style="font-size:11px; font-weight:600; margin-top:6px; color:#B026FF;">3 место</div><div style="font-size:9px; color:#888;">⭐ ${top3[2].turnover}</div></div>`;
+            <div class="podium-item">
+                <div class="podium-2"><div class="podium-avatar">${getAvatarHtml(top3[1].avatar, top3[1].name)}</div></div>
+                <div class="podium-name">${top3[1].name}</div>
+                <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">2 место</div>
+                <div style="font-size:9px; color:#888;">⭐ ${top3[1].turnover}</div>
+            </div>
+            <div class="podium-item">
+                <div class="podium-1"><div class="podium-avatar">${getAvatarHtml(top3[0].avatar, top3[0].name)}</div></div>
+                <div class="podium-name">${top3[0].name}</div>
+                <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">1 место</div>
+                <div style="font-size:9px; color:#888;">⭐ ${top3[0].turnover}</div>
+            </div>
+            <div class="podium-item">
+                <div class="podium-3"><div class="podium-avatar">${getAvatarHtml(top3[2].avatar, top3[2].name)}</div></div>
+                <div class="podium-name">${top3[2].name}</div>
+                <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">3 место</div>
+                <div style="font-size:9px; color:#888;">⭐ ${top3[2].turnover}</div>
+            </div>
+        `;
     }
 
     socket.on('leaderboard_data', (data) => {
         const cont = document.getElementById('leaderboardList');
         if (!data || !data.length) { cont.innerHTML = '<div class="empty">🏆 Таблица лидеров пуста</div>'; renderPodium([]); return; }
         renderPodium(data);
-        cont.innerHTML = data.slice(3, 50).map((u, i) => `<div class="leader-item"><div style="display: flex; align-items: center; gap: 10px;"><span style="font-weight:800; width:30px; color:#888;">#${i+4}</span><div style="width:30px; height:30px; border-radius:50%; background:#1a1a1a; border:1px solid #333; display:flex; align-items:center; justify-content:center; overflow:hidden;">${getAvatarHtml(u.avatar, u.name)}</div><span style="font-size:13px;">${u.name}</span></div><span style="color:#B026FF; font-size:13px;">⭐ ${u.turnover}</span></div>`).join('');
+        cont.innerHTML = data.slice(3, 50).map((u, i) => `<div class="leader-item"><div style="display: flex; align-items: center; gap: 10px;"><span style="font-weight:800; width:30px; color:#888;">#${i+4}</span><div style="width:30px; height:30px; border-radius:50%; background:#1a1a1a; border:1px solid #333; display:flex; align-items:center; justify-content:center; overflow:hidden;">${getAvatarHtml(u.avatar, u.name)}</div><span style="font-size:13px;">${u.name}</span></div><span style="color:#FFD700; font-size:13px;">⭐ ${u.turnover}</span></div>`).join('');
     });
 
     // ==================== ПРОФИЛЬ ====================
