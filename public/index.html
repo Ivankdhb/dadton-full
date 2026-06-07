@@ -105,10 +105,20 @@
         .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 50px; font-size: 12px; color: #FFD700; border: 1px solid rgba(255,215,0,0.3); z-index: 200; display: none; white-space: nowrap; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #0a0a0a; border-radius: 24px; padding: 24px; width: 90%; max-width: 340px; border: 1px solid #FFD700; }
-        .asset-btn { flex: 1; text-align: center; padding: 10px; background: rgba(255,215,0,0.1); border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .modal-content { background: #0a0a0a; border-radius: 24px; padding: 20px; width: 90%; max-width: 320px; border: 1px solid #FFD700; }
+        .asset-btn { flex: 1; text-align: center; padding: 8px; background: rgba(255,215,0,0.1); border-radius: 10px; cursor: pointer; transition: all 0.2s; font-size: 13px; }
         .asset-btn.active { background: rgba(255,215,0,0.3); }
-        #ton-connect-button { margin: 16px 0; }
+        
+        /* Компактные кнопки в модалке */
+        .modal-content .btn {
+            padding: 10px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
+        .modal-content .bet-input {
+            padding: 8px !important;
+            font-size: 14px !important;
+        }
     </style>
 </head>
 <body>
@@ -198,21 +208,33 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- МОДАЛЬНОЕ ОКНО ПОПОЛНЕНИЯ С КОМПАКТНЫМИ КНОПКАМИ -->
 <div id="depositModal" class="modal">
     <div class="modal-content">
-        <h3 style="color:#FFD700; margin-bottom:16px; text-align:center;">💎 Пополнение через TON</h3>
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
+        <h3 style="color:#FFD700; margin-bottom:16px; text-align:center; font-size:18px;">💎 Пополнение</h3>
+        
+        <div style="display:flex; gap:10px; margin-bottom:16px;">
+            <div id="tonBtn" class="asset-btn" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
             <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
         </div>
+        
         <input type="number" id="depositAmount" class="bet-input" placeholder="Сумма" value="1" step="0.5">
-        <div style="background:#0a0a0a; border-radius:12px; padding:10px; margin:12px 0; text-align:center;">
-            <span style="color:#6b6b6b;">Получишь:</span>
-            <span id="previewStars" style="color:#FFD700; font-size:18px; font-weight:800;">0 ⭐</span>
+        
+        <div style="background:#0a0a0a; border-radius:10px; padding:8px; margin-bottom:16px; text-align:center;">
+            <span style="font-size:12px;">Получишь:</span>
+            <span id="previewStars" style="color:#FFD700; font-size:16px; font-weight:800;">0 ⭐</span>
         </div>
-        <div id="ton-connect-button"></div>
+        
+        <!-- ДВЕ КНОПКИ В РЯД -->
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <div id="connectWalletBtn" class="btn" onclick="connectWallet()">🔗 Подключить кошелёк</div>
+            <div id="payBtn" class="btn" style="display:none;" onclick="sendPayment()">💸 Оплатить</div>
+        </div>
+        
+        <!-- КНОПКА ОТМЕНА -->
         <div class="btn btn-cancel" onclick="closeDepositModal()">Отмена</div>
-        <div id="walletStatus" style="margin-top:12px; font-size:11px; color:#6b6b6b; text-align:center;"></div>
+        
+        <div id="walletStatus" style="margin-top:12px; font-size:10px; color:#6b6b6b; text-align:center;"></div>
     </div>
 </div>
 
@@ -314,30 +336,29 @@
         }
         try {
             tonConnectUI = new TonConnectUI({
-                manifestUrl: MANIFEST_URL,
-                buttonRootId: 'ton-connect-button'
+                manifestUrl: MANIFEST_URL
             });
             tonConnectUI.onStatusChange((wallet) => {
                 if (wallet) {
                     userWalletAddress = wallet.account.address;
                     document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-                    toast('Кошелёк успешно подключён!');
+                    document.getElementById('connectWalletBtn').style.display = 'none';
+                    document.getElementById('payBtn').style.display = 'block';
+                    toast('✅ Кошелёк успешно подключён! Нажмите "Оплатить"');
                 } else {
                     userWalletAddress = null;
                     document.getElementById('walletStatus').innerHTML = '';
+                    document.getElementById('connectWalletBtn').style.display = 'block';
+                    document.getElementById('payBtn').style.display = 'none';
                 }
             });
         } catch(e) { console.error(e); }
     }
     
-    async function sendPayment() {
-        if (!userWalletAddress) {
-            toast('❌ Сначала подключите кошелёк');
-            return;
-        }
+    async function connectWallet() {
         let amount = parseFloat(document.getElementById('depositAmount').value);
         if (!amount || amount <= 0) {
-            toast('❌ Введите сумму');
+            toast('❌ Введите сумму пополнения!');
             return;
         }
         if (selectedAsset === 'TON' && amount < 0.5) {
@@ -348,6 +369,36 @@
             toast('❌ Минимум 1 USDT');
             return;
         }
+        
+        if (!tonConnectUI) initTonConnect();
+        
+        document.getElementById('connectWalletBtn').innerHTML = "⏳ Подключение...";
+        
+        try {
+            const wallets = await tonConnectUI.getWallets();
+            if (!wallets || wallets.length === 0) {
+                toast('❌ Установите Tonkeeper или другой TON кошелёк');
+                document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
+                return;
+            }
+            const preferred = wallets.find(w => w.name === 'Tonkeeper') || wallets[0];
+            await tonConnectUI.connect({
+                bridgeUrl: preferred.bridgeUrl,
+                universalLink: preferred.universalLink
+            });
+        } catch (e) {
+            console.error('Connect error:', e);
+            toast('❌ Ошибка подключения: ' + (e.message || 'неизвестная ошибка'));
+            document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
+        }
+    }
+    
+    async function sendPayment() {
+        if (!userWalletAddress) {
+            toast('❌ Сначала подключите кошелёк');
+            return;
+        }
+        let amount = parseFloat(document.getElementById('depositAmount').value);
         const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
         const nanoAmount = Math.floor(amount * 1e9);
         const transaction = {
@@ -358,19 +409,24 @@
                 payload: `deposit_${uid}_${Math.floor(starsAmount)}`
             }]
         };
+        document.getElementById('payBtn').innerHTML = "⏳ Отправка...";
         try {
-            toast('Подтвердите транзакцию...');
             await tonConnectUI.sendTransaction(transaction);
             toast(`✅ Транзакция отправлена! Получите ${Math.floor(starsAmount)}⭐`);
             closeDepositModal();
             setTimeout(() => refreshBalance(), 10000);
-        } catch(e) { toast('❌ Ошибка: ' + e.message); }
+        } catch(e) {
+            toast('❌ Ошибка: ' + e.message);
+            document.getElementById('payBtn').innerHTML = "💸 Оплатить";
+        }
     }
     
     function selectAsset(asset) {
         selectedAsset = asset;
-        document.getElementById('tonBtn').style.background = asset === 'TON' ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.1)';
-        document.getElementById('usdtBtn').style.background = asset === 'USDT' ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.1)';
+        document.getElementById('tonBtn').classList.remove('active');
+        document.getElementById('usdtBtn').classList.remove('active');
+        if (asset === 'TON') document.getElementById('tonBtn').classList.add('active');
+        else document.getElementById('usdtBtn').classList.add('active');
         updatePreview();
     }
     
@@ -388,13 +444,19 @@
         updatePreview();
         initTonConnect();
         if (userWalletAddress) {
+            document.getElementById('connectWalletBtn').style.display = 'none';
+            document.getElementById('payBtn').style.display = 'block';
             document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-            sendPayment();
+        } else {
+            document.getElementById('connectWalletBtn').style.display = 'block';
+            document.getElementById('payBtn').style.display = 'none';
         }
     }
     
     function closeDepositModal() {
         document.getElementById('depositModal').style.display = 'none';
+        document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
+        document.getElementById('payBtn').innerHTML = "💸 Оплатить";
     }
 
     // ==================== РАКЕТА ====================
@@ -889,4 +951,4 @@
     socket.emit('roulette_get_bets', (bets) => { if (bets && bets.length) { rouletteBets = bets; renderRouletteBets(); } });
 </script>
 </body>
-  </html>
+</html>
