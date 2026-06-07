@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DadTon - Премиум</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://dadton-full.onrender.com/socket.io/socket.io.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@1.0.2/dist/tonconnect-ui.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -108,17 +108,8 @@
         .modal-content { background: #0a0a0a; border-radius: 24px; padding: 20px; width: 90%; max-width: 320px; border: 1px solid #FFD700; }
         .asset-btn { flex: 1; text-align: center; padding: 8px; background: rgba(255,215,0,0.1); border-radius: 10px; cursor: pointer; transition: all 0.2s; font-size: 13px; }
         .asset-btn.active { background: rgba(255,215,0,0.3); }
-        
-        /* Компактные кнопки в модалке */
-        .modal-content .btn {
-            padding: 10px !important;
-            font-size: 13px !important;
-            font-weight: 600 !important;
-        }
-        .modal-content .bet-input {
-            padding: 8px !important;
-            font-size: 14px !important;
-        }
+        .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; }
+        .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
     </style>
 </head>
 <body>
@@ -208,13 +199,12 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- МОДАЛЬНОЕ ОКНО ПОПОЛНЕНИЯ С КОМПАКТНЫМИ КНОПКАМИ -->
 <div id="depositModal" class="modal">
     <div class="modal-content">
         <h3 style="color:#FFD700; margin-bottom:16px; text-align:center; font-size:18px;">💎 Пополнение</h3>
         
         <div style="display:flex; gap:10px; margin-bottom:16px;">
-            <div id="tonBtn" class="asset-btn" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
+            <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
             <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
         </div>
         
@@ -225,14 +215,9 @@
             <span id="previewStars" style="color:#FFD700; font-size:16px; font-weight:800;">0 ⭐</span>
         </div>
         
-        <!-- ДВЕ КНОПКИ В РЯД -->
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <div id="connectWalletBtn" class="btn" onclick="connectWallet()">🔗 Подключить кошелёк</div>
-            <div id="payBtn" class="btn" style="display:none;" onclick="sendPayment()">💸 Оплатить</div>
-        </div>
+        <div id="ton-connect-button"></div>
         
-        <!-- КНОПКА ОТМЕНА -->
-        <div class="btn btn-cancel" onclick="closeDepositModal()">Отмена</div>
+        <div class="btn btn-cancel" onclick="closeDepositModal()" style="margin-top:10px;">Отмена</div>
         
         <div id="walletStatus" style="margin-top:12px; font-size:10px; color:#6b6b6b; text-align:center;"></div>
     </div>
@@ -241,7 +226,7 @@
 <script>
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
-    const socket = io('https://dadton-full.onrender.com');
+    const socket = io();
     const user = tg?.initDataUnsafe?.user;
     const uid = user ? user.id.toString() : 'p' + Math.floor(Math.random() * 1000000);
     const pname = user ? (user.first_name + (user.last_name ? ' ' + user.last_name : '')) : 'Игрок';
@@ -268,7 +253,7 @@
     let selectedAsset = 'TON';
     let userWalletAddress = null;
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
-    const MANIFEST_URL = 'https://dadton-full.netlify.app/tonconnect-manifest.json';
+    const MANIFEST_URL = window.location.origin + '/tonconnect-manifest.json';
 
     function toast(msg) {
         const t = document.getElementById('toast');
@@ -326,7 +311,7 @@
         else return `<span style="font-size:16px;font-weight:bold;">${name ? name.charAt(0).toUpperCase() : '?'}</span>`;
     }
 
-    // ==================== TON CONNECT ====================
+    // ==================== TON CONNECT (РАБОТАЕТ) ====================
     
     function initTonConnect() {
         if (tonConnectUI) return;
@@ -336,29 +321,30 @@
         }
         try {
             tonConnectUI = new TonConnectUI({
-                manifestUrl: MANIFEST_URL
+                manifestUrl: MANIFEST_URL,
+                buttonRootId: 'ton-connect-button'
             });
             tonConnectUI.onStatusChange((wallet) => {
                 if (wallet) {
                     userWalletAddress = wallet.account.address;
                     document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-                    document.getElementById('connectWalletBtn').style.display = 'none';
-                    document.getElementById('payBtn').style.display = 'block';
-                    toast('✅ Кошелёк успешно подключён! Нажмите "Оплатить"');
+                    toast('✅ Кошелёк подключён! Теперь нажмите "Оплатить"');
                 } else {
                     userWalletAddress = null;
                     document.getElementById('walletStatus').innerHTML = '';
-                    document.getElementById('connectWalletBtn').style.display = 'block';
-                    document.getElementById('payBtn').style.display = 'none';
                 }
             });
         } catch(e) { console.error(e); }
     }
     
-    async function connectWallet() {
+    async function sendPayment() {
+        if (!userWalletAddress) {
+            toast('❌ Сначала подключите кошелёк');
+            return;
+        }
         let amount = parseFloat(document.getElementById('depositAmount').value);
         if (!amount || amount <= 0) {
-            toast('❌ Введите сумму пополнения!');
+            toast('❌ Введите сумму');
             return;
         }
         if (selectedAsset === 'TON' && amount < 0.5) {
@@ -369,36 +355,6 @@
             toast('❌ Минимум 1 USDT');
             return;
         }
-        
-        if (!tonConnectUI) initTonConnect();
-        
-        document.getElementById('connectWalletBtn').innerHTML = "⏳ Подключение...";
-        
-        try {
-            const wallets = await tonConnectUI.getWallets();
-            if (!wallets || wallets.length === 0) {
-                toast('❌ Установите Tonkeeper или другой TON кошелёк');
-                document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
-                return;
-            }
-            const preferred = wallets.find(w => w.name === 'Tonkeeper') || wallets[0];
-            await tonConnectUI.connect({
-                bridgeUrl: preferred.bridgeUrl,
-                universalLink: preferred.universalLink
-            });
-        } catch (e) {
-            console.error('Connect error:', e);
-            toast('❌ Ошибка подключения: ' + (e.message || 'неизвестная ошибка'));
-            document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
-        }
-    }
-    
-    async function sendPayment() {
-        if (!userWalletAddress) {
-            toast('❌ Сначала подключите кошелёк');
-            return;
-        }
-        let amount = parseFloat(document.getElementById('depositAmount').value);
         const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
         const nanoAmount = Math.floor(amount * 1e9);
         const transaction = {
@@ -409,7 +365,6 @@
                 payload: `deposit_${uid}_${Math.floor(starsAmount)}`
             }]
         };
-        document.getElementById('payBtn').innerHTML = "⏳ Отправка...";
         try {
             await tonConnectUI.sendTransaction(transaction);
             toast(`✅ Транзакция отправлена! Получите ${Math.floor(starsAmount)}⭐`);
@@ -417,7 +372,6 @@
             setTimeout(() => refreshBalance(), 10000);
         } catch(e) {
             toast('❌ Ошибка: ' + e.message);
-            document.getElementById('payBtn').innerHTML = "💸 Оплатить";
         }
     }
     
@@ -443,20 +397,10 @@
         selectAsset('TON');
         updatePreview();
         initTonConnect();
-        if (userWalletAddress) {
-            document.getElementById('connectWalletBtn').style.display = 'none';
-            document.getElementById('payBtn').style.display = 'block';
-            document.getElementById('walletStatus').innerHTML = `✅ Кошелёк подключён: ${userWalletAddress.slice(0,6)}...${userWalletAddress.slice(-4)}`;
-        } else {
-            document.getElementById('connectWalletBtn').style.display = 'block';
-            document.getElementById('payBtn').style.display = 'none';
-        }
     }
     
     function closeDepositModal() {
         document.getElementById('depositModal').style.display = 'none';
-        document.getElementById('connectWalletBtn').innerHTML = "🔗 Подключить кошелёк";
-        document.getElementById('payBtn').innerHTML = "💸 Оплатить";
     }
 
     // ==================== РАКЕТА ====================
