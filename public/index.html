@@ -6,7 +6,6 @@
     <title>DadTon - Премиум</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@1.0.2/dist/tonconnect-ui.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
@@ -95,16 +94,12 @@
         .roulette-avatars { position: absolute; width: 100%; height: 100%; }
         .roulette-pointer { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 30px; color: var(--gold); filter: drop-shadow(0 0 3px black); z-index: 10; }
         
-        /* ПЬЕДЕСТАЛ - АВАТАРКИ ПО ЦЕНТРУ */
         .podium { display: flex; justify-content: center; align-items: flex-end; gap: 15px; margin: 20px 0 30px; height: 190px; }
         .podium-item { display: flex; flex-direction: column; align-items: center; width: 90px; }
-        .podium-1 { height: 130px; width: 80px; background: linear-gradient(180deg, #FFD700, #B8860B); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-        .podium-2 { height: 100px; width: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .podium-3 { height: 75px; width: 80px; background: linear-gradient(180deg, #CD7F32, #8B4513); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .podium-1 { height: 130px; width: 80px; background: linear-gradient(180deg, #FFD700, #B8860B); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .podium-2 { height: 100px; width: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); border-radius: 12px 12px 8px 8px; }
+        .podium-3 { height: 75px; width: 80px; background: linear-gradient(180deg, #CD7F32, #8B4513); border-radius: 12px 12px 8px 8px; }
         .podium-avatar { width: 46px; height: 46px; border-radius: 50%; background: #1a1a1a; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 4px; overflow: hidden; margin-left: auto; margin-right: auto; }
-        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .podium-name { font-size: 10px; font-weight: 600; max-width: 70px; overflow: hidden; text-overflow: ellipsis; text-align: center; margin-top: 4px; color: #fff; }
-        
         .leader-list { display: flex; flex-direction: column; gap: 6px; }
         .leader-item { background: #111111; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
         
@@ -130,6 +125,8 @@
         .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
         .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
+        .stars-option { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1a1a1a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border); }
+        .stars-option:active { transform: scale(0.98); background: #222; }
     </style>
 </head>
 <body>
@@ -227,23 +224,57 @@
         <h3 style="color:var(--gold); margin-bottom:16px; font-size:18px;">💎 Пополнение</h3>
         
         <div style="display:flex; gap:10px; margin-bottom:16px;">
-            <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
-            <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
+            <div id="cryptoBtn" class="asset-btn active" onclick="showCryptoPanel()">💎 Крипта</div>
+            <div id="starsBtn" class="asset-btn" onclick="showStarsPanel()">⭐ Telegram Stars</div>
         </div>
         
-        <input type="number" id="depositAmount" class="bet-input" placeholder="Сумма" value="1" step="0.5">
-        
-        <div style="background:#1a1a1a; border-radius:8px; padding:8px; margin-bottom:16px;">
-            <span style="font-size:12px; color:#888;">Получишь:</span>
-            <span id="previewStars" style="color:var(--gold); font-size:16px; font-weight:800;">0 ⭐</span>
+        <!-- КРИПТО ПАНЕЛЬ -->
+        <div id="cryptoPanel">
+            <div style="display:flex; gap:10px; margin-bottom:16px;">
+                <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
+                <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
+            </div>
+            <input type="number" id="depositAmount" class="bet-input" placeholder="Сумма" value="1" step="0.5">
+            <div style="background:#1a1a1a; border-radius:8px; padding:8px; margin-bottom:16px;">
+                <span style="font-size:12px; color:#888;">Получишь:</span>
+                <span id="previewStars" style="color:var(--gold); font-size:16px; font-weight:800;">0 ⭐</span>
+            </div>
+            <div class="btn" onclick="sendTonDirect()">💸 Оплатить через Tonkeeper</div>
         </div>
         
-        <!-- ПРЯМАЯ ССЫЛКА НА TONKEEPER (РАБОТАЕТ 100%) -->
-        <div class="btn" onclick="sendTonDirect()">💸 Оплатить через Tonkeeper</div>
+        <!-- TELEGRAM STARS ПАНЕЛЬ -->
+        <div id="starsPanel" style="display:none;">
+            <div class="stars-option" onclick="buyStars(50)">
+                <span>⭐ 50 звёзд</span>
+                <span style="color:var(--gold);">от 0.99$</span>
+            </div>
+            <div class="stars-option" onclick="buyStars(100)">
+                <span>⭐ 100 звёзд</span>
+                <span style="color:var(--gold);">от 1.99$</span>
+            </div>
+            <div class="stars-option" onclick="buyStars(250)">
+                <span>⭐ 250 звёзд</span>
+                <span style="color:var(--gold);">от 4.99$</span>
+            </div>
+            <div class="stars-option" onclick="buyStars(500)">
+                <span>⭐ 500 звёзд</span>
+                <span style="color:var(--gold);">от 9.99$</span>
+            </div>
+            <div class="stars-option" onclick="buyStars(1000)">
+                <span>⭐ 1000 звёзд</span>
+                <span style="color:var(--gold);">от 19.99$</span>
+            </div>
+            <div class="stars-option" onclick="buyStars(2500)">
+                <span>⭐ 2500 звёзд</span>
+                <span style="color:var(--gold);">от 49.99$</span>
+            </div>
+            <div style="margin-top:12px; font-size:10px; color:#888; text-align:center;">
+                💡 Оплата через Telegram Stars<br>
+                Деньги списываются с вашего аккаунта Telegram
+            </div>
+        </div>
         
-        <div class="btn btn-cancel" onclick="closeDepositModal()">Отмена</div>
-        
-        <div id="walletStatus" style="margin-top:12px; font-size:10px; color:#888; text-align:center;"></div>
+        <div class="btn btn-cancel" onclick="closeDepositModal()" style="margin-top:12px;">Отмена</div>
     </div>
 </div>
 
@@ -332,8 +363,54 @@
         else return `<span style="font-size:16px;font-weight:bold;">${name ? name.charAt(0).toUpperCase() : '?'}</span>`;
     }
 
-    // ==================== ПРЯМОЙ TON PAYMENT (РАБОТАЕТ 100%) ====================
+    // ==================== ПОПОЛНЕНИЕ ====================
     
+    function showCryptoPanel() {
+        document.getElementById('cryptoBtn').classList.add('active');
+        document.getElementById('starsBtn').classList.remove('active');
+        document.getElementById('cryptoPanel').style.display = 'block';
+        document.getElementById('starsPanel').style.display = 'none';
+    }
+    
+    function showStarsPanel() {
+        document.getElementById('starsBtn').classList.add('active');
+        document.getElementById('cryptoBtn').classList.remove('active');
+        document.getElementById('cryptoPanel').style.display = 'none';
+        document.getElementById('starsPanel').style.display = 'block';
+    }
+    
+    // TELEGRAM STARS
+    async function buyStars(starsAmount) {
+        if (!tg) {
+            toast('❌ Telegram WebApp не найден');
+            return;
+        }
+        
+        toast(`💫 Создание инвойса на ${starsAmount}⭐...`);
+        
+        try {
+            // Создаём инвойс через Telegram WebApp
+            const invoiceLink = `https://t.me/${
+                tg.initDataUnsafe?.user?.username || 'dadton_bot'
+            }?start=stars_${starsAmount}_${uid}`;
+            
+            // Альтернативный способ - прямая оплата через Telegram Stars
+            tg.openInvoice(invoiceLink, (status) => {
+                if (status === 'paid') {
+                    toast(`✅ Пополнение на ${starsAmount}⭐ выполнено!`);
+                    refreshBalance();
+                    closeDepositModal();
+                } else {
+                    toast('❌ Оплата не выполнена');
+                }
+            });
+        } catch(e) {
+            console.error('Stars error:', e);
+            toast('❌ Ошибка создания платежа');
+        }
+    }
+    
+    // КРИПТО (TON/USDT)
     function sendTonDirect() {
         let amount = parseFloat(document.getElementById('depositAmount').value);
         if (!amount || amount <= 0) {
@@ -353,20 +430,13 @@
         const nanoAmount = Math.floor(amount * 1e9);
         const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
         
-        // Формируем deep link для Tonkeeper
         const url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
         
-        // Копируем адрес
         navigator.clipboard.writeText(ADMIN_WALLET);
-        
-        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес кошелька скопирован!`);
-        
-        // Открываем Tonkeeper
+        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес скопирован!`);
         window.open(url, '_blank');
-        
         closeDepositModal();
         
-        // Сообщаем на сервер
         fetch('/api/deposit-request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -400,6 +470,7 @@
     
     function showDepositModal() {
         document.getElementById('depositModal').style.display = 'flex';
+        showCryptoPanel();
         selectAsset('TON');
         updatePreview();
     }
@@ -408,7 +479,7 @@
         document.getElementById('depositModal').style.display = 'none';
     }
 
-    // ==================== РАКЕТА ====================
+    // ==================== ОСТАЛЬНЫЕ ИГРЫ ====================
     
     function updateRocketPosition(multiplier) {
         const rocket = document.getElementById('rocketShip');
@@ -548,7 +619,7 @@
     socket.on('rocket_history_data', (d) => { if (d && d.length) { crashHistory = d.map(item => item.multiplier.toFixed(2)); if (crashHistory.length > 10) crashHistory = crashHistory.slice(0, 10); document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); } });
     socket.emit('rocket_get_history');
 
-    // ==================== МИНЫ (НОВЫЙ ПРИБЫЛЬНЫЙ МНОЖИТЕЛЬ) ====================
+    // ==================== МИНЫ ====================
     function minesBetAdj(type) {
         if (minesActive) { toast("Нельзя менять ставку во время игры!"); return; }
         let input = document.getElementById('minesBetInput');
@@ -834,19 +905,19 @@
         podium.innerHTML = `
             <div class="podium-item">
                 <div class="podium-2"><div class="podium-avatar">${getAvatarHtml(top3[1].avatar, top3[1].name)}</div></div>
-                <div class="podium-name">${top3[1].name}</div>
+                <div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[1].name}</div>
                 <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">2 место</div>
                 <div style="font-size:9px; color:#888;">⭐ ${top3[1].turnover}</div>
             </div>
             <div class="podium-item">
                 <div class="podium-1"><div class="podium-avatar">${getAvatarHtml(top3[0].avatar, top3[0].name)}</div></div>
-                <div class="podium-name">${top3[0].name}</div>
+                <div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[0].name}</div>
                 <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">1 место</div>
                 <div style="font-size:9px; color:#888;">⭐ ${top3[0].turnover}</div>
             </div>
             <div class="podium-item">
                 <div class="podium-3"><div class="podium-avatar">${getAvatarHtml(top3[2].avatar, top3[2].name)}</div></div>
-                <div class="podium-name">${top3[2].name}</div>
+                <div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[2].name}</div>
                 <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">3 место</div>
                 <div style="font-size:9px; color:#888;">⭐ ${top3[2].turnover}</div>
             </div>
