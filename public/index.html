@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DadTon - Премиум</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>ты
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -996,8 +996,8 @@
             const profit = totalDeposited - totalWithdrawn;
             container.innerHTML = `
                 <div class="stats-grid">
-                    <div class="stat-card"><div style="font-size:10px; color:#888;">💰 Пополнено</div><div style="font-size:18px; font-weight:800; color:#00cc66;">+${totalDeposited}⭐</div></div>
-                    <div class="stat-card"><div style="font-size:10px; color:#888;">💸 Выведено</div><div style="font-size:18px; font-weight:800; color:#ff4444;">-${totalWithdrawn}⭐</div></div>
+                    <div class="stat-card"><div style="font-size:10px; color:#888;"> Пополнено</div><div style="font-size:18px; font-weight:800; color:#00cc66;">+${totalDeposited}⭐</div></div>
+                    <div class="stat-card"><div style="font-size:10px; color:#888;"> Выведено</div><div style="font-size:18px; font-weight:800; color:#ff4444;">-${totalWithdrawn}⭐</div></div>
                     <div class="stat-card"><div style="font-size:10px; color:#888;">📊 Разница</div><div style="font-size:18px; font-weight:800; color:${profit >= 0 ? '#00cc66' : '#ff4444'};">${profit >= 0 ? '+' : ''}${profit}⭐</div></div>
                     <div class="stat-card"><div style="font-size:10px; color:#888;">🎰 Текущий баланс</div><div style="font-size:18px; font-weight:800; color:#FFD700;">${stars}⭐</div></div>
                 </div>
@@ -1006,7 +1006,7 @@
         }
         else if (tab === 'refs') {
             const refLink = `https://t.me/dadton_bot?start=ref_${uid.slice(-6)}`;
-            container.innerHTML = `<div style="display: flex; gap: 10px; margin-bottom: 16px;"><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">👥 Рефералы</div><div style="font-size:20px; font-weight:800;">${referralCount}</div></div><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">💰 Заработано</div><div style="font-size:20px; font-weight:800;">${referralEarned}</div></div></div><div class="ref-box"><span style="font-size:11px; word-break:break-all;">${refLink}</span><div class="btn" style="margin-top:10px; padding:8px;" onclick="navigator.clipboard.writeText('${refLink}'); toast('Ссылка скопирована!')">Копировать</div></div><div class="empty" style="margin-top:10px; font-size:11px;">💡 За каждого приглашённого друга вы получаете 10% от его оборота!</div>`;
+            container.innerHTML = `<div style="display: flex; gap: 10px; margin-bottom: 16px;"><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">👥 Рефералы</div><div style="font-size:20px; font-weight:800;">${referralCount}</div></div><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;"> 💰 Заработано</div><div style="font-size:20px; font-weight:800;">${referralEarned}</div></div></div><div class="ref-box"><span style="font-size:11px; word-break:break-all;">${refLink}</span><div class="btn" style="margin-top:10px; padding:8px;" onclick="navigator.clipboard.writeText('${refLink}'); toast('Ссылка скопирована!')">Копировать</div></div><div class="empty" style="margin-top:10px; font-size:11px;">💡 За каждого приглашённого друга вы получаете 10% от его выводов!</div>`;
         }
     }
 
