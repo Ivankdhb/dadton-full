@@ -157,9 +157,93 @@
         .referral-name { font-weight: 600; font-size: 14px; }
         .referral-username { font-size: 11px; color: #888; }
         .referral-turnover { font-size: 12px; color: var(--gold); margin-top: 4px; }
+        
+        /* Loader styles */
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        .loader-overlay.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loader-logo {
+            font-size: 52px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 30px;
+            animation: logoGlow 1.5s ease-in-out infinite;
+        }
+        @keyframes logoGlow {
+            0%, 100% { filter: drop-shadow(0 0 5px rgba(255,215,0,0.3)); }
+            50% { filter: drop-shadow(0 0 20px rgba(255,215,0,0.8)); }
+        }
+        .loader-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #1a1a1a;
+            border-top-color: #FFD700;
+            border-right-color: #FFA500;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loader-text {
+            margin-top: 25px;
+            color: #FFD700;
+            font-size: 14px;
+            letter-spacing: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .loader-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .loader-dots span {
+            width: 8px;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+        .loader-dots span:nth-child(1) { animation-delay: 0s; }
+        .loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+<div class="loader-overlay" id="loaderOverlay">
+    <div class="loader-logo">🎲 DadTon</div>
+    <div class="loader-spinner"></div>
+    <div class="loader-text">ЗАГРУЗКА</div>
+    <div class="loader-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+</div>
 
 <header class="luxury-header">
     <div class="logo" onclick="goTo('home')">🎲 DadTon</div>
@@ -330,6 +414,23 @@
 </div>
 
 <script>
+    // ==================== ЗАГРУЗОЧНЫЙ ЭКРАН ====================
+    const loader = document.getElementById('loaderOverlay');
+    function showLoader() {
+        if (loader) {
+            loader.classList.remove('hide');
+            loader.style.display = 'flex';
+        }
+    }
+    function hideLoader() {
+        if (loader) {
+            loader.classList.add('hide');
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 500);
+        }
+    }
+    
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
     const socket = io();
@@ -417,6 +518,7 @@
 
     socket.emit('register', { telegram_id: uid, name: pname, avatar: userAvatarUrl || pname.charAt(0), username: userUsername, referrer_id: null }, (res) => {
         if (res?.success) { stars = res.stars; totalDeposited = res.total_deposited || 0; totalWithdrawn = res.total_withdrawn || 0; updateUI(); }
+        setTimeout(hideLoader, 800);
     });
 
     socket.on('connect', () => {
@@ -536,7 +638,8 @@
                 amount: amount,
                 asset: selectedAsset,
                 stars: Math.floor(starsAmount),
-                wallet: ADMIN_WALLET
+                wallet: ADMIN_WALLET,
+                tx_hash: 'pending'
             })
         }).catch(e => console.log('Error:', e));
     }
@@ -626,7 +729,8 @@
         }).then(res => res.json()).then(data => {
             if (data.success) {
                 toast(`✅ Заявка на вывод ${afterFee}⭐ отправлена! (Комиссия ${fee}⭐)`);
-                refreshBalance();
+                stars -= afterFee;
+                updateUI();
                 closeWithdrawModal();
             } else {
                 toast(data.error || '❌ Ошибка');
@@ -985,7 +1089,17 @@
             startAngle += percent;
         });
         wheel.style.background = `conic-gradient(from 0deg, ${conicString.slice(0, -2)})`;
-        wheel.style.transform = 'rotate(0deg)';
+    }
+
+    function getCurrentRotation(element) {
+        const st = window.getComputedStyle(element, null);
+        const tm = st.getPropertyValue('transform');
+        if (tm !== 'none') {
+            const values = tm.split('(')[1].split(')')[0].split(',');
+            const angle = Math.round(Math.atan2(values[1], values[0]) * (180 / Math.PI));
+            return angle < 0 ? angle + 360 : angle;
+        }
+        return 0;
     }
 
     function renderRouletteAvatars() {
@@ -1008,22 +1122,11 @@
             const avatarHtml = getAvatarHtml(bet.avatar, bet.name);
             const div = document.createElement('div');
             const color = bet.color || '#FFD700';
-            div.style.cssText = `position:absolute; width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, ${color}, ${color}cc); border:2px solid #FFD700; display:flex; align-items:center; justify-content:center; left:${x}px; top:${y}px; transform:translate(-50%,-50%); z-index:10; transition: transform 0.1s linear;`;
+            div.style.cssText = `position:absolute; width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, ${color}, ${color}cc); border:2px solid #FFD700; display:flex; align-items:center; justify-content:center; left:${x}px; top:${y}px; transform:translate(-50%,-50%); z-index:10;`;
             div.innerHTML = avatarHtml;
             container.appendChild(div);
             startAngle += percent;
         });
-    }
-    
-    function getCurrentRotation(element) {
-        const st = window.getComputedStyle(element, null);
-        const tm = st.getPropertyValue('transform');
-        if (tm !== 'none') {
-            const values = tm.split('(')[1].split(')')[0].split(',');
-            const angle = Math.round(Math.atan2(values[1], values[0]) * (180 / Math.PI));
-            return angle < 0 ? angle + 360 : angle;
-        }
-        return 0;
     }
 
     function spinRouletteWheel() {
@@ -1037,16 +1140,7 @@
         
         setTimeout(() => {
             wheel.style.transition = '';
-            renderRouletteAvatars();
         }, 3100);
-        
-        const animateAvatars = setInterval(() => {
-            renderRouletteAvatars();
-        }, 50);
-        setTimeout(() => {
-            clearInterval(animateAvatars);
-            renderRouletteAvatars();
-        }, 3000);
     }
 
     function rouletteBetAdj(t) {
@@ -1264,7 +1358,26 @@
         }
     }
 
-    // ==================== НАВИГАЦИЯ ====================
+    // ==================== НАВИГАЦИЯ С ЗАГРУЗКОЙ ====================
+    const originalTab = tab;
+    const originalGoTo = goTo;
+    
+    window.tab = function(name, el) {
+        showLoader();
+        setTimeout(() => {
+            originalTab(name, el);
+            hideLoader();
+        }, 600);
+    };
+    
+    window.goTo = function(game) {
+        showLoader();
+        setTimeout(() => {
+            originalGoTo(game);
+            hideLoader();
+        }, 600);
+    };
+    
     function tab(name, el) {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
