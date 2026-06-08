@@ -631,11 +631,19 @@
     const waitingOverlay = document.getElementById('waitingOverlay');
     
     function showWaitingOverlay() {
-        if (waitingOverlay) waitingOverlay.style.display = 'flex';
+        if (waitingOverlay) {
+            waitingOverlay.style.display = 'flex';
+            waitingOverlay.style.opacity = '1';
+            console.log('Оверлей ПОКАЗАН');
+        }
     }
     
     function hideWaitingOverlay() {
-        if (waitingOverlay) waitingOverlay.style.display = 'none';
+        if (waitingOverlay) {
+            waitingOverlay.style.display = 'none';
+            waitingOverlay.style.opacity = '0';
+            console.log('Оверлей СКРЫТ');
+        }
     }
     
     function showExplosion() {
@@ -760,6 +768,7 @@
         const el = document.getElementById('crashStatus');
         const statusDiv = document.getElementById('crashStatusText');
         const multDiv = document.getElementById('crashMult');
+        console.log('countdown:', s);
         if (s > 0) { 
             isFlying = false; 
             showWaitingOverlay();
@@ -804,7 +813,9 @@
     socket.on('rocket_crash', (mult) => { 
         isFlying = false; 
         showExplosion();
-        setTimeout(() => { showWaitingOverlay(); }, 500);
+        setTimeout(() => { 
+            showWaitingOverlay(); 
+        }, 600);
         if (hasActiveBet && myBet && !myBet.cashed) { 
             gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
             if (gameHistory.length > 10) gameHistory.pop(); 
