@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,151 +13,67 @@ const io = socketIo(server, {
 app.use(express.json());
 app.use(express.static('public'));
 
-// ==================== БАЗА ДАННЫХ ====================
-const db = new sqlite3.Database('dadton.db');
+// ==================== SUPABASE НАСТРОЙКИ ====================
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id TEXT UNIQUE,
-        name TEXT,
-        avatar TEXT,
-        stars INTEGER DEFAULT 1000,
-        turnover INTEGER DEFAULT 0,
-        games_played INTEGER DEFAULT 0,
-        wins INTEGER DEFAULT 0,
-        referrer_id TEXT
-    )`);
+console.log('✅ Supabase подключён');
 
-    db.run(`CREATE TABLE IF NOT EXISTS rocket_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        multiplier REAL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS user_finance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id TEXT UNIQUE,
-        deposited INTEGER DEFAULT 0,
-        withdrawn INTEGER DEFAULT 0
-    )`);
-});
-
-console.log('✅ База данных готова');
-
+// ==================== КОНСТАНТЫ ====================
 const MAX_BET = 5000;
 const MIN_BET = 10;
-const BOT_TOKEN = '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0';
-const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// ==================== TELEGRAM STARS ====================
+// ==================== API ЭНДПОИНТЫ ====================
 
-// Создание инвойса
-app.post('/api/create-invoice', async (req, res) => {
-    const { userId, starsAmount } = req.body;
-    
-    if (!userId || !starsAmount || starsAmount < 1) {
-        return res.json({ success: false, error: 'Неверная сумма' });
-    }
-    
-    try {
-        const response = await fetch(`${TELEGRAM_API}/sendInvoice`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: userId,
-                title: "⭐ DadTon - Пополнение",
-                description: `Покупка ${starsAmount} звёзд`,
-                payload: JSON.stringify({ userId: userId, stars: starsAmount }),
-                provider_token: "",
-                currency: "XTR",
-                prices: [{ label: `⭐ ${starsAmount} звёзд`, amount: starsAmount }]
-            })
-        });
-        const data = await response.json();
-        res.json({ success: true, data: data });
-    } catch (error) {
-        console.error('Invoice error:', error);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// Webhook для обработки платежей
-app.post('/webhook/telegram', async (req, res) => {
-    const update = req.body;
-    
-    // PreCheckoutQuery
-    if (update.pre_checkout_query) {
-        await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pre_checkout_query_id: update.pre_checkout_query.id,
-                ok: true
-            })
-        });
-        return res.sendStatus(200);
-    }
-    
-    // SuccessfulPayment
-    if (update.message && update.message.successful_payment) {
-        const payment = update.message.successful_payment;
-        const userId = update.message.from.id;
-        const stars = payment.total_amount;
-        const payload = JSON.parse(payment.invoice_payload);
-        
-        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars, userId]);
-        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) 
-                VALUES (?, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
-                [userId, stars, stars]);
-        
-        console.log(`✅ Пользователь ${userId} пополнил ${stars}⭐`);
-        
-        // Отправляем уведомление в чат
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: userId,
-                text: `✅ Пополнение выполнено!\n⭐ +${stars} звёзд на игровой счёт!`
-            })
-        });
-        
-        return res.sendStatus(200);
-    }
-    
-    res.sendStatus(200);
-});
-
-// ==================== ОСТАЛЬНЫЕ API ====================
+// Заявка на пополнение
 app.post('/api/deposit-request', (req, res) => {
     const { telegram_id, name, amount, asset, stars } = req.body;
-    console.log(`📩 ЗАЯВКА: ${name} хочет пополнить ${amount} ${asset} -> ${stars}⭐`);
+    console.log(`📩 ЗАЯВКА: ${name} (${telegram_id}) хочет пополнить ${amount} ${asset} -> ${stars}⭐`);
     res.json({ success: true });
 });
 
-app.post('/api/withdraw-request', (req, res) => {
+// Заявка на вывод
+app.post('/api/withdraw-request', async (req, res) => {
     const { telegram_id, stars_amount, asset, wallet_address } = req.body;
     
-    db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-        if (!row || row.stars < stars_amount) {
-            return res.json({ success: false, error: 'Недостаточно звёзд' });
-        }
-        
-        db.run(`UPDATE users SET stars = stars - ? WHERE telegram_id = ?`, [stars_amount, telegram_id]);
-        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET withdrawn = withdrawn + ?`, 
-            [telegram_id, stars_amount, stars_amount]);
-        
-        console.log(`📩 ЗАЯВКА НА ВЫВОД: ${telegram_id}, ${stars_amount}⭐ -> ${asset}`);
-        res.json({ success: true });
-    });
+    const { data: user } = await supabase
+        .from('users')
+        .select('stars')
+        .eq('telegram_id', telegram_id)
+        .single();
+    
+    if (!user || user.stars < stars_amount) {
+        return res.json({ success: false, error: 'Недостаточно звёзд' });
+    }
+    
+    await supabase
+        .from('users')
+        .update({ stars: user.stars - stars_amount })
+        .eq('telegram_id', telegram_id);
+    
+    await supabase
+        .from('user_finance')
+        .upsert({ 
+            telegram_id: telegram_id, 
+            withdrawn: stars_amount 
+        }, { onConflict: 'telegram_id' });
+    
+    console.log(`📩 ЗАЯВКА НА ВЫВОД: ${telegram_id}, ${stars_amount}⭐ -> ${asset}`);
+    res.json({ success: true });
 });
 
-app.post('/api/finance-stats', (req, res) => {
+// Финансовая статистика
+app.post('/api/finance-stats', async (req, res) => {
     const { telegram_id } = req.body;
-    db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-        res.json({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0 });
-    });
+    
+    const { data } = await supabase
+        .from('user_finance')
+        .select('deposited, withdrawn')
+        .eq('telegram_id', telegram_id)
+        .single();
+    
+    res.json({ deposited: data?.deposited || 0, withdrawn: data?.withdrawn || 0 });
 });
 
 // ==================== РАКЕТА ====================
@@ -243,8 +159,14 @@ function startRocketFlying() {
                 bet.cashedAt = rocketState.currentMultiplier;
                 bet.winAmount = winAmount;
                 
-                db.run(`UPDATE users SET stars = stars + ?, turnover = turnover + ?, wins = wins + 1 WHERE telegram_id = ?`, 
-                    [winAmount, winAmount, bet.telegram_id]);
+                supabase
+                    .from('users')
+                    .update({ 
+                        stars: supabase.raw(`stars + ${winAmount}`),
+                        turnover: supabase.raw(`turnover + ${winAmount}`),
+                        wins: supabase.raw(`wins + 1`)
+                    })
+                    .eq('telegram_id', bet.telegram_id);
                 
                 io.emit('rocket_cashout_done', { 
                     name: bet.name, 
@@ -263,7 +185,9 @@ function startRocketFlying() {
             console.log(`💥 КРАШ! ${rocketState.currentMultiplier.toFixed(2)}x`);
             io.emit('rocket_crash', rocketState.currentMultiplier);
             
-            db.run(`INSERT INTO rocket_history (multiplier) VALUES (?)`, [rocketState.currentMultiplier]);
+            supabase
+                .from('rocket_history')
+                .insert([{ multiplier: rocketState.currentMultiplier }]);
             
             setTimeout(startRocketCountdown, 1500);
         } else {
@@ -284,83 +208,133 @@ function calculateRouletteWinner() {
     return null;
 }
 
+// ==================== СОКЕТЫ ====================
 io.on('connection', (socket) => {
     console.log('👤 Игрок подключился');
     
-    socket.on('register', (data, callback) => {
+    socket.on('register', async (data, callback) => {
         const telegram_id = data.telegram_id;
         const name = data.name || 'Игрок';
         const avatar = data.avatar || '👤';
         const referrerId = data.referrer_id || null;
         
-        db.get(`SELECT * FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (!row) {
-                db.run(`INSERT INTO users (telegram_id, name, avatar, stars, referrer_id) VALUES (?, ?, ?, 1000, ?)`, 
-                    [telegram_id, name, avatar, referrerId], function(err) {
-                    if (err) {
-                        if (callback) callback({ success: false, error: err.message });
-                    } else {
-                        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, 0, 0)`, [telegram_id]);
-                        if (referrerId) {
-                            db.run(`UPDATE users SET stars = stars + 100 WHERE telegram_id = ?`, [referrerId]);
-                        }
-                        if (callback) callback({ success: true, stars: 1000, name, telegram_id, avatar, turnover: 0, games_played: 0, wins: 0 });
-                    }
-                });
-            } else {
-                db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, finance) => {
-                    if (callback) callback({ 
-                        success: true, 
-                        stars: row.stars, 
-                        name: row.name, 
-                        telegram_id, 
-                        avatar: row.avatar || '👤', 
-                        turnover: row.turnover || 0, 
-                        games_played: row.games_played || 0, 
-                        wins: row.wins || 0,
-                        total_deposited: finance?.deposited || 0,
-                        total_withdrawn: finance?.withdrawn || 0
-                    });
-                });
+        const { data: user } = await supabase
+            .from('users')
+            .select('*')
+            .eq('telegram_id', telegram_id)
+            .single();
+        
+        if (!user) {
+            await supabase
+                .from('users')
+                .insert([{ telegram_id, name, avatar, referrer_id: referrerId }]);
+            
+            await supabase
+                .from('user_finance')
+                .insert([{ telegram_id, deposited: 0, withdrawn: 0 }]);
+            
+            if (referrerId) {
+                await supabase
+                    .from('users')
+                    .update({ stars: supabase.raw('stars + 100') })
+                    .eq('telegram_id', referrerId);
             }
+            
+            const { data: finance } = await supabase
+                .from('user_finance')
+                .select('deposited, withdrawn')
+                .eq('telegram_id', telegram_id)
+                .single();
+            
+            if (callback) callback({ 
+                success: true, 
+                stars: 1000, 
+                name, 
+                telegram_id, 
+                avatar, 
+                turnover: 0, 
+                games_played: 0, 
+                wins: 0,
+                total_deposited: finance?.deposited || 0,
+                total_withdrawn: finance?.withdrawn || 0
+            });
+        } else {
+            const { data: finance } = await supabase
+                .from('user_finance')
+                .select('deposited, withdrawn')
+                .eq('telegram_id', telegram_id)
+                .single();
+            
+            if (callback) callback({ 
+                success: true, 
+                stars: user.stars, 
+                name: user.name, 
+                telegram_id, 
+                avatar: user.avatar || '👤', 
+                turnover: user.turnover || 0, 
+                games_played: user.games_played || 0, 
+                wins: user.wins || 0,
+                total_deposited: finance?.deposited || 0,
+                total_withdrawn: finance?.withdrawn || 0
+            });
+        }
+    });
+    
+    socket.on('get_balance', async (telegram_id, callback) => {
+        const { data: user } = await supabase
+            .from('users')
+            .select('stars, name, avatar, turnover, games_played, wins')
+            .eq('telegram_id', telegram_id)
+            .single();
+        
+        if (user) {
+            const { data: finance } = await supabase
+                .from('user_finance')
+                .select('deposited, withdrawn')
+                .eq('telegram_id', telegram_id)
+                .single();
+            
+            if (callback) callback({ 
+                stars: user.stars, 
+                name: user.name, 
+                avatar: user.avatar || '👤', 
+                turnover: user.turnover || 0, 
+                games_played: user.games_played || 0, 
+                wins: user.wins || 0,
+                total_deposited: finance?.deposited || 0,
+                total_withdrawn: finance?.withdrawn || 0
+            });
+        } else {
+            if (callback) callback({ stars: 1000 });
+        }
+    });
+    
+    socket.on('get_referral_stats', async (telegram_id, callback) => {
+        const { data, count } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: false })
+            .eq('referrer_id', telegram_id);
+        
+        const totalTurnover = data?.reduce((sum, u) => sum + (u.turnover || 0), 0) || 0;
+        
+        if (callback) callback({ 
+            count: count || 0, 
+            earned: Math.floor(totalTurnover * 0.1) 
         });
     });
     
-    socket.on('get_balance', (telegram_id, callback) => {
-        db.get(`SELECT stars, name, avatar, turnover, games_played, wins FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (row) {
-                db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, finance) => {
-                    if (callback) callback({ 
-                        stars: row.stars, 
-                        name: row.name, 
-                        avatar: row.avatar || '👤', 
-                        turnover: row.turnover || 0, 
-                        games_played: row.games_played || 0, 
-                        wins: row.wins || 0,
-                        total_deposited: finance?.deposited || 0,
-                        total_withdrawn: finance?.withdrawn || 0
-                    });
-                });
-            } else {
-                if (callback) callback({ stars: 1000 });
-            }
-        });
-    });
-    
-    socket.on('get_referral_stats', (telegram_id, callback) => {
-        db.get(`SELECT COUNT(*) as count, SUM(turnover) as total FROM users WHERE referrer_id = ?`, [telegram_id], (err, row) => {
-            if (callback) callback({ count: row?.count || 0, earned: Math.floor((row?.total || 0) * 0.1) });
-        });
-    });
-    
-    socket.on('get_finance_stats', (telegram_id, callback) => {
-        db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (callback) callback({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0 });
-        });
+    socket.on('get_finance_stats', async (telegram_id, callback) => {
+        const { data } = await supabase
+            .from('user_finance')
+            .select('deposited, withdrawn')
+            .eq('telegram_id', telegram_id)
+            .single();
+        
+        if (callback) callback({ deposited: data?.deposited || 0, withdrawn: data?.withdrawn || 0 });
     });
     
     // РАКЕТА
-    socket.on('rocket_place_bet', (data, callback) => {
+    socket.on('rocket_place_bet', async (data, callback) => {
         if (!data || rocketState.status !== 'waiting') {
             if (callback) callback({ success: false, error: 'Ставки только до взлёта!' });
             return;
@@ -373,25 +347,35 @@ io.on('connection', (socket) => {
             return;
         }
         
-        db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (!row || row.stars < amount) {
-                if (callback) callback({ success: false, error: `Недостаточно звёзд!` });
-                return;
-            }
-            
-            db.run(`UPDATE users SET stars = stars - ?, games_played = games_played + 1 WHERE telegram_id = ?`, [amount, telegram_id]);
-            
-            rocketState.bets.push({
-                telegram_id, name, amount, autoCashout: parseFloat(autoCashout) || 0,
-                cashedAt: null, winAmount: null, avatar: avatar || '👤'
-            });
-            
-            io.emit('rocket_bet_placed', { name, amount, autoCashout, avatar: avatar || '👤' });
-            if (callback) callback({ success: true });
+        const { data: user } = await supabase
+            .from('users')
+            .select('stars')
+            .eq('telegram_id', telegram_id)
+            .single();
+        
+        if (!user || user.stars < amount) {
+            if (callback) callback({ success: false, error: `Недостаточно звёзд!` });
+            return;
+        }
+        
+        await supabase
+            .from('users')
+            .update({ 
+                stars: user.stars - amount,
+                games_played: supabase.raw('games_played + 1')
+            })
+            .eq('telegram_id', telegram_id);
+        
+        rocketState.bets.push({
+            telegram_id, name, amount, autoCashout: parseFloat(autoCashout) || 0,
+            cashedAt: null, winAmount: null, avatar: avatar || '👤'
         });
+        
+        io.emit('rocket_bet_placed', { name, amount, autoCashout, avatar: avatar || '👤' });
+        if (callback) callback({ success: true });
     });
     
-    socket.on('rocket_cancel_bet', (data, callback) => {
+    socket.on('rocket_cancel_bet', async (data, callback) => {
         const { telegram_id } = data;
         const betIndex = rocketState.bets.findIndex(b => b.telegram_id === telegram_id && !b.cashedAt);
         
@@ -401,13 +385,18 @@ io.on('connection', (socket) => {
         }
         
         const bet = rocketState.bets[betIndex];
-        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [bet.amount, telegram_id]);
+        
+        await supabase
+            .from('users')
+            .update({ stars: supabase.raw(`stars + ${bet.amount}`) })
+            .eq('telegram_id', telegram_id);
+        
         rocketState.bets.splice(betIndex, 1);
         io.emit('rocket_bet_cancelled', { telegram_id, name: bet.name });
         if (callback) callback({ success: true, amount: bet.amount });
     });
     
-    socket.on('rocket_cashout', (data, callback) => {
+    socket.on('rocket_cashout', async (data, callback) => {
         if (rocketState.status !== 'flying') {
             if (callback) callback({ success: false, error: 'Сейчас нельзя забрать' });
             return;
@@ -425,21 +414,31 @@ io.on('connection', (socket) => {
         bet.cashedAt = rocketState.currentMultiplier;
         bet.winAmount = winAmount;
         
-        db.run(`UPDATE users SET stars = stars + ?, turnover = turnover + ?, wins = wins + 1 WHERE telegram_id = ?`, 
-            [winAmount, winAmount, telegram_id]);
+        await supabase
+            .from('users')
+            .update({ 
+                stars: supabase.raw(`stars + ${winAmount}`),
+                turnover: supabase.raw(`turnover + ${winAmount}`),
+                wins: supabase.raw('wins + 1')
+            })
+            .eq('telegram_id', telegram_id);
         
         io.emit('rocket_cashout_done', { name, multiplier: rocketState.currentMultiplier, win: winAmount, amount: bet.amount, avatar: bet.avatar });
         if (callback) callback({ success: true, win: winAmount });
     });
     
-    socket.on('rocket_get_history', () => {
-        db.all(`SELECT multiplier FROM rocket_history ORDER BY timestamp DESC LIMIT 10`, (err, rows) => {
-            socket.emit('rocket_history_data', rows || []);
-        });
+    socket.on('rocket_get_history', async () => {
+        const { data } = await supabase
+            .from('rocket_history')
+            .select('multiplier')
+            .order('timestamp', { ascending: false })
+            .limit(10);
+        
+        socket.emit('rocket_history_data', data || []);
     });
     
     // МИНЫ
-    socket.on('mines_start', (data, callback) => {
+    socket.on('mines_start', async (data, callback) => {
         const { telegram_id, betAmount, minesCount } = data;
         
         if (betAmount < MIN_BET || betAmount > MAX_BET) {
@@ -452,34 +451,44 @@ io.on('connection', (socket) => {
             return;
         }
         
-        db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (!row || row.stars < betAmount) {
-                if (callback) callback({ success: false, error: `Недостаточно звёзд!` });
-                return;
-            }
-            
-            db.run(`UPDATE users SET stars = stars - ?, games_played = games_played + 1 WHERE telegram_id = ?`, [betAmount, telegram_id]);
-            
-            const totalCells = 25;
-            const mineIndices = [];
-            while (mineIndices.length < minesCount) {
-                const idx = Math.floor(Math.random() * totalCells);
-                if (!mineIndices.includes(idx)) mineIndices.push(idx);
-            }
-            
-            minesState.set(telegram_id, {
-                grid: mineIndices,
-                bet: betAmount,
-                minesCount: minesCount,
-                revealed: 0,
-                active: true
-            });
-            
-            if (callback) callback({ success: true, minesCount: minesCount });
+        const { data: user } = await supabase
+            .from('users')
+            .select('stars')
+            .eq('telegram_id', telegram_id)
+            .single();
+        
+        if (!user || user.stars < betAmount) {
+            if (callback) callback({ success: false, error: `Недостаточно звёзд!` });
+            return;
+        }
+        
+        await supabase
+            .from('users')
+            .update({ 
+                stars: user.stars - betAmount,
+                games_played: supabase.raw('games_played + 1')
+            })
+            .eq('telegram_id', telegram_id);
+        
+        const totalCells = 25;
+        const mineIndices = [];
+        while (mineIndices.length < minesCount) {
+            const idx = Math.floor(Math.random() * totalCells);
+            if (!mineIndices.includes(idx)) mineIndices.push(idx);
+        }
+        
+        minesState.set(telegram_id, {
+            grid: mineIndices,
+            bet: betAmount,
+            minesCount: minesCount,
+            revealed: 0,
+            active: true
         });
+        
+        if (callback) callback({ success: true, minesCount: minesCount });
     });
     
-    socket.on('mines_reveal', (data, callback) => {
+    socket.on('mines_reveal', async (data, callback) => {
         const { telegram_id, cellIndex } = data;
         const game = minesState.get(telegram_id);
         
@@ -491,7 +500,10 @@ io.on('connection', (socket) => {
         if (game.grid.includes(cellIndex)) {
             game.active = false;
             minesState.delete(telegram_id);
-            db.run(`UPDATE users SET games_played = games_played - 1 WHERE telegram_id = ?`, [telegram_id]);
+            await supabase
+                .from('users')
+                .update({ games_played: supabase.raw('games_played - 1') })
+                .eq('telegram_id', telegram_id);
             if (callback) callback({ success: false, exploded: true });
             return;
         }
@@ -507,15 +519,22 @@ io.on('connection', (socket) => {
         if (callback) callback({ success: true, revealed: game.revealed, multiplier: finalMultiplier.toFixed(2), winAmount });
         
         if (game.revealed === safeCells) {
-            db.run(`UPDATE users SET stars = stars + ?, turnover = turnover + ?, wins = wins + 1 WHERE telegram_id = ?`, 
-                [winAmount, winAmount, telegram_id]);
+            await supabase
+                .from('users')
+                .update({ 
+                    stars: supabase.raw(`stars + ${winAmount}`),
+                    turnover: supabase.raw(`turnover + ${winAmount}`),
+                    wins: supabase.raw('wins + 1')
+                })
+                .eq('telegram_id', telegram_id);
+            
             game.active = false;
             minesState.delete(telegram_id);
             if (callback) callback({ success: true, finished: true, winAmount });
         }
     });
     
-    socket.on('mines_cashout', (data, callback) => {
+    socket.on('mines_cashout', async (data, callback) => {
         const { telegram_id } = data;
         const game = minesState.get(telegram_id);
         
@@ -530,8 +549,14 @@ io.on('connection', (socket) => {
         const finalMultiplier = Math.min(multiplier, 3.5);
         const winAmount = Math.floor(game.bet * finalMultiplier);
         
-        db.run(`UPDATE users SET stars = stars + ?, turnover = turnover + ?, wins = wins + 1 WHERE telegram_id = ?`, 
-            [winAmount, winAmount, telegram_id]);
+        await supabase
+            .from('users')
+            .update({ 
+                stars: supabase.raw(`stars + ${winAmount}`),
+                turnover: supabase.raw(`turnover + ${winAmount}`),
+                wins: supabase.raw('wins + 1')
+            })
+            .eq('telegram_id', telegram_id);
         
         game.active = false;
         minesState.delete(telegram_id);
@@ -540,7 +565,7 @@ io.on('connection', (socket) => {
     });
     
     // РУЛЕТКА
-    socket.on('roulette_place_bet', (data, callback) => {
+    socket.on('roulette_place_bet', async (data, callback) => {
         if (rouletteIsSpinning) {
             if (callback) callback({ success: false, error: 'Рулетка крутится!' });
             return;
@@ -558,27 +583,40 @@ io.on('connection', (socket) => {
             return;
         }
         
-        db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (!row || row.stars < amount) {
-                if (callback) callback({ success: false, error: `Недостаточно звёзд!` });
-                return;
-            }
-            
-            db.run(`UPDATE users SET stars = stars - ?, games_played = games_played + 1 WHERE telegram_id = ?`, [amount, telegram_id]);
-            
-            rouletteBets.push({ telegram_id, name, amount, avatar: avatar || '👤' });
-            io.emit('roulette_update', [...rouletteBets]);
-            if (callback) callback({ success: true });
-        });
+        const { data: user } = await supabase
+            .from('users')
+            .select('stars')
+            .eq('telegram_id', telegram_id)
+            .single();
+        
+        if (!user || user.stars < amount) {
+            if (callback) callback({ success: false, error: `Недостаточно звёзд!` });
+            return;
+        }
+        
+        await supabase
+            .from('users')
+            .update({ 
+                stars: user.stars - amount,
+                games_played: supabase.raw('games_played + 1')
+            })
+            .eq('telegram_id', telegram_id);
+        
+        rouletteBets.push({ telegram_id, name, amount, avatar: avatar || '👤' });
+        io.emit('roulette_update', [...rouletteBets]);
+        if (callback) callback({ success: true });
     });
     
-    socket.on('roulette_cancel_bet', (data, callback) => {
+    socket.on('roulette_cancel_bet', async (data, callback) => {
         const { telegram_id } = data;
         const betIndex = rouletteBets.findIndex(b => b.telegram_id === telegram_id);
         
         if (betIndex !== -1) {
             const bet = rouletteBets[betIndex];
-            db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [bet.amount, telegram_id]);
+            await supabase
+                .from('users')
+                .update({ stars: supabase.raw(`stars + ${bet.amount}`) })
+                .eq('telegram_id', telegram_id);
             rouletteBets.splice(betIndex, 1);
             io.emit('roulette_update', [...rouletteBets]);
             if (callback) callback({ success: true, amount: bet.amount });
@@ -596,13 +634,19 @@ io.on('connection', (socket) => {
         rouletteIsSpinning = true;
         io.emit('roulette_spinning');
         
-        setTimeout(() => {
+        setTimeout(async () => {
             const winner = calculateRouletteWinner();
             const total = rouletteBets.reduce((s, b) => s + b.amount, 0);
             
             if (winner) {
-                db.run(`UPDATE users SET stars = stars + ?, turnover = turnover + ?, wins = wins + 1 WHERE telegram_id = ?`, 
-                    [total, total, winner.telegram_id]);
+                await supabase
+                    .from('users')
+                    .update({ 
+                        stars: supabase.raw(`stars + ${total}`),
+                        turnover: supabase.raw(`turnover + ${total}`),
+                        wins: supabase.raw('wins + 1')
+                    })
+                    .eq('telegram_id', winner.telegram_id);
                 io.emit('roulette_result', { winner, total });
             } else {
                 io.emit('roulette_result', { winner: null, total });
@@ -619,10 +663,14 @@ io.on('connection', (socket) => {
         if (callback) callback([...rouletteBets]);
     });
     
-    socket.on('get_leaderboard', () => {
-        db.all(`SELECT name, avatar, turnover FROM users ORDER BY turnover DESC LIMIT 50`, (err, rows) => {
-            io.emit('leaderboard_data', rows || []);
-        });
+    socket.on('get_leaderboard', async () => {
+        const { data } = await supabase
+            .from('users')
+            .select('name, avatar, turnover')
+            .order('turnover', { ascending: false })
+            .limit(50);
+        
+        io.emit('leaderboard_data', data || []);
     });
 });
 
@@ -631,4 +679,5 @@ startRocketCountdown();
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`📦 Supabase подключён: ${SUPABASE_URL}`);
 });
