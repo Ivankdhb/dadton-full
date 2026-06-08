@@ -40,6 +40,7 @@ db.serialize(() => {
         telegram_id TEXT UNIQUE,
         deposited INTEGER DEFAULT 0,
         withdrawn INTEGER DEFAULT 0,
+        admin_added INTEGER DEFAULT 0,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     
@@ -51,6 +52,15 @@ db.serialize(() => {
         asset TEXT,
         wallet TEXT,
         status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    
+    db.run(`CREATE TABLE IF NOT EXISTS referrals_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_id TEXT,
+        referred_id TEXT,
+        amount INTEGER,
+        earned INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 });
@@ -72,6 +82,20 @@ async function notifyAdmin(message) {
             })
         });
     } catch(e) { console.log('Notify error:', e); }
+}
+
+async function notifyUser(telegram_id, message) {
+    try {
+        await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: telegram_id,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+    } catch(e) { console.log('Notify user error:', e); }
 }
 
 app.post('/api/create-invoice', async (req, res) => {
@@ -138,11 +162,21 @@ app.post('/webhook/telegram', async (req, res) => {
         const starsAmount = payment.total_amount;
         const userId = payload.userId;
         
-        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [starsAmount, userId.toString()]);
-        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
-            [userId.toString(), starsAmount, starsAmount]);
+        db.get(`SELECT referrer_id, name FROM users WHERE telegram_id = ?`, [userId.toString()], (err, user) => {
+            db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [starsAmount, userId.toString()]);
+            db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, ?, 0, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
+                [userId.toString(), starsAmount, starsAmount]);
+            
+            if (user && user.referrer_id) {
+                const referrerEarned = Math.floor(starsAmount * 0.05);
+                db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [referrerEarned, user.referrer_id]);
+                db.run(`INSERT INTO referrals_log (referrer_id, referred_id, amount, earned) VALUES (?, ?, ?, ?)`,
+                    [user.referrer_id, userId.toString(), starsAmount, referrerEarned]);
+                notifyUser(user.referrer_id, `🎉 Ваш реферал ${user.name} пополнил баланс на ${starsAmount}⭐\n💰 Вы получили ${referrerEarned}⭐ (5%)`);
+            }
+        });
         
-        console.log(`✅ Пользователь ${userId} пополнил ${starsAmount}⭐`);
+        console.log(`✅ Пользователь ${userId} пополнил ${starsAmount}⭐ через Stars`);
         await notifyAdmin(`💰 <b>ПОПОЛНЕНИЕ ЧЕРЕЗ STARS</b>\n👤 ID: ${userId}\n⭐ Сумма: +${starsAmount}`);
         return res.sendStatus(200);
     }
@@ -151,8 +185,18 @@ app.post('/webhook/telegram', async (req, res) => {
 });
 
 app.post('/api/deposit-request', (req, res) => {
-    const { telegram_id, name, amount, asset, stars } = req.body;
-    console.log(`📩 ЗАЯВКА: ${name} (${telegram_id}) хочет пополнить ${amount} ${asset} -> ${stars}⭐`);
+    const { telegram_id, name, amount, asset, stars, tx_hash } = req.body;
+    console.log(`📩 ЗАЯВКА НА ПОПОЛНЕНИЕ: ${name} (${telegram_id}) -> ${amount} ${asset} = ${stars}⭐`);
+    
+    // Автоматическое зачисление при подтверждении транзакции
+    if (tx_hash) {
+        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars, telegram_id]);
+        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, ?, 0, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
+            [telegram_id, stars, stars]);
+        notifyUser(telegram_id, `✅ Ваш баланс пополнен на ${stars}⭐ через ${asset}!`);
+        return res.json({ success: true, auto_credited: true });
+    }
+    
     notifyAdmin(`📩 <b>ЗАЯВКА НА ПОПОЛНЕНИЕ</b>\n👤 ${name}\n🆔 ${telegram_id}\n💎 ${amount} ${asset}\n⭐ ${stars}`);
     res.json({ success: true });
 });
@@ -165,44 +209,42 @@ app.post('/api/withdraw-request', (req, res) => {
             return res.json({ success: false, error: 'Недостаточно звёзд' });
         }
         
-        db.run(`INSERT INTO withdraw_requests (telegram_id, name, amount, asset, wallet) VALUES (?, ?, ?, ?, ?)`,
-            [telegram_id, row.name, stars_amount, asset, wallet_address]);
+        // Сразу списываем баланс
+        db.run(`UPDATE users SET stars = stars - ? WHERE telegram_id = ?`, [stars_amount, telegram_id]);
+        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET withdrawn = withdrawn + ?`, 
+            [telegram_id, stars_amount, stars_amount]);
         
-        let cryptoAmount = 0;
-        let cryptoCurrency = '';
+        db.run(`INSERT INTO withdraw_requests (telegram_id, name, amount, asset, wallet) VALUES (?, ?, ?, ?, ?)`,
+            [telegram_id, row.name, stars_amount, asset, wallet_address || 'Telegram Stars']);
+        
+        let message = `🔴 <b>НОВАЯ ЗАЯВКА НА ВЫВОД</b>\n👤 Игрок: ${row.name}\n🆔 ID: ${telegram_id}\n⭐ Сумма: ${stars_amount}\n💳 Валюта: ${asset}`;
+        
         if (asset === 'TON') {
-            cryptoAmount = (stars_amount / 85).toFixed(2);
-            cryptoCurrency = 'TON';
-        } else {
-            cryptoAmount = (stars_amount / 43).toFixed(2);
-            cryptoCurrency = 'USDT';
+            const cryptoAmount = (stars_amount / 85).toFixed(2);
+            message += `\n💰 Отправить ${cryptoAmount} TON на кошелёк: ${wallet_address}`;
+        } else if (asset === 'USDT') {
+            const cryptoAmount = (stars_amount / 43).toFixed(2);
+            message += `\n💰 Отправить ${cryptoAmount} USDT на кошелёк: ${wallet_address}`;
+        } else if (asset === 'STARS') {
+            message += `\n💰 Выдать ${stars_amount} Telegram Stars пользователю @${row.name || row.telegram_id}`;
         }
         
-        notifyAdmin(`
-🔴 <b>НОВАЯ ЗАЯВКА НА ВЫВОД</b>
-👤 Игрок: ${row.name}
-🆔 ID: ${telegram_id}
-⭐ Сумма: ${stars_amount}
-💳 Валюта: ${asset}
-📮 Кошелёк: ${wallet_address}
-💰 <b>Отправить ${cryptoAmount} ${cryptoCurrency}</b>
-        `);
-        
+        notifyAdmin(message);
         res.json({ success: true, message: 'Заявка отправлена админу' });
     });
 });
 
 app.post('/api/finance-stats', (req, res) => {
     const { telegram_id } = req.body;
-    db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-        res.json({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0 });
+    db.get(`SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+        res.json({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0, admin_added: row?.admin_added || 0 });
     });
 });
 
 const ADMIN_ID = '1631627984';
 
 app.post('/api/admin/add-stars', (req, res) => {
-    const { admin_id, target_telegram_id, stars_amount } = req.body;
+    const { admin_id, target_telegram_id, stars_amount, comment } = req.body;
     
     if (admin_id !== ADMIN_ID) {
         return res.json({ success: false, error: 'Доступ запрещён' });
@@ -218,10 +260,13 @@ app.post('/api/admin/add-stars', (req, res) => {
         }
         
         db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars_amount, target_telegram_id]);
-        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
+        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET admin_added = admin_added + ?`, 
             [target_telegram_id, stars_amount, stars_amount]);
         
-        notifyAdmin(`✅ <b>АДМИН ПОПОЛНИЛ БАЛАНС</b>\n📱 Пользователь: ${row.name}\n🆔 ID: ${target_telegram_id}\n⭐ Сумма: +${stars_amount}`);
+        let message = `👑 <b>АДМИН ПОПОЛНИЛ ВАШ БАЛАНС</b>\n⭐ Сумма: +${stars_amount}\n📝 Комментарий: ${comment || 'Без комментария'}`;
+        notifyUser(target_telegram_id, message);
+        
+        notifyAdmin(`✅ <b>АДМИН ПОПОЛНИЛ БАЛАНС</b>\n📱 Пользователь: ${row.name}\n🆔 ID: ${target_telegram_id}\n⭐ Сумма: +${stars_amount}\n📝 Комментарий: ${comment || '—'}`);
         
         res.json({ success: true, message: `Пользователю ${row.name} добавлено ${stars_amount}⭐` });
     });
@@ -258,18 +303,15 @@ app.post('/api/admin/approve-withdraw', (req, res) => {
         return res.json({ success: false, error: 'Доступ запрещён' });
     }
     
-    db.get(`SELECT stars, name FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-        if (!row || row.stars < stars_amount) {
-            return res.json({ success: false, error: 'Недостаточно средств' });
+    db.get(`SELECT name FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+        if (!row) {
+            return res.json({ success: false, error: 'Пользователь не найден' });
         }
-        
-        db.run(`UPDATE users SET stars = stars - ? WHERE telegram_id = ?`, [stars_amount, telegram_id]);
-        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET withdrawn = withdrawn + ?`, 
-            [telegram_id, stars_amount, stars_amount]);
         
         db.run(`UPDATE withdraw_requests SET status = 'approved' WHERE telegram_id = ? AND amount = ? AND status = 'pending'`,
             [telegram_id, stars_amount]);
         
+        notifyUser(telegram_id, `✅ <b>ВАША ЗАЯВКА НА ВЫВОД ПОДТВЕРЖДЕНА</b>\n⭐ Сумма: ${stars_amount}\n💸 Статус: ВЫПОЛНЕНА`);
         notifyAdmin(`✅ <b>ВЫВОД ПОДТВЕРЖДЁН</b>\n👤 Игрок: ${row.name}\n⭐ Сумма: ${stars_amount}\n💸 Статус: ВЫПОЛНЕН`);
         
         res.json({ success: true });
@@ -441,15 +483,12 @@ io.on('connection', (socket) => {
                     if (err) {
                         if (callback) callback({ success: false, error: err.message });
                     } else {
-                        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, 0, 0)`, [telegram_id]);
-                        if (referrerId) {
-                            db.run(`UPDATE users SET stars = stars + 0 WHERE telegram_id = ?`, [referrerId]);
-                        }
+                        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, 0, 0)`, [telegram_id]);
                         if (callback) callback({ success: true, stars: 0, name, telegram_id, avatar, turnover: 0, games_played: 0, wins: 0 });
                     }
                 });
             } else {
-                db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, finance) => {
+                db.get(`SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, finance) => {
                     if (callback) callback({ 
                         success: true, 
                         stars: row.stars, 
@@ -460,7 +499,8 @@ io.on('connection', (socket) => {
                         games_played: row.games_played || 0, 
                         wins: row.wins || 0,
                         total_deposited: finance?.deposited || 0,
-                        total_withdrawn: finance?.withdrawn || 0
+                        total_withdrawn: finance?.withdrawn || 0,
+                        admin_added: finance?.admin_added || 0
                     });
                 });
             }
@@ -470,7 +510,7 @@ io.on('connection', (socket) => {
     socket.on('get_balance', (telegram_id, callback) => {
         db.get(`SELECT stars, name, avatar, turnover, games_played, wins FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
             if (row) {
-                db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, finance) => {
+                db.get(`SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, finance) => {
                     if (callback) callback({ 
                         stars: row.stars, 
                         name: row.name, 
@@ -479,7 +519,8 @@ io.on('connection', (socket) => {
                         games_played: row.games_played || 0, 
                         wins: row.wins || 0,
                         total_deposited: finance?.deposited || 0,
-                        total_withdrawn: finance?.withdrawn || 0
+                        total_withdrawn: finance?.withdrawn || 0,
+                        admin_added: finance?.admin_added || 0
                     });
                 });
             } else {
@@ -490,14 +531,16 @@ io.on('connection', (socket) => {
     
     socket.on('get_referral_stats', (telegram_id, callback) => {
         db.all(`SELECT name, username, telegram_id, turnover FROM users WHERE referrer_id = ?`, [telegram_id], (err, rows) => {
-            const totalEarned = (rows || []).reduce((sum, r) => sum + Math.floor(r.turnover * 0.05), 0);
-            if (callback) callback({ count: rows?.length || 0, earned: totalEarned, referrals: rows || [] });
+            db.all(`SELECT SUM(earned) as total FROM referrals_log WHERE referrer_id = ?`, [telegram_id], (err, earnedRow) => {
+                const totalEarned = earnedRow?.total || 0;
+                if (callback) callback({ count: rows?.length || 0, earned: totalEarned, referrals: rows || [] });
+            });
         });
     });
     
     socket.on('get_finance_stats', (telegram_id, callback) => {
-        db.get(`SELECT deposited, withdrawn FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
-            if (callback) callback({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0 });
+        db.get(`SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+            if (callback) callback({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0, admin_added: row?.admin_added || 0 });
         });
     });
     
@@ -780,4 +823,4 @@ startRocketCountdown();
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
-});
+}); 
