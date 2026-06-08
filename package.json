@@ -8,6 +8,6 @@
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.6.1",
-    "@supabase/supabase-js": "^2.39.0"
+    "sqlite3": "^5.1.6"
   }
 }
