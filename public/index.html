@@ -39,7 +39,8 @@
         
         .rocket-container { background: #111111; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border); margin-bottom: 16px; position: relative; overflow: hidden; }
         .rocket-canvas { position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; background: #000; }
-        #rocketVideo { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+        #rocketVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #waitingOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 2; transition: 0.3s; }
         .rocket-multiplier { font-size: 48px; font-weight: 900; font-family: monospace; letter-spacing: 2px; margin-top: 10px; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); position: relative; z-index: 10; }
         .rocket-multiplier.flying { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
         .rocket-multiplier.crashed { color: var(--danger); }
@@ -175,9 +176,12 @@
 <div id="screen-crash" class="screen">
     <div class="rocket-container">
         <div class="rocket-canvas" id="rocketCanvas">
-            <video id="rocketVideo" autoplay muted playsinline loop>
+            <video id="rocketVideo" autoplay muted playsinline loop style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;">
                 <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4">
             </video>
+            <div id="waitingOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                <span style="color: #FFD700; font-size: 20px; font-weight: 800;">● ОЖИДАНИЕ</span>
+            </div>
             <div class="explosion" id="explosion">💥</div>
         </div>
         <div class="rocket-multiplier" id="crashMult">1.00x</div>
@@ -190,7 +194,7 @@
         <div class="auto-row"><span>⚡ Автовывод</span><div style="display:flex; align-items:center; gap:6px;"><input type="number" id="autoCashoutVal" class="auto-value" value="1.5" step="0.05" min="1.05" max="10"><label class="switch"><input type="checkbox" id="autoCashoutToggle"><span class="slider"></span></label></div></div>
         <div class="btn" id="crashBtn" onclick="rocketAction()">💰 Сделать ставку</div>
     </div>
-    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">● Ожидание</span></div>
+    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">● ОЖИДАНИЕ</span></div>
     <div class="bets-list" id="crashBets"></div>
 </div>
 
@@ -623,11 +627,15 @@
         }).catch(e => toast('❌ Ошибка сервера'));
     }
 
-    // ==================== РАКЕТА ====================
-    function checkAutoCashout() {
-        if (autoEnabled && hasActiveBet && myBet && !myBet.cashed && isFlying && currentMultiplier >= myBet.autoCashout - 0.005) {
-            cashout();
-        }
+    // ==================== РАКЕТА - УПРАВЛЕНИЕ ОВЕРЛЕЕМ ====================
+    const waitingOverlay = document.getElementById('waitingOverlay');
+    
+    function showWaitingOverlay() {
+        if (waitingOverlay) waitingOverlay.style.display = 'flex';
+    }
+    
+    function hideWaitingOverlay() {
+        if (waitingOverlay) waitingOverlay.style.display = 'none';
     }
     
     function showExplosion() {
@@ -636,24 +644,9 @@
         setTimeout(() => { explosion.classList.remove('active'); }, 500);
     }
     
-    // Управление видео
-    const rocketVideo = document.getElementById('rocketVideo');
-    
-    function playRocketVideo() {
-        if (rocketVideo) {
-            rocketVideo.currentTime = 0;
-            rocketVideo.play().catch(e => console.log('Video play error:', e));
-        }
-    }
-    
-    function pauseRocketVideo() {
-        if (rocketVideo) rocketVideo.pause();
-    }
-    
-    function resetRocketVideo() {
-        if (rocketVideo) {
-            rocketVideo.currentTime = 0;
-            rocketVideo.pause();
+    function checkAutoCashout() {
+        if (autoEnabled && hasActiveBet && myBet && !myBet.cashed && isFlying && currentMultiplier >= myBet.autoCashout - 0.005) {
+            cashout();
         }
     }
 
@@ -769,23 +762,25 @@
         const multDiv = document.getElementById('crashMult');
         if (s > 0) { 
             isFlying = false; 
+            showWaitingOverlay();
             if (statusDiv) { 
                 multDiv.style.display = 'none'; 
                 statusDiv.style.display = 'block'; 
                 statusDiv.innerHTML = s; 
             } 
-            if (el) el.innerHTML = `⏳ Старт через ${s}`; 
+            if (el) el.innerHTML = `⏳ СТАРТ ЧЕРЕЗ ${s}`; 
         }
         else if (s === 0) { 
             isFlying = true; 
-            if (el) el.innerHTML = '🚀 В игре'; 
+            hideWaitingOverlay();
+            if (el) el.innerHTML = '🚀 В ИГРЕ'; 
             if (statusDiv) statusDiv.style.display = 'none'; 
             if (multDiv) multDiv.style.display = 'block'; 
         }
         else { 
             isFlying = false; 
-            resetRocketVideo();
-            if (el) el.innerHTML = '● Ожидание'; 
+            showWaitingOverlay();
+            if (el) el.innerHTML = '● ОЖИДАНИЕ'; 
             if (statusDiv) statusDiv.style.display = 'none'; 
             if (multDiv) multDiv.style.display = 'block'; 
         }
@@ -794,7 +789,7 @@
 
     socket.on('rocket_start', () => { 
         isFlying = true; 
-        playRocketVideo();
+        hideWaitingOverlay();
         document.getElementById('crashMult').innerHTML = '1.00x'; 
         document.getElementById('crashMult').className = 'rocket-multiplier flying'; 
         updateButtonUI(); 
@@ -808,8 +803,8 @@
     
     socket.on('rocket_crash', (mult) => { 
         isFlying = false; 
-        pauseRocketVideo();
-        showExplosion(); 
+        showExplosion();
+        setTimeout(() => { showWaitingOverlay(); }, 500);
         if (hasActiveBet && myBet && !myBet.cashed) { 
             gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
             if (gameHistory.length > 10) gameHistory.pop(); 
@@ -825,7 +820,6 @@
         document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
         setTimeout(() => { 
             refreshBalance(); 
-            resetRocketVideo();
         }, 500); 
         updateAutoSettingsLock(); 
         updateButtonUI(); 
@@ -1209,7 +1203,6 @@
         if (game === 'crash') { 
             updateButtonUI(); 
             updateAutoSettingsLock(); 
-            resetRocketVideo();
         }
         if (game !== 'roulette') stopRouletteAutoSpin();
     }
