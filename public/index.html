@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DadTon - Премиум</title>
+    <title>DadTon</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -38,21 +38,29 @@
         .game-card .art { position: absolute; right: 16px; bottom: 12px; font-size: 48px; opacity: 0.8; }
         
         .rocket-container { background: #111111; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border); margin-bottom: 16px; position: relative; overflow: hidden; }
-        .rocket-canvas { position: relative; width: 100%; height: 200px; margin-bottom: 10px; }
-        .rocket-ship { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 64px; filter: drop-shadow(0 0 15px var(--gold-glow)); transition: bottom 0.05s linear; z-index: 10; }
-        .rocket-ship.crashed { animation: shake 0.3s ease-in-out 3; filter: drop-shadow(0 0 15px var(--danger)); }
-        @keyframes shake { 0%, 100% { transform: translateX(-50%) rotate(0deg); } 25% { transform: translateX(-50%) rotate(5deg); } 75% { transform: translateX(-50%) rotate(-5deg); } }
-        .rocket-exhaust { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 20px; background: radial-gradient(ellipse, #ff6600, #ff3300); border-radius: 50%; filter: blur(4px); animation: exhaust 0.1s infinite alternate; z-index: 5; }
-        @keyframes exhaust { from { opacity: 0.7; width: 30px; height: 15px; } to { opacity: 1; width: 50px; height: 25px; } }
-        .rocket-smoke { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 40px; background: radial-gradient(ellipse, rgba(100,100,100,0.6), transparent); border-radius: 50%; filter: blur(8px); animation: smoke 0.3s infinite alternate; z-index: 4; }
-        @keyframes smoke { from { opacity: 0.3; width: 60px; height: 30px; } to { opacity: 0.8; width: 100px; height: 50px; } }
-        .explosion { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.1s; }
-        .explosion.active { opacity: 1; animation: boom 0.5s ease-out forwards; }
-        @keyframes boom { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+        .rocket-canvas { position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; background: #000; }
+        #rocketVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
         .rocket-multiplier { font-size: 48px; font-weight: 900; font-family: monospace; letter-spacing: 2px; margin-top: 10px; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
         .rocket-multiplier.flying { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
         .rocket-multiplier.crashed { color: var(--danger); }
         .rocket-countdown { font-size: 40px; font-weight: 900; color: var(--gold); }
+        
+        .explosion {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            transition: opacity 0.1s;
+        }
+        .explosion.active {
+            opacity: 1;
+            animation: boom 0.5s ease-out forwards;
+        }
+        @keyframes boom { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
         
         .bet-panel { background: #111111; border-radius: 12px; padding: 16px; border: 1px solid var(--border); }
         .bet-input { background: #1a1a1a; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; width: 100%; text-align: center; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
@@ -129,19 +137,6 @@
         .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
         .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
-        .stars-option {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #1a1a1a;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            border: 1px solid var(--border);
-            transition: all 0.2s;
-        }
-        .stars-option:active { transform: scale(0.98); background: #222; border-color: var(--gold); }
         .custom-stars {
             display: flex;
             gap: 8px;
@@ -192,10 +187,10 @@
 
 <div id="screen-crash" class="screen">
     <div class="rocket-container">
-        <div class="rocket-canvas">
-            <div class="rocket-ship" id="rocketShip">🚀</div>
-            <div class="rocket-exhaust" id="rocketExhaust"></div>
-            <div class="rocket-smoke" id="rocketSmoke"></div>
+        <div class="rocket-canvas" id="rocketCanvas">
+            <video id="rocketVideo" autoplay muted playsinline loop style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                <source src="https://files.catbox.moe/7coqjg.mp4" type="video/mp4">
+            </video>
             <div class="explosion" id="explosion">💥</div>
         </div>
         <div class="rocket-multiplier" id="crashMult">1.00x</div>
@@ -208,7 +203,7 @@
         <div class="auto-row"><span>Автовывод</span><div style="display:flex; align-items:center; gap:6px;"><input type="number" id="autoCashoutVal" class="auto-value" value="1.5" step="0.05" min="1.05" max="10"><label class="switch"><input type="checkbox" id="autoCashoutToggle"><span class="slider"></span></label></div></div>
         <div class="btn" id="crashBtn" onclick="rocketAction()">Сделать ставку</div>
     </div>
-    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">● Ожидание</span></div>
+    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">Ожидание</span></div>
     <div class="bets-list" id="crashBets"></div>
 </div>
 
@@ -365,9 +360,6 @@
     let currentBet = 10, myBet = null, autoEnabled = false, autoValue = 1.5, betsList = [], isFlying = false, crashHistory = [], currentMultiplier = 1;
     let hasActiveBet = false;
     
-    let rocketMaxHeight = 150;
-    let minBottom = 20;
-    
     let minesBet = 20, minesActive = false, minesRevealed = 0, minesMinesCount = 5, minesGridActive = false, minesCurrentWinAmount = 0, minesMult = 1;
     let minesWaiting = false;
     
@@ -379,13 +371,7 @@
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
     const USDT_JETTON = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 
-    // ==================== ФУНКЦИЯ МНОЖИТЕЛЯ МИН ====================
     function calculateMinesMultiplier(minesCount, revealed) {
-        // 5 мин: каждая +4% (1.04 в степени revealed)
-        // 10 мин: каждая +12% (1.12 в степени revealed)
-        // 15 мин: каждая +30% (1.30 в степени revealed)
-        // 20 мин: каждая +100% (2.00 в степени revealed)
-        // 24 мин: каждая +200% (3.00 в степени revealed)
         let perCellMultiplier = 1;
         if (minesCount === 5) perCellMultiplier = 1.04;
         else if (minesCount === 10) perCellMultiplier = 1.12;
@@ -657,23 +643,32 @@
         }
     }
     
-    function updateRocketPosition(multiplier) {
-        const rocket = document.getElementById('rocketShip');
-        if (!rocket) return;
-        if (!isFlying) { rocket.style.bottom = minBottom + 'px'; return; }
-        let progress = Math.min(1, (multiplier - 1) / 4);
-        rocket.style.bottom = minBottom + (rocketMaxHeight * progress) + 'px';
-    }
-    
     function showExplosion() {
         const explosion = document.getElementById('explosion');
-        const rocket = document.getElementById('rocketShip');
-        rocket.classList.add('crashed');
         explosion.classList.add('active');
-        setTimeout(() => { explosion.classList.remove('active'); rocket.classList.remove('crashed'); }, 500);
+        setTimeout(() => { explosion.classList.remove('active'); }, 500);
     }
     
-    function resetRocketPosition() { const rocket = document.getElementById('rocketShip'); if (rocket) rocket.style.bottom = minBottom + 'px'; }
+    function playRocketVideo() {
+        const video = document.getElementById('rocketVideo');
+        if (video) {
+            video.currentTime = 0;
+            video.play().catch(e => console.log('Video play error:', e));
+        }
+    }
+    
+    function pauseRocketVideo() {
+        const video = document.getElementById('rocketVideo');
+        if (video) video.pause();
+    }
+    
+    function resetRocketVideo() {
+        const video = document.getElementById('rocketVideo');
+        if (video) {
+            video.currentTime = 0;
+            video.pause();
+        }
+    }
 
     function updateCrashBet() {
         if (hasActiveBet) { toast("Нельзя менять ставку после её создания"); return; }
@@ -720,7 +715,7 @@
         if (!hasActiveBet && !isFlying) { btn.innerText = "Сделать ставку"; btn.className = "btn"; }
         else if (hasActiveBet && !isFlying) { btn.innerText = "Отмена"; btn.className = "btn btn-cancel"; }
         else if (hasActiveBet && isFlying && myBet && !myBet.cashed) { btn.innerText = "Забрать"; btn.className = "btn btn-cashout"; }
-        else { btn.innerText = "Ожидание"; btn.className = "btn btn-secondary"; btn.style.opacity = "0.7"; btn.disabled = true; }
+        else { btn.innerText = "Ожидание"; btn.className = "btn btn-secondary"; btn.style.opacity = "0.7"; }
     }
 
     function rocketAction() {
@@ -785,20 +780,70 @@
         const el = document.getElementById('crashStatus');
         const statusDiv = document.getElementById('crashStatusText');
         const multDiv = document.getElementById('crashMult');
-        if (s > 0) { isFlying = false; resetRocketPosition(); if (statusDiv) { multDiv.style.display = 'none'; statusDiv.style.display = 'block'; statusDiv.innerHTML = s; } if (el) el.innerHTML = `Старт через ${s}`; }
-        else if (s === 0) { isFlying = true; if (el) el.innerHTML = 'В игре'; if (statusDiv) statusDiv.style.display = 'none'; if (multDiv) multDiv.style.display = 'block'; }
-        else { isFlying = false; if (el) el.innerHTML = 'Ожидание'; if (statusDiv) statusDiv.style.display = 'none'; if (multDiv) multDiv.style.display = 'block'; resetRocketPosition(); }
+        if (s > 0) { 
+            isFlying = false; 
+            if (statusDiv) { 
+                multDiv.style.display = 'none'; 
+                statusDiv.style.display = 'block'; 
+                statusDiv.innerHTML = s; 
+            } 
+            if (el) el.innerHTML = `Старт через ${s}`; 
+        }
+        else if (s === 0) { 
+            isFlying = true; 
+            if (el) el.innerHTML = 'В игре'; 
+            if (statusDiv) statusDiv.style.display = 'none'; 
+            if (multDiv) multDiv.style.display = 'block'; 
+        }
+        else { 
+            isFlying = false; 
+            resetRocketVideo();
+            if (el) el.innerHTML = 'Ожидание'; 
+            if (statusDiv) statusDiv.style.display = 'none'; 
+            if (multDiv) multDiv.style.display = 'block'; 
+        }
         updateButtonUI();
     });
 
-    socket.on('rocket_start', () => { isFlying = true; document.getElementById('crashMult').innerHTML = '1.00x'; document.getElementById('crashMult').className = 'rocket-multiplier flying'; resetRocketPosition(); updateButtonUI(); });
+    socket.on('rocket_start', () => { 
+        isFlying = true; 
+        playRocketVideo();
+        document.getElementById('crashMult').innerHTML = '1.00x'; 
+        document.getElementById('crashMult').className = 'rocket-multiplier flying'; 
+        updateButtonUI(); 
+    });
+    
     socket.on('rocket_multiplier', (m) => { 
         currentMultiplier = m; 
         document.getElementById('crashMult').innerHTML = m.toFixed(2) + 'x'; 
-        updateRocketPosition(m); 
         checkAutoCashout(); 
     });
-    socket.on('rocket_crash', (mult) => { isFlying = false; showExplosion(); if (hasActiveBet && myBet && !myBet.cashed) { gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); if (gameHistory.length > 10) gameHistory.pop(); hasActiveBet = false; myBet = null; refreshBalance(); if (tg) tg.HapticFeedback?.notificationOccurred('error'); } crashHistory.unshift(mult.toFixed(2)); if (crashHistory.length > 10) crashHistory.pop(); document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); document.getElementById('crashMult').className = 'rocket-multiplier crashed'; document.getElementById('crashMult').innerHTML = 'ВЗРЫВ!'; setTimeout(() => { refreshBalance(); resetRocketPosition(); }, 500); updateAutoSettingsLock(); updateButtonUI(); });
+    
+    socket.on('rocket_crash', (mult) => { 
+        isFlying = false; 
+        pauseRocketVideo();
+        showExplosion(); 
+        if (hasActiveBet && myBet && !myBet.cashed) { 
+            gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
+            if (gameHistory.length > 10) gameHistory.pop(); 
+            hasActiveBet = false; 
+            myBet = null; 
+            refreshBalance(); 
+            if (tg) tg.HapticFeedback?.notificationOccurred('error'); 
+        } 
+        crashHistory.unshift(mult.toFixed(2)); 
+        if (crashHistory.length > 10) crashHistory.pop(); 
+        document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); 
+        document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
+        document.getElementById('crashMult').innerHTML = 'ВЗРЫВ!'; 
+        setTimeout(() => { 
+            refreshBalance(); 
+            resetRocketVideo();
+        }, 500); 
+        updateAutoSettingsLock(); 
+        updateButtonUI(); 
+    });
+    
     socket.on('rocket_bet_placed', (b) => { betsList.push({ ...b, cashedAt: null }); renderBets(); refreshBalance(); });
     socket.on('rocket_cashout_done', (d) => { if (d.name === pname) { gameHistory.unshift({ game: 'Ракета', amount: d.win, time: new Date().toLocaleTimeString() }); if (gameHistory.length > 10) gameHistory.pop(); refreshBalance(); if (myBet) myBet.cashed = true; hasActiveBet = false; myBet = null; if (tg) tg.HapticFeedback?.notificationOccurred('success'); } const bb = betsList.find(b => b.name === d.name && !b.cashedAt); if (bb) { bb.cashedAt = d.multiplier; bb.winAmount = d.win; } renderBets(); updateAutoSettingsLock(); updateButtonUI(); });
     socket.on('rocket_bets_clear', () => { betsList = []; renderBets(); });
@@ -806,7 +851,7 @@
     socket.on('rocket_history_data', (d) => { if (d && d.length) { crashHistory = d.map(item => item.multiplier.toFixed(2)); if (crashHistory.length > 10) crashHistory = crashHistory.slice(0, 10); document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); } });
     socket.emit('rocket_get_history');
 
-    // ==================== МИНЫ (исправленный множитель) ====================
+    // ==================== МИНЫ ====================
     function minesBetAdj(type) {
         if (minesActive) { toast("Нельзя менять ставку во время игры!"); return; }
         let input = document.getElementById('minesBetInput');
@@ -1174,7 +1219,11 @@
         document.getElementById(`screen-${game}`).classList.add('active');
         if (game === 'mines') renderMinesBoard(false);
         if (game === 'roulette') startRouletteAutoSpin();
-        if (game === 'crash') { updateButtonUI(); updateAutoSettingsLock(); resetRocketPosition(); }
+        if (game === 'crash') { 
+            updateButtonUI(); 
+            updateAutoSettingsLock(); 
+            resetRocketVideo();
+        }
         if (game !== 'roulette') stopRouletteAutoSpin();
     }
 
@@ -1187,7 +1236,6 @@
     document.getElementById('autoCashoutToggle').checked = false;
     document.getElementById('autoCashoutVal').disabled = true;
     updateAutoSettingsLock();
-    resetRocketPosition();
     socket.emit('roulette_get_bets', (bets) => { if (bets && bets.length) { rouletteBets = bets; renderRouletteBets(); } });
 </script>
 </body>
