@@ -221,7 +221,6 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- МОДАЛЬНОЕ ОКНО ПОПОЛНЕНИЯ -->
 <div id="depositModal" class="modal">
     <div class="modal-content">
         <h3 style="color:var(--gold); margin-bottom:16px; font-size:18px;">💎 Пополнение</h3>
@@ -245,38 +244,22 @@
             <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через Tonkeeper</div>
         </div>
         
-        <!-- TELEGRAM STARS ПАНЕЛЬ -->
+        <!-- TELEGRAM STARS ПАНЕЛЬ (РУЧНОЙ ВВОД) -->
         <div id="starsPanel" style="display:none;">
-            <div class="stars-option" onclick="sendStars(10)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 10 звёзд</span>
-                <span style="color:var(--gold);">→ 10⭐ в игру</span>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                <div class="preset" onclick="setStarsAmount(10)">10⭐</div>
+                <div class="preset" onclick="setStarsAmount(25)">25⭐</div>
+                <div class="preset" onclick="setStarsAmount(50)">50⭐</div>
+                <div class="preset" onclick="setStarsAmount(100)">100⭐</div>
+                <div class="preset" onclick="setStarsAmount(250)">250⭐</div>
+                <div class="preset" onclick="setStarsAmount(500)">500⭐</div>
+                <div class="preset" onclick="setStarsAmount(1000)">1000⭐</div>
             </div>
-            <div class="stars-option" onclick="sendStars(25)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 25 звёзд</span>
-                <span style="color:var(--gold);">→ 25⭐ в игру</span>
-            </div>
-            <div class="stars-option" onclick="sendStars(50)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 50 звёзд</span>
-                <span style="color:var(--gold);">→ 50⭐ в игру</span>
-            </div>
-            <div class="stars-option" onclick="sendStars(100)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 100 звёзд</span>
-                <span style="color:var(--gold);">→ 100⭐ в игру</span>
-            </div>
-            <div class="stars-option" onclick="sendStars(250)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 250 звёзд</span>
-                <span style="color:var(--gold);">→ 250⭐ в игру</span>
-            </div>
-            <div class="stars-option" onclick="sendStars(500)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 500 звёзд</span>
-                <span style="color:var(--gold);">→ 500⭐ в игру</span>
-            </div>
-            <div class="stars-option" onclick="sendStars(1000)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-                <span>⭐ Отправить 1000 звёзд</span>
-                <span style="color:var(--gold);">→ 1000⭐ в игру</span>
-            </div>
+            <input type="number" id="starsInput" class="bet-input" placeholder="Своя сумма" value="50" min="1">
+            <div class="btn" onclick="payWithStars()" style="margin-top:12px;">⭐ Оплатить звёздами</div>
             <div style="margin-top:12px; font-size:10px; color:#888; text-align:center;">
-                💡 Звёзды списываются с вашего баланса в Telegram
+                💡 Звёзды списываются с вашего баланса в Telegram<br>
+                1 звезда = 1 внутриигровая звезда
             </div>
         </div>
         
@@ -389,7 +372,47 @@
         document.getElementById('starsPanel').style.display = 'block';
     }
     
-    // КРИПТО ОПЛАТА (TON или USDT)
+    function setStarsAmount(amount) {
+        document.getElementById('starsInput').value = amount;
+    }
+    
+    async function payWithStars() {
+        if (!tg) {
+            toast('❌ Telegram WebApp не найден');
+            return;
+        }
+        
+        let starsAmount = parseInt(document.getElementById('starsInput').value);
+        if (!starsAmount || starsAmount < 1) {
+            toast('❌ Введите количество звёзд (минимум 1)');
+            return;
+        }
+        
+        toast(`⭐ Создание инвойса на ${starsAmount} звёзд...`);
+        
+        try {
+            const response = await fetch('/api/create-invoice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: uid,
+                    starsAmount: starsAmount
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                toast('✅ Инвойс создан, открываем оплату...');
+            } else {
+                toast('❌ Ошибка: ' + (data.error || 'неизвестная'));
+            }
+        } catch(e) {
+            console.error('Stars error:', e);
+            toast('❌ Ошибка при создании платежа');
+        }
+    }
+    
     function sendCryptoPayment() {
         let amount = parseFloat(document.getElementById('depositAmount').value);
         
@@ -414,7 +437,6 @@
         if (selectedAsset === 'TON') {
             url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
         } else {
-            // USDT в сети TON (jetton transfer)
             url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
         }
         
@@ -435,55 +457,6 @@
                 wallet: ADMIN_WALLET
             })
         }).catch(e => console.log('Error:', e));
-    }
-    
-    // TELEGRAM STARS (отправка из баланса)
-    async function sendStars(amount) {
-        if (!tg) {
-            toast('❌ Telegram WebApp не найден');
-            return;
-        }
-        
-        toast(`⭐ Отправка ${amount} звёзд...`);
-        
-        try {
-            const invoiceData = {
-                title: `DadTon - Пополнение`,
-                description: `Получение ${amount} внутриигровых звёзд`,
-                payload: JSON.stringify({ type: 'stars', amount: amount, uid: uid }),
-                provider_token: '',
-                currency: 'XTR',
-                prices: [{ label: `⭐ ${amount} звёзд`, amount: amount }]
-            };
-            
-            tg.sendInvoice(invoiceData, (status) => {
-                if (status === 'paid') {
-                    fetch('/api/stars-payment', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            telegram_id: uid,
-                            amount: amount,
-                            stars: amount
-                        })
-                    }).then(() => {
-                        toast(`✅ Получено ${amount}⭐! Баланс обновлён`);
-                        refreshBalance();
-                        closeDepositModal();
-                    }).catch(() => {
-                        toast('⚠️ Звёзды отправлены, но баланс обновится позже');
-                        refreshBalance();
-                    });
-                } else if (status === 'cancelled') {
-                    toast('❌ Отправка отменена');
-                } else {
-                    toast('❌ Ошибка при отправке');
-                }
-            });
-        } catch(e) {
-            console.error('Stars error:', e);
-            toast('❌ Ошибка: ' + e.message);
-        }
     }
     
     function selectAsset(asset) {
@@ -514,11 +487,7 @@
         document.getElementById('depositModal').style.display = 'none';
     }
 
-    // ==================== ОСТАЛЬНЫЕ ИГРЫ (ракета, мины, рулетка) ====================
-    // ... (код игр остаётся такой же как у тебя, я его не трогаю чтобы не раздувать сообщение)
-    
-    // ВНИМАНИЕ: Ниже нужно вставить код ракеты, минов, рулетки, лидеров, профиля
-    // Так как он большой, я предполагаю что у тебя он уже есть и работает
+    // ==================== РАКЕТА ====================
     
     function updateRocketPosition(multiplier) {
         const rocket = document.getElementById('rocketShip');
