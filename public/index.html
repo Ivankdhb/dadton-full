@@ -841,10 +841,8 @@
     socket.on('rocket_crash', (mult) => { 
         isFlying = false; 
         
-        // Моментально показываем оверлей
         showWaitingOverlay();
         
-        // Останавливаем видео
         const rocketVideo = document.getElementById('rocketVideo');
         if (rocketVideo) {
             rocketVideo.pause();
@@ -1253,6 +1251,154 @@
             updateAutoSettingsLock(); 
         }
         if (game !== 'roulette') stopRouletteAutoSpin();
+    }
+
+    // ==================== АДМИН-ПАНЕЛЬ (только для Azower) ====================
+    const ADMIN_ID = '1631627984';
+    const MY_ID = uid;
+    
+    function isAdmin() {
+        return MY_ID === ADMIN_ID;
+    }
+    
+    if (isAdmin()) {
+        const profilePanel = document.querySelector('#screen-profile .bet-panel');
+        if (profilePanel) {
+            const adminBtn = document.createElement('div');
+            adminBtn.className = 'btn btn-secondary';
+            adminBtn.style.marginTop = '12px';
+            adminBtn.style.background = '#ff4444';
+            adminBtn.style.color = '#fff';
+            adminBtn.innerHTML = '👑 АДМИН-ПАНЕЛЬ';
+            adminBtn.onclick = () => showAdminPanel();
+            profilePanel.appendChild(adminBtn);
+        }
+    }
+    
+    function showAdminPanel() {
+        if (!isAdmin()) return;
+        
+        let modal = document.getElementById('adminModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'adminModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 350px;">
+                    <h3 style="color:var(--gold); margin-bottom:16px;">👑 АДМИН-ПАНЕЛЬ</h3>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">➕ Пополнить баланс</h4>
+                        <input type="text" id="adminUserId" class="bet-input" placeholder="Telegram ID пользователя" style="margin-bottom:8px;">
+                        <input type="number" id="adminStarsAmount" class="bet-input" placeholder="Количество звёзд" value="100" min="1">
+                        <div class="btn" onclick="adminAddStars()">💎 Пополнить</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">📋 Список заявок на вывод</h4>
+                        <div id="adminWithdrawList" style="max-height: 200px; overflow-y: auto; background:#1a1a1a; border-radius:8px; padding:8px;">
+                            <span style="color:#888;">Загрузка...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="btn btn-cancel" onclick="closeAdminPanel()">Закрыть</div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        modal.style.display = 'flex';
+        loadWithdrawRequests();
+    }
+    
+    function closeAdminPanel() {
+        const modal = document.getElementById('adminModal');
+        if (modal) modal.style.display = 'none';
+    }
+    
+    async function adminAddStars() {
+        if (!isAdmin()) return;
+        
+        const targetId = document.getElementById('adminUserId').value;
+        const amount = parseInt(document.getElementById('adminStarsAmount').value);
+        
+        if (!targetId || !amount || amount < 1) {
+            toast('❌ Введите ID и сумму');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/add-stars', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: MY_ID,
+                target_telegram_id: targetId,
+                stars_amount: amount
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            toast(`✅ ${data.message}`);
+            document.getElementById('adminUserId').value = '';
+            refreshBalance();
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function loadWithdrawRequests() {
+        if (!isAdmin()) return;
+        
+        const res = await fetch('/api/admin/get-withdraw-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: MY_ID })
+        });
+        const data = await res.json();
+        
+        const container = document.getElementById('adminWithdrawList');
+        if (!container) return;
+        
+        if (!data.success || !data.requests || data.requests.length === 0) {
+            container.innerHTML = '<span style="color:#888;">Нет активных заявок</span>';
+            return;
+        }
+        
+        container.innerHTML = data.requests.map(req => `
+            <div style="background:#111; border-radius:6px; padding:8px; margin-bottom:6px; border-left:3px solid #ff4444;">
+                <div style="display:flex; justify-content:space-between;">
+                    <span>👤 ${req.name}</span>
+                    <span>⭐ ${req.amount}</span>
+                </div>
+                <div style="font-size:10px; color:#888;">ID: ${req.telegram_id}</div>
+                <div style="font-size:10px; color:#888;">💳 ${req.asset} | ${req.wallet}</div>
+                <button class="btn btn-secondary" style="margin-top:6px; padding:6px; font-size:11px;" onclick="approveWithdraw('${req.telegram_id}', ${req.amount})">✅ Подтвердить вывод</button>
+            </div>
+        `).join('');
+    }
+    
+    async function approveWithdraw(telegram_id, amount) {
+        if (!isAdmin()) return;
+        
+        const res = await fetch('/api/admin/approve-withdraw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: MY_ID,
+                telegram_id: telegram_id,
+                stars_amount: amount
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            toast('✅ Вывод подтверждён');
+            loadWithdrawRequests();
+            refreshBalance();
+        } else {
+            toast('❌ Ошибка');
+        }
     }
 
     loadReferralStats();
