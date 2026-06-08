@@ -13,7 +13,6 @@ const io = socketIo(server, {
 app.use(express.json());
 app.use(express.static('public'));
 
-// ==================== БАЗА ДАННЫХ ====================
 const db = new sqlite3.Database('dadton.db');
 
 db.serialize(() => {
@@ -22,7 +21,8 @@ db.serialize(() => {
         telegram_id TEXT UNIQUE,
         name TEXT,
         avatar TEXT,
-        stars INTEGER DEFAULT 1000,
+        username TEXT,
+        stars INTEGER DEFAULT 0,
         turnover INTEGER DEFAULT 0,
         games_played INTEGER DEFAULT 0,
         wins INTEGER DEFAULT 0,
@@ -57,11 +57,9 @@ db.serialize(() => {
 
 console.log('✅ База данных готова');
 
-// ==================== TELEGRAM STARS ====================
 const BOT_TOKEN = '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0';
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// Отправка уведомления админу в Telegram
 async function notifyAdmin(message) {
     try {
         await fetch(`${TELEGRAM_API}/sendMessage`, {
@@ -84,10 +82,12 @@ app.post('/api/create-invoice', async (req, res) => {
     }
     
     let userId = 'unknown';
+    let userName = 'unknown';
     try {
         const params = new URLSearchParams(initData);
         const user = JSON.parse(params.get('user') || '{}');
         userId = user.id || 'unknown';
+        userName = user.username || user.first_name || 'unknown';
     } catch(e) {}
     
     try {
@@ -150,7 +150,6 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ==================== API ЭНДПОИНТЫ ====================
 app.post('/api/deposit-request', (req, res) => {
     const { telegram_id, name, amount, asset, stars } = req.body;
     console.log(`📩 ЗАЯВКА: ${name} (${telegram_id}) хочет пополнить ${amount} ${asset} -> ${stars}⭐`);
@@ -169,6 +168,16 @@ app.post('/api/withdraw-request', (req, res) => {
         db.run(`INSERT INTO withdraw_requests (telegram_id, name, amount, asset, wallet) VALUES (?, ?, ?, ?, ?)`,
             [telegram_id, row.name, stars_amount, asset, wallet_address]);
         
+        let cryptoAmount = 0;
+        let cryptoCurrency = '';
+        if (asset === 'TON') {
+            cryptoAmount = (stars_amount / 85).toFixed(2);
+            cryptoCurrency = 'TON';
+        } else {
+            cryptoAmount = (stars_amount / 43).toFixed(2);
+            cryptoCurrency = 'USDT';
+        }
+        
         notifyAdmin(`
 🔴 <b>НОВАЯ ЗАЯВКА НА ВЫВОД</b>
 👤 Игрок: ${row.name}
@@ -176,6 +185,7 @@ app.post('/api/withdraw-request', (req, res) => {
 ⭐ Сумма: ${stars_amount}
 💳 Валюта: ${asset}
 📮 Кошелёк: ${wallet_address}
+💰 <b>Отправить ${cryptoAmount} ${cryptoCurrency}</b>
         `);
         
         res.json({ success: true, message: 'Заявка отправлена админу' });
@@ -189,7 +199,6 @@ app.post('/api/finance-stats', (req, res) => {
     });
 });
 
-// ==================== АДМИН-ФУНКЦИИ ====================
 const ADMIN_ID = '1631627984';
 
 app.post('/api/admin/add-stars', (req, res) => {
@@ -225,7 +234,7 @@ app.post('/api/admin/get-users', (req, res) => {
         return res.json({ success: false, error: 'Доступ запрещён' });
     }
     
-    db.all(`SELECT telegram_id, name, stars, turnover FROM users ORDER BY stars DESC LIMIT 100`, (err, rows) => {
+    db.all(`SELECT telegram_id, name, username, stars, turnover FROM users ORDER BY stars DESC LIMIT 100`, (err, rows) => {
         res.json({ success: true, users: rows || [] });
     });
 });
@@ -267,11 +276,26 @@ app.post('/api/admin/approve-withdraw', (req, res) => {
     });
 });
 
-// ==================== КОНСТАНТЫ ====================
+app.post('/api/admin/find-user', (req, res) => {
+    const { admin_id, username } = req.body;
+    
+    if (admin_id !== ADMIN_ID) {
+        return res.json({ success: false, error: 'Доступ запрещён' });
+    }
+    
+    db.get(`SELECT telegram_id, name FROM users WHERE name LIKE ? OR telegram_id = ?`, 
+        [`%${username}%`, username], 
+        (err, row) => {
+            if (!row) {
+                return res.json({ success: false, error: 'Пользователь не найден' });
+            }
+            res.json({ success: true, user_id: row.telegram_id, name: row.name });
+        });
+});
+
 const MAX_BET = 5000;
 const MIN_BET = 10;
 
-// ==================== РАКЕТА ====================
 let rocketState = {
     status: 'waiting',
     currentMultiplier: 1.00,
@@ -349,7 +373,7 @@ function startRocketFlying() {
         rocketState.currentMultiplier += speed * (delta / 100);
         
         for (let bet of rocketState.bets) {
-            if (!bet.cashedAt && bet.autoCashout && rocketState.currentMultiplier >= (bet.autoCashout - 0.005)) {
+            if (!bet.cashedAt && bet.autoCashout > 0 && rocketState.currentMultiplier >= (bet.autoCashout - 0.005)) {
                 const winAmount = Math.floor(bet.amount * rocketState.currentMultiplier);
                 bet.cashedAt = rocketState.currentMultiplier;
                 bet.winAmount = winAmount;
@@ -395,7 +419,6 @@ function calculateRouletteWinner() {
     return null;
 }
 
-// ==================== СОКЕТЫ ====================
 io.on('connection', (socket) => {
     console.log('👤 Игрок подключился');
     
@@ -403,6 +426,7 @@ io.on('connection', (socket) => {
         const telegram_id = data.telegram_id;
         const name = data.name || 'Игрок';
         const avatar = data.avatar || '👤';
+        const username = data.username || null;
         const referrerId = data.referrer_id || null;
         
         if (!telegram_id) {
@@ -412,16 +436,16 @@ io.on('connection', (socket) => {
         
         db.get(`SELECT * FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
             if (!row) {
-                db.run(`INSERT INTO users (telegram_id, name, avatar, stars, referrer_id) VALUES (?, ?, ?, 1000, ?)`, 
-                    [telegram_id, name, avatar, referrerId], function(err) {
+                db.run(`INSERT INTO users (telegram_id, name, avatar, username, stars, referrer_id) VALUES (?, ?, ?, ?, 0, ?)`, 
+                    [telegram_id, name, avatar, username, referrerId], function(err) {
                     if (err) {
                         if (callback) callback({ success: false, error: err.message });
                     } else {
                         db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, 0, 0)`, [telegram_id]);
                         if (referrerId) {
-                            db.run(`UPDATE users SET stars = stars + 100 WHERE telegram_id = ?`, [referrerId]);
+                            db.run(`UPDATE users SET stars = stars + 0 WHERE telegram_id = ?`, [referrerId]);
                         }
-                        if (callback) callback({ success: true, stars: 1000, name, telegram_id, avatar, turnover: 0, games_played: 0, wins: 0 });
+                        if (callback) callback({ success: true, stars: 0, name, telegram_id, avatar, turnover: 0, games_played: 0, wins: 0 });
                     }
                 });
             } else {
@@ -459,14 +483,15 @@ io.on('connection', (socket) => {
                     });
                 });
             } else {
-                if (callback) callback({ stars: 1000 });
+                if (callback) callback({ stars: 0 });
             }
         });
     });
     
     socket.on('get_referral_stats', (telegram_id, callback) => {
-        db.get(`SELECT COUNT(*) as count, SUM(turnover) as total FROM users WHERE referrer_id = ?`, [telegram_id], (err, row) => {
-            if (callback) callback({ count: row?.count || 0, earned: Math.floor((row?.total || 0) * 0.1) });
+        db.all(`SELECT name, username, telegram_id, turnover FROM users WHERE referrer_id = ?`, [telegram_id], (err, rows) => {
+            const totalEarned = (rows || []).reduce((sum, r) => sum + Math.floor(r.turnover * 0.05), 0);
+            if (callback) callback({ count: rows?.length || 0, earned: totalEarned, referrals: rows || [] });
         });
     });
     
@@ -476,7 +501,6 @@ io.on('connection', (socket) => {
         });
     });
     
-    // ========== РАКЕТА ==========
     socket.on('rocket_place_bet', (data, callback) => {
         if (!data || rocketState.status !== 'waiting') {
             if (callback) callback({ success: false, error: 'Ставки только до взлёта!' });
@@ -555,7 +579,6 @@ io.on('connection', (socket) => {
         });
     });
     
-    // ========== МИНЫ ==========
     function calculateMinesMultiplier(minesCount, revealed) {
         let perCellMultiplier = 1;
         if (minesCount === 5) perCellMultiplier = 1.04;
@@ -663,14 +686,13 @@ io.on('connection', (socket) => {
         if (callback) callback({ success: true, winAmount });
     });
     
-    // ========== РУЛЕТКА ==========
     socket.on('roulette_place_bet', (data, callback) => {
         if (rouletteIsSpinning) {
             if (callback) callback({ success: false, error: 'Рулетка крутится!' });
             return;
         }
         
-        const { telegram_id, name, amount, avatar } = data;
+        const { telegram_id, name, amount, avatar, username } = data;
         
         if (amount < MIN_BET || amount > MAX_BET) {
             if (callback) callback({ success: false, error: `Ставка от ${MIN_BET} до ${MAX_BET}` });
@@ -693,7 +715,7 @@ io.on('connection', (socket) => {
             const hue = Math.floor(Math.random() * 360);
             const color = `hsl(${hue}, 70%, 55%)`;
             
-            rouletteBets.push({ telegram_id, name, amount, avatar: avatar || '👤', color });
+            rouletteBets.push({ telegram_id, name, amount, avatar: avatar || '👤', username: username || name, color });
             io.emit('roulette_update', [...rouletteBets]);
             if (callback) callback({ success: true });
         });
