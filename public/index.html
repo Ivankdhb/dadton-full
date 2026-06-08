@@ -41,7 +41,6 @@
         .rocket-canvas { position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; background: #000; }
         #rocketVideo { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
         
-        /* Оверлей ожидания - чёрный фон с надписью */
         .waiting-overlay {
             position: absolute;
             top: 0;
@@ -54,7 +53,6 @@
             justify-content: center;
             z-index: 20;
             border-radius: 12px;
-            transition: opacity 0.1s ease;
         }
         .waiting-overlay span {
             font-size: 24px;
@@ -69,7 +67,7 @@
         .rocket-multiplier.crashed { color: var(--danger); }
         .rocket-countdown { font-size: 40px; font-weight: 900; color: var(--gold); }
         
-        .explosion { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; opacity: 0; pointer-events: none; z-index: 25; transition: opacity 0.1s; }
+        .explosion { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; opacity: 0; pointer-events: none; z-index: 25; }
         .explosion.active { opacity: 1; animation: boom 0.5s ease-out forwards; }
         @keyframes boom { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
         
@@ -199,10 +197,10 @@
 <div id="screen-crash" class="screen">
     <div class="rocket-container">
         <div class="rocket-canvas" id="rocketCanvas">
-            <video id="rocketVideo" autoplay muted playsinline loop style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+            <video id="rocketVideo" muted playsinline loop style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
                 <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4">
             </video>
-            <div class="waiting-overlay" id="waitingOverlay" style="display: flex;">
+            <div class="waiting-overlay" id="waitingOverlay" style="display: none;">
                 <span>ОЖИДАНИЕ</span>
             </div>
             <div class="explosion" id="explosion">💥</div>
@@ -822,39 +820,59 @@
     socket.on('rocket_start', () => { 
         isFlying = true; 
         hideWaitingOverlay();
+        
+        const rocketVideo = document.getElementById('rocketVideo');
+        if (rocketVideo) {
+            rocketVideo.currentTime = 0;
+            rocketVideo.play().catch(e => console.log('Video play error:', e));
+        }
+        
         document.getElementById('crashMult').innerHTML = '1.00x'; 
         document.getElementById('crashMult').className = 'rocket-multiplier flying'; 
         updateButtonUI(); 
     });
     
+    socket.on('rocket_multiplier', (m) => { 
+        currentMultiplier = m; 
+        document.getElementById('crashMult').innerHTML = m.toFixed(2) + 'x'; 
+        checkAutoCashout(); 
+    });
+    
     socket.on('rocket_crash', (mult) => { 
-    isFlying = false; 
+        isFlying = false; 
+        
+        // Моментально показываем оверлей
+        showWaitingOverlay();
+        
+        // Останавливаем видео
+        const rocketVideo = document.getElementById('rocketVideo');
+        if (rocketVideo) {
+            rocketVideo.pause();
+        }
+        
+        showExplosion();
+        
+        if (hasActiveBet && myBet && !myBet.cashed) { 
+            gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
+            if (gameHistory.length > 10) gameHistory.pop(); 
+            hasActiveBet = false; 
+            myBet = null; 
+            refreshBalance(); 
+            if (tg) tg.HapticFeedback?.notificationOccurred('error'); 
+        } 
+        crashHistory.unshift(mult.toFixed(2)); 
+        if (crashHistory.length > 10) crashHistory.pop(); 
+        document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); 
+        document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
+        document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
+        
+        setTimeout(() => { 
+            refreshBalance(); 
+        }, 500); 
+        updateAutoSettingsLock(); 
+        updateButtonUI(); 
+    });
     
-    // Моментально чёрный фон
-    showWaitingOverlay();
-    
-    showExplosion();
-    
-    if (hasActiveBet && myBet && !myBet.cashed) { 
-        gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
-        if (gameHistory.length > 10) gameHistory.pop(); 
-        hasActiveBet = false; 
-        myBet = null; 
-        refreshBalance(); 
-        if (tg) tg.HapticFeedback?.notificationOccurred('error'); 
-    } 
-    crashHistory.unshift(mult.toFixed(2)); 
-    if (crashHistory.length > 10) crashHistory.pop(); 
-    document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); 
-    document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
-    document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
-    
-    setTimeout(() => { 
-        refreshBalance(); 
-    }, 500); 
-    updateAutoSettingsLock(); 
-    updateButtonUI(); 
-});
     socket.on('rocket_bet_placed', (b) => { betsList.push({ ...b, cashedAt: null }); renderBets(); refreshBalance(); });
     socket.on('rocket_cashout_done', (d) => { if (d.name === pname) { gameHistory.unshift({ game: 'Ракета', amount: d.win, time: new Date().toLocaleTimeString() }); if (gameHistory.length > 10) gameHistory.pop(); refreshBalance(); if (myBet) myBet.cashed = true; hasActiveBet = false; myBet = null; if (tg) tg.HapticFeedback?.notificationOccurred('success'); } const bb = betsList.find(b => b.name === d.name && !b.cashedAt); if (bb) { bb.cashedAt = d.multiplier; bb.winAmount = d.win; } renderBets(); updateAutoSettingsLock(); updateButtonUI(); });
     socket.on('rocket_bets_clear', () => { betsList = []; renderBets(); });
