@@ -69,10 +69,11 @@
         input:checked + .slider { background-color: var(--gold); }
         input:checked + .slider:before { transform: translateX(24px); }
         
-        .btn { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); width: 100%; padding: 14px; border: none; border-radius: 8px; color: #000; font-weight: 800; font-size: 16px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        /* ЯРКИЕ КНОПКИ РАКЕТЫ */
+        .btn { background: linear-gradient(135deg, #FFD700, #FFA500); width: 100%; padding: 14px; border: none; border-radius: 8px; color: #000; font-weight: 800; font-size: 16px; cursor: pointer; text-align: center; transition: all 0.2s; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.5); }
         .btn:active { transform: scale(0.97); opacity: 0.9; }
-        .btn-cancel { background: #ff4444; color: #fff; }
-        .btn-cashout { background: linear-gradient(135deg, #00cc66, #009944); color: #fff; animation: pulse 0.8s infinite; }
+        .btn-cancel { background: linear-gradient(135deg, #ff4444, #cc0000); color: #fff; box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5); }
+        .btn-cashout { background: linear-gradient(135deg, #00ff66, #009944); color: #fff; box-shadow: 0 4px 15px rgba(0, 255, 100, 0.5); animation: pulse 0.8s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 100, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(0, 255, 100, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 100, 0); } }
         
         .history { display: flex; gap: 8px; overflow-x: auto; margin: 12px 0; padding-bottom: 4px; }
@@ -94,12 +95,15 @@
         .roulette-avatars { position: absolute; width: 100%; height: 100%; }
         .roulette-pointer { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 30px; color: var(--gold); filter: drop-shadow(0 0 3px black); z-index: 10; }
         
+        /* ПЬЕДЕСТАЛ - АВАТАРКИ ПО ЦЕНТРУ */
         .podium { display: flex; justify-content: center; align-items: flex-end; gap: 15px; margin: 20px 0 30px; height: 190px; }
         .podium-item { display: flex; flex-direction: column; align-items: center; width: 90px; }
         .podium-1 { height: 130px; width: 80px; background: linear-gradient(180deg, #FFD700, #B8860B); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .podium-2 { height: 100px; width: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); border-radius: 12px 12px 8px 8px; }
-        .podium-3 { height: 75px; width: 80px; background: linear-gradient(180deg, #CD7F32, #8B4513); border-radius: 12px 12px 8px 8px; }
+        .podium-2 { height: 100px; width: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .podium-3 { height: 75px; width: 80px; background: linear-gradient(180deg, #CD7F32, #8B4513); border-radius: 12px 12px 8px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .podium-avatar { width: 46px; height: 46px; border-radius: 50%; background: #1a1a1a; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 4px; overflow: hidden; margin-left: auto; margin-right: auto; }
+        .podium-name { font-size: 10px; font-weight: 600; max-width: 70px; overflow: hidden; text-overflow: ellipsis; text-align: center; margin-top: 4px; color: #fff; }
+        
         .leader-list { display: flex; flex-direction: column; gap: 6px; }
         .leader-item { background: #111111; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
         
@@ -266,7 +270,7 @@
             <div id="starsBtn" class="asset-btn" onclick="showStarsPanel()">⭐ Telegram Stars</div>
         </div>
         
-        <!-- КРИПТО ПАНЕЛЬ (TON/USDT) -->
+        <!-- КРИПТО ПАНЕЛЬ -->
         <div id="cryptoPanel">
             <div style="display:flex; gap:10px; margin-bottom:16px;">
                 <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
@@ -381,6 +385,18 @@
         }
         return true;
     }
+    
+    function checkGameActive() {
+        if (isFlying && hasActiveBet) {
+            toast('⚠️ У вас уже есть активная ставка в этом раунде!');
+            return false;
+        }
+        if (rocketState && rocketState.status === 'waiting' && hasActiveBet) {
+            toast('⚠️ Вы уже сделали ставку в этом раунде!');
+            return false;
+        }
+        return true;
+    }
 
     socket.emit('register', { telegram_id: uid, name: pname, avatar: userAvatarUrl || pname.charAt(0), referrer_id: null }, (res) => {
         if (res?.success) { stars = res.stars; totalDeposited = res.total_deposited || 0; totalWithdrawn = res.total_withdrawn || 0; updateUI(); }
@@ -396,7 +412,7 @@
         else return `<span style="font-size:16px;font-weight:bold;">${name ? name.charAt(0).toUpperCase() : '?'}</span>`;
     }
 
-    // ==================== ПОПОЛНЕНИЕ ====================
+    // ==================== ПОПОЛНЕНИЕ (ИСПРАВЛЕНО: USDT = 1 ДОЛЛАР) ====================
     
     function showCryptoPanel() {
         document.getElementById('cryptoBtn').classList.add('active');
@@ -453,7 +469,7 @@
         }
     }
     
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ КРИПТО
+    // ИСПРАВЛЕНА: USDT отправляется КАК 1 USDT, а не 1000
     function sendCryptoPayment() {
         let amount = parseFloat(document.getElementById('depositAmount').value);
         
@@ -478,8 +494,9 @@
             const nanoAmount = Math.floor(amount * 1e9);
             url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
         } else {
-            // Для USDT сумма указывается в ДОЛЛАРАХ (не в нано)
-            url = `ton://transfer/${ADMIN_WALLET}?amount=${amount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
+            // Для USDT - указываем amount как число долларов (например 1.5), НЕ умножаем!
+            const usdtAmount = amount.toFixed(2);
+            url = `ton://transfer/${ADMIN_WALLET}?amount=${usdtAmount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
         }
         
         navigator.clipboard.writeText(ADMIN_WALLET);
@@ -529,8 +546,7 @@
         document.getElementById('depositModal').style.display = 'none';
     }
 
-    // ==================== РАКЕТА, МИНЫ, РУЛЕТКА ====================
-    // (весь код игр остаётся без изменений)
+    // ==================== РАКЕТА ====================
     
     function updateRocketPosition(multiplier) {
         const rocket = document.getElementById('rocketShip');
@@ -604,7 +620,7 @@
     }
 
     function placeBet() {
-        if (hasActiveBet) return;
+        if (hasActiveBet) { toast("❌ У вас уже есть активная ставка в этом раунде!"); return; }
         if (!checkBalanceBeforeBet(currentBet)) return;
         autoEnabled = document.getElementById('autoCashoutToggle').checked;
         autoValue = parseFloat(document.getElementById('autoCashoutVal').value);
@@ -621,7 +637,7 @@
     }
 
     function cancelBet() {
-        if (!hasActiveBet) return;
+        if (!hasActiveBet) { toast("❌ Нет активной ставки для отмены"); return; }
         socket.emit('rocket_cancel_bet', { telegram_id: uid }, (res) => {
             if (res?.success) {
                 toast(`Ставка отменена. Возвращено ${res.amount}⭐`);
@@ -635,6 +651,9 @@
     }
 
     function cashout() {
+        if (!hasActiveBet) { toast("❌ Нет активной ставки для вывода"); return; }
+        if (!isFlying) { toast("❌ Ракета ещё не взлетела или уже упала"); return; }
+        if (myBet && myBet.cashed) { toast("❌ Вы уже забрали выигрыш"); return; }
         if (isFlying && hasActiveBet && myBet && !myBet.cashed) {
             socket.emit('rocket_cashout', { telegram_id: uid, name: pname });
             if (tg) tg.HapticFeedback?.impactOccurred('heavy');
@@ -955,20 +974,17 @@
         while (top3.length < 3) top3.push({ name: '???', avatar: '❓', turnover: 0 });
         podium.innerHTML = `
             <div class="podium-item">
-                <div class="podium-2"><div class="podium-avatar">${getAvatarHtml(top3[1].avatar, top3[1].name)}</div></div>
-                <div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[1].name}</div>
+                <div class="podium-2"><div class="podium-avatar">${getAvatarHtml(top3[1].avatar, top3[1].name)}</div><div class="podium-name">${top3[1].name}</div></div>
                 <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">2 место</div>
                 <div style="font-size:9px; color:#888;">⭐ ${top3[1].turnover}</div>
             </div>
             <div class="podium-item">
-                <div class="podium-1"><div class="podium-avatar">${getAvatarHtml(top3[0].avatar, top3[0].name)}</div></div>
-                <div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[0].name}</div>
+                <div class="podium-1"><div class="podium-avatar">${getAvatarHtml(top3[0].avatar, top3[0].name)}</div><div class="podium-name">${top3[0].name}</div></div>
                 <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">1 место</div>
                 <div style="font-size:9px; color:#888;">⭐ ${top3[0].turnover}</div>
             </div>
             <div class="podium-item">
-                <div class="podium-3"><div class="podium-avatar">${getAvatarHtml(top3[2].avatar, top3[2].name)}</div></div>
-                <div style="font-size:10px; font-weight:600; max-width:65px; overflow:hidden; text-overflow:ellipsis;">${top3[2].name}</div>
+                <div class="podium-3"><div class="podium-avatar">${getAvatarHtml(top3[2].avatar, top3[2].name)}</div><div class="podium-name">${top3[2].name}</div></div>
                 <div style="font-size:11px; font-weight:600; margin-top:6px; color:#FFD700;">3 место</div>
                 <div style="font-size:9px; color:#888;">⭐ ${top3[2].turnover}</div>
             </div>
