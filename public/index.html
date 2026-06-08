@@ -146,39 +146,17 @@
         .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
         .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
-        .custom-stars {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .custom-stars input {
-            flex: 1;
-            background: #1a1a1a;
-            border: 1px solid var(--border);
-            color: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .custom-stars button {
-            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-            border: none;
-            border-radius: 8px;
-            padding: 10px 16px;
-            color: #000;
-            font-weight: 700;
-            cursor: pointer;
-        }
+        .custom-stars { display: flex; gap: 8px; margin-top: 8px; }
+        .custom-stars input { flex: 1; background: #1a1a1a; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 8px; text-align: center; }
+        .custom-stars button { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); border: none; border-radius: 8px; padding: 10px 16px; color: #000; font-weight: 700; cursor: pointer; }
         
-        .button-row {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-        }
-        .button-row .btn {
-            flex: 1;
-            margin-top: 0;
-        }
+        .button-row { display: flex; gap: 12px; margin-top: 16px; }
+        .button-row .btn { flex: 1; margin-top: 0; }
+        
+        .referral-item { background: #1a1a1a; border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); }
+        .referral-name { font-weight: 600; font-size: 14px; }
+        .referral-username { font-size: 11px; color: #888; }
+        .referral-turnover { font-size: 12px; color: var(--gold); margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -304,14 +282,10 @@
         
         <div id="cryptoPanel">
             <div style="display:flex; gap:10px; margin-bottom:16px;">
-                <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
-                <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
+                <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 85⭐</span></div>
+                <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 43⭐</span></div>
             </div>
             <input type="number" id="depositAmount" class="bet-input" placeholder="Сумма" value="1" step="0.5">
-            <div style="background:#1a1a1a; border-radius:8px; padding:8px; margin-bottom:16px;">
-                <span style="font-size:12px; color:#888;">Получишь:</span>
-                <span id="previewStars" style="color:var(--gold); font-size:16px; font-weight:800;">0 ⭐</span>
-            </div>
             <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через Tonkeeper</div>
         </div>
         
@@ -331,9 +305,6 @@
                 <input type="number" id="starsInput" placeholder="Своя сумма" value="50" min="1">
                 <button onclick="payWithStars()">⭐ Оплатить</button>
             </div>
-            <div style="margin-top:12px; font-size:10px; color:#888; text-align:center;">
-                💡 Откроется окно оплаты Telegram Stars
-            </div>
         </div>
         
         <div class="btn btn-cancel" onclick="closeDepositModal()" style="margin-top:12px;">Отмена</div>
@@ -343,6 +314,9 @@
 <div id="withdrawModal" class="modal">
     <div class="modal-content">
         <h3 style="color:var(--gold); margin-bottom:16px; font-size:18px;">💸 Вывод средств</h3>
+        <div style="background:#1a1a1a; border-radius:8px; padding:8px; margin-bottom:12px;">
+            <span style="font-size:11px; color:#888;">⚠️ Комиссия: 15%</span>
+        </div>
         <div style="display:flex; gap:10px; margin-bottom:16px;">
             <div id="withdrawTonBtn" class="asset-btn active" onclick="selectWithdrawAsset('TON')">💎 TON</div>
             <div id="withdrawUsdtBtn" class="asset-btn" onclick="selectWithdrawAsset('USDT')">💵 USDT</div>
@@ -366,6 +340,7 @@
 
     let stars = 0, turnover = 0, games = 0, wins = 0;
     let referralCount = 0, referralEarned = 0;
+    let referralsList = [];
     let gameHistory = [];
     let totalDeposited = 0, totalWithdrawn = 0;
 
@@ -439,7 +414,7 @@
         return true;
     }
 
-    socket.emit('register', { telegram_id: uid, name: pname, avatar: userAvatarUrl || pname.charAt(0), referrer_id: null }, (res) => {
+    socket.emit('register', { telegram_id: uid, name: pname, avatar: userAvatarUrl || pname.charAt(0), username: userUsername, referrer_id: null }, (res) => {
         if (res?.success) { stars = res.stars; totalDeposited = res.total_deposited || 0; totalWithdrawn = res.total_withdrawn || 0; updateUI(); }
     });
 
@@ -453,7 +428,6 @@
         else return `<span style="font-size:16px;font-weight:bold;">${name ? name.charAt(0).toUpperCase() : '?'}</span>`;
     }
 
-    // ==================== ПОПОЛНЕНИЕ И ВЫВОД ====================
     function showCryptoPanel() {
         document.getElementById('cryptoBtn').classList.add('active');
         document.getElementById('starsBtn').classList.remove('active');
@@ -535,7 +509,7 @@
             return;
         }
         
-        const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
+        const starsAmount = selectedAsset === 'TON' ? amount * 85 : amount * 43;
         const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
         
         let url;
@@ -572,20 +546,12 @@
         document.getElementById('usdtBtn').classList.remove('active');
         if (asset === 'TON') document.getElementById('tonBtn').classList.add('active');
         else document.getElementById('usdtBtn').classList.add('active');
-        updatePreview();
-    }
-    
-    function updatePreview() {
-        let amount = parseFloat(document.getElementById('depositAmount').value) || 0;
-        let starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
-        document.getElementById('previewStars').innerText = Math.floor(starsAmount) + ' ⭐';
     }
     
     function showDepositModal() {
         document.getElementById('depositModal').style.display = 'flex';
         showCryptoPanel();
         selectAsset('TON');
-        updatePreview();
     }
     
     function closeDepositModal() {
@@ -628,18 +594,21 @@
             return;
         }
         
+        const fee = Math.floor(amount * 0.15);
+        const afterFee = amount - fee;
+        
         fetch('/api/withdraw-request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 telegram_id: uid,
-                stars_amount: amount,
+                stars_amount: afterFee,
                 asset: selectedWithdrawAsset,
                 wallet_address: address
             })
         }).then(res => res.json()).then(data => {
             if (data.success) {
-                toast(`✅ Заявка на вывод ${amount}⭐ отправлена!`);
+                toast(`✅ Заявка на вывод ${afterFee}⭐ отправлена! (Комиссия ${fee}⭐)`);
                 refreshBalance();
                 closeWithdrawModal();
             } else {
@@ -648,13 +617,12 @@
         }).catch(e => toast('❌ Ошибка сервера'));
     }
 
-    // ==================== РАКЕТА - УПРАВЛЕНИЕ ОВЕРЛЕЕМ ====================
+    // ==================== РАКЕТА ====================
     const waitingOverlay = document.getElementById('waitingOverlay');
     
     function showWaitingOverlay() {
         if (waitingOverlay) {
             waitingOverlay.style.display = 'flex';
-            waitingOverlay.style.opacity = '1';
             console.log('Оверлей ПОКАЗАН');
         }
     }
@@ -662,7 +630,6 @@
     function hideWaitingOverlay() {
         if (waitingOverlay) {
             waitingOverlay.style.display = 'none';
-            waitingOverlay.style.opacity = '0';
             console.log('Оверлей СКРЫТ');
         }
     }
@@ -724,7 +691,7 @@
         if (!hasActiveBet && !isFlying) { btn.innerText = "💰 Сделать ставку"; btn.className = "btn"; }
         else if (hasActiveBet && !isFlying) { btn.innerText = "❌ Отмена"; btn.className = "btn btn-cancel"; }
         else if (hasActiveBet && isFlying && myBet && !myBet.cashed) { btn.innerText = "💸 Забрать"; btn.className = "btn btn-cashout"; }
-        else { btn.innerText = "⏳ Ожидание"; btn.className = "btn btn-secondary"; btn.style.opacity = "0.7"; }
+        else { btn.innerText = "⏳ Ожидание"; btn.className = "btn btn-secondary"; }
     }
 
     function rocketAction() {
@@ -740,7 +707,7 @@
         if (!checkBalanceBeforeBet(currentBet)) return;
         autoEnabled = document.getElementById('autoCashoutToggle').checked;
         autoValue = parseFloat(document.getElementById('autoCashoutVal').value);
-        socket.emit('rocket_place_bet', { telegram_id: uid, name: pname, amount: currentBet, autoCashout: autoValue, avatar: userAvatarUrl || pname.charAt(0) }, (res) => {
+        socket.emit('rocket_place_bet', { telegram_id: uid, name: pname, amount: currentBet, autoCashout: autoEnabled ? autoValue : 0, avatar: userAvatarUrl || pname.charAt(0) }, (res) => {
             if (res?.success) {
                 hasActiveBet = true;
                 myBet = { amount: currentBet, autoCashout: autoEnabled ? autoValue : 0, cashed: false };
@@ -789,7 +756,6 @@
         const el = document.getElementById('crashStatus');
         const statusDiv = document.getElementById('crashStatusText');
         const multDiv = document.getElementById('crashMult');
-        console.log('countdown:', s);
         if (s > 0) { 
             isFlying = false; 
             showWaitingOverlay();
@@ -840,13 +806,10 @@
     
     socket.on('rocket_crash', (mult) => { 
         isFlying = false; 
-        
         showWaitingOverlay();
         
         const rocketVideo = document.getElementById('rocketVideo');
-        if (rocketVideo) {
-            rocketVideo.pause();
-        }
+        if (rocketVideo) rocketVideo.pause();
         
         showExplosion();
         
@@ -864,9 +827,7 @@
         document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
         document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
         
-        setTimeout(() => { 
-            refreshBalance(); 
-        }, 500); 
+        setTimeout(() => { refreshBalance(); }, 500); 
         updateAutoSettingsLock(); 
         updateButtonUI(); 
     });
@@ -1005,9 +966,9 @@
         const total = rouletteBets.reduce((s, b) => s + b.amount, 0);
         if (total === 0) { wheel.style.background = '#1a1a1a'; return; }
         let conicString = '', startAngle = 0;
-        rouletteBets.forEach((bet, idx) => {
+        rouletteBets.forEach((bet) => {
             const percent = (bet.amount / total) * 360;
-            const color = bet.color || `hsl(${(idx * 45) % 360}, 70%, 55%)`;
+            const color = bet.color || '#FFD700';
             conicString += `${color} ${startAngle}deg ${startAngle + percent}deg, `;
             startAngle += percent;
         });
@@ -1021,7 +982,7 @@
         if (total === 0) return;
         let startAngle = 0;
         const radius = 98, cx = 130, cy = 130;
-        rouletteBets.forEach((bet, idx) => {
+        rouletteBets.forEach((bet) => {
             const percent = (bet.amount / total) * 360;
             const midAngle = startAngle + percent / 2;
             const angleRad = (midAngle * Math.PI) / 180;
@@ -1029,7 +990,7 @@
             const y = cy + radius * Math.sin(angleRad);
             const avatarHtml = getAvatarHtml(bet.avatar, bet.name);
             const div = document.createElement('div');
-            const color = bet.color || `hsl(${(idx * 45) % 360}, 70%, 55%)`;
+            const color = bet.color || '#FFD700';
             div.style.cssText = `position:absolute; width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, ${color}, ${color}cc); border:2px solid #FFD700; display:flex; align-items:center; justify-content:center; left:${x}px; top:${y}px; transform:translate(-50%,-50%); z-index:10;`;
             div.innerHTML = avatarHtml;
             container.appendChild(div);
@@ -1073,7 +1034,7 @@
         if (rouletteHasBet) { toast("❌ У вас уже есть ставка!"); return; }
         if (rouletteSpinning) { toast("❌ Рулетка крутится!"); return; }
         if (!checkBalanceBeforeBet(rouletteBet)) return;
-        socket.emit('roulette_place_bet', { telegram_id: uid, name: pname, amount: rouletteBet, avatar: userAvatarUrl || pname.charAt(0) }, (res) => {
+        socket.emit('roulette_place_bet', { telegram_id: uid, name: pname, amount: rouletteBet, avatar: userAvatarUrl || pname.charAt(0), username: userUsername }, (res) => {
             if (res?.success) {
                 rouletteHasBet = true;
                 refreshBalance();
@@ -1132,10 +1093,10 @@
             renderRouletteAvatars();
             return;
         }
-        cont.innerHTML = rouletteBets.map((b, idx) => {
+        cont.innerHTML = rouletteBets.map((b) => {
             const chance = total ? ((b.amount / total) * 100).toFixed(1) : 0;
             const avatarHtml = getAvatarHtml(b.avatar, b.name);
-            const color = b.color || `hsl(${(idx * 45) % 360}, 70%, 55%)`;
+            const color = b.color || '#FFD700';
             return `<div class="bet-item" style="border-left: 3px solid ${color};"><div style="display:flex; align-items:center; gap:6px;"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, ${color}, ${color}cc); border:1px solid #FFD700; display:flex; align-items:center; justify-content:center; overflow:hidden;">${avatarHtml}</div><span>${b.name}</span></div><span>⭐ ${b.amount}</span><span style="color:#88ff88;">шанс ${chance}%</span></div>`;
         }).join('');
         updateRouletteWheel();
@@ -1200,6 +1161,7 @@
             if (data) {
                 referralCount = data.count || 0;
                 referralEarned = data.earned || 0;
+                referralsList = data.referrals || [];
             }
         });
     }
@@ -1225,8 +1187,34 @@
             `;
         }
         else if (tab === 'refs') {
-            const refLink = `https://t.me/dadton_bot?start=ref_${uid.slice(-6)}`;
-            container.innerHTML = `<div style="display: flex; gap: 10px; margin-bottom: 16px;"><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">👥 Рефералы</div><div style="font-size:20px; font-weight:800;">${referralCount}</div></div><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">💰 Заработано</div><div style="font-size:20px; font-weight:800;">${referralEarned}⭐</div></div></div><div class="ref-box"><span style="font-size:11px; word-break:break-all;">${refLink}</span><div class="btn btn-secondary" style="margin-top:10px; padding:8px;" onclick="navigator.clipboard.writeText('${refLink}'); toast('Ссылка скопирована!')">📋 Копировать</div></div><div class="empty" style="margin-top:10px; font-size:11px;">💡 За каждого приглашённого друга вы получаете 10% от его оборота!</div>`;
+            const refLink = `https://t.me/dadton_bot?start=ref_${uid}`;
+            let referralsHtml = '';
+            if (referralsList.length === 0) {
+                referralsHtml = '<div class="empty">👥 Пока нет приглашённых друзей</div>';
+            } else {
+                referralsHtml = referralsList.map(ref => `
+                    <div class="referral-item">
+                        <div class="referral-name">${ref.name}</div>
+                        <div class="referral-username">${ref.username ? '@' + ref.username : 'ID: ' + ref.telegram_id}</div>
+                        <div class="referral-turnover">Оборот: ${ref.turnover}⭐</div>
+                    </div>
+                `).join('');
+            }
+            container.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><div style="font-size:10px; color:#888;">👥 Рефералы</div><div style="font-size:20px; font-weight:800;">${referralCount}</div></div>
+                    <div class="stat-card"><div style="font-size:10px; color:#888;">💰 Заработано</div><div style="font-size:20px; font-weight:800;">${referralEarned}⭐</div></div>
+                </div>
+                <div class="ref-box">
+                    <span style="font-size:11px; word-break:break-all;">${refLink}</span>
+                    <div class="btn btn-secondary" style="margin-top:10px; padding:8px;" onclick="navigator.clipboard.writeText('${refLink}'); toast('Ссылка скопирована!')">📋 Копировать</div>
+                </div>
+                <div style="margin-top:16px;">
+                    <div style="font-size:12px; color:#888; margin-bottom:8px;">📋 Ваши рефералы:</div>
+                    ${referralsHtml}
+                </div>
+                <div class="empty" style="margin-top:10px; font-size:11px;">💡 За каждого приглашённого друга вы получаете 5% от его оборота!</div>
+            `;
         }
     }
 
@@ -1246,19 +1234,14 @@
         document.getElementById(`screen-${game}`).classList.add('active');
         if (game === 'mines') renderMinesBoard(false);
         if (game === 'roulette') startRouletteAutoSpin();
-        if (game === 'crash') { 
-            updateButtonUI(); 
-            updateAutoSettingsLock(); 
-        }
         if (game !== 'roulette') stopRouletteAutoSpin();
     }
 
-    // ==================== АДМИН-ПАНЕЛЬ (только для Azower) ====================
+    // ==================== АДМИН-ПАНЕЛЬ ====================
     const ADMIN_ID = '1631627984';
-    const MY_ID = uid;
     
     function isAdmin() {
-        return MY_ID === ADMIN_ID;
+        return uid === ADMIN_ID;
     }
     
     if (isAdmin()) {
@@ -1295,7 +1278,7 @@
                     </div>
                     
                     <div style="margin-bottom: 16px;">
-                        <h4 style="color:#fff; margin-bottom:8px;">📋 Список заявок на вывод</h4>
+                        <h4 style="color:#fff; margin-bottom:8px;">📋 Заявки на вывод</h4>
                         <div id="adminWithdrawList" style="max-height: 200px; overflow-y: auto; background:#1a1a1a; border-radius:8px; padding:8px;">
                             <span style="color:#888;">Загрузка...</span>
                         </div>
@@ -1306,7 +1289,6 @@
             `;
             document.body.appendChild(modal);
         }
-        
         modal.style.display = 'flex';
         loadWithdrawRequests();
     }
@@ -1319,7 +1301,7 @@
     async function adminAddStars() {
         if (!isAdmin()) return;
         
-        const targetId = document.getElementById('adminUserId').value;
+        const targetId = document.getElementById('adminUserId').value.trim();
         const amount = parseInt(document.getElementById('adminStarsAmount').value);
         
         if (!targetId || !amount || amount < 1) {
@@ -1331,7 +1313,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                admin_id: MY_ID,
+                admin_id: uid,
                 target_telegram_id: targetId,
                 stars_amount: amount
             })
@@ -1353,7 +1335,7 @@
         const res = await fetch('/api/admin/get-withdraw-requests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ admin_id: MY_ID })
+            body: JSON.stringify({ admin_id: uid })
         });
         const data = await res.json();
         
@@ -1385,7 +1367,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                admin_id: MY_ID,
+                admin_id: uid,
                 telegram_id: telegram_id,
                 stars_amount: amount
             })
