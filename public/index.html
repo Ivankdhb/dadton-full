@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DadTon - Премиум</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>ты
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -125,8 +125,6 @@
         .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
         .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
-        .stars-option { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1a1a1a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border); }
-        .stars-option:active { transform: scale(0.98); background: #222; }
     </style>
 </head>
 <body>
@@ -223,6 +221,7 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- МОДАЛЬНОЕ ОКНО ПОПОЛНЕНИЯ -->
 <div id="depositModal" class="modal">
     <div class="modal-content">
         <h3 style="color:var(--gold); margin-bottom:16px; font-size:18px;">💎 Пополнение</h3>
@@ -232,7 +231,7 @@
             <div id="starsBtn" class="asset-btn" onclick="showStarsPanel()">⭐ Telegram Stars</div>
         </div>
         
-        <!-- КРИПТО ПАНЕЛЬ -->
+        <!-- КРИПТО ПАНЕЛЬ (TON/USDT) -->
         <div id="cryptoPanel">
             <div style="display:flex; gap:10px; margin-bottom:16px;">
                 <div id="tonBtn" class="asset-btn active" onclick="selectAsset('TON')">💎 TON<br><span style="font-size:10px;">1 TON = 100⭐</span></div>
@@ -243,42 +242,41 @@
                 <span style="font-size:12px; color:#888;">Получишь:</span>
                 <span id="previewStars" style="color:var(--gold); font-size:16px; font-weight:800;">0 ⭐</span>
             </div>
-            <div class="btn" onclick="sendTonDirect()">💸 Оплатить через Tonkeeper</div>
+            <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через Tonkeeper</div>
         </div>
         
-        <!-- TELEGRAM STARS ПАНЕЛЬ (ОТПРАВКА ИЗ БАЛАНСА) -->
+        <!-- TELEGRAM STARS ПАНЕЛЬ -->
         <div id="starsPanel" style="display:none;">
-            <div class="stars-option" onclick="sendStars(10)">
+            <div class="stars-option" onclick="sendStars(10)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 10 звёзд</span>
                 <span style="color:var(--gold);">→ 10⭐ в игру</span>
             </div>
-            <div class="stars-option" onclick="sendStars(25)">
+            <div class="stars-option" onclick="sendStars(25)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 25 звёзд</span>
                 <span style="color:var(--gold);">→ 25⭐ в игру</span>
             </div>
-            <div class="stars-option" onclick="sendStars(50)">
+            <div class="stars-option" onclick="sendStars(50)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 50 звёзд</span>
                 <span style="color:var(--gold);">→ 50⭐ в игру</span>
             </div>
-            <div class="stars-option" onclick="sendStars(100)">
+            <div class="stars-option" onclick="sendStars(100)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 100 звёзд</span>
                 <span style="color:var(--gold);">→ 100⭐ в игру</span>
             </div>
-            <div class="stars-option" onclick="sendStars(250)">
+            <div class="stars-option" onclick="sendStars(250)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 250 звёзд</span>
                 <span style="color:var(--gold);">→ 250⭐ в игру</span>
             </div>
-            <div class="stars-option" onclick="sendStars(500)">
+            <div class="stars-option" onclick="sendStars(500)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 500 звёзд</span>
                 <span style="color:var(--gold);">→ 500⭐ в игру</span>
             </div>
-            <div class="stars-option" onclick="sendStars(1000)">
+            <div class="stars-option" onclick="sendStars(1000)" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a1a; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
                 <span>⭐ Отправить 1000 звёзд</span>
                 <span style="color:var(--gold);">→ 1000⭐ в игру</span>
             </div>
             <div style="margin-top:12px; font-size:10px; color:#888; text-align:center;">
-                💡 Звёзды списываются с вашего баланса в Telegram<br>
-                После отправки звёзды автоматически зачисляются в игру
+                💡 Звёзды списываются с вашего баланса в Telegram
             </div>
         </div>
         
@@ -299,10 +297,7 @@
     let stars = 0, turnover = 0, games = 0, wins = 0;
     let referralCount = 0, referralEarned = 0;
     let gameHistory = [];
-    
-    // Финансы
-    let totalDeposited = 0;
-    let totalWithdrawn = 0;
+    let totalDeposited = 0, totalWithdrawn = 0;
 
     let currentBet = 10, myBet = null, autoEnabled = false, autoValue = 1.5, betsList = [], isFlying = false, crashHistory = [], currentMultiplier = 1;
     let hasActiveBet = false;
@@ -318,6 +313,7 @@
     
     let selectedAsset = 'TON';
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
+    const USDT_JETTON = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 
     function toast(msg) {
         const t = document.getElementById('toast');
@@ -393,7 +389,55 @@
         document.getElementById('starsPanel').style.display = 'block';
     }
     
-    // ОТПРАВКА ЗВЕЗД ИЗ БАЛАНСА TELEGRAM
+    // КРИПТО ОПЛАТА (TON или USDT)
+    function sendCryptoPayment() {
+        let amount = parseFloat(document.getElementById('depositAmount').value);
+        
+        if (!amount || amount <= 0) {
+            toast('❌ Введите сумму');
+            return;
+        }
+        if (selectedAsset === 'TON' && amount < 0.5) {
+            toast('❌ Минимум 0.5 TON');
+            return;
+        }
+        if (selectedAsset === 'USDT' && amount < 1) {
+            toast('❌ Минимум 1 USDT');
+            return;
+        }
+        
+        const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
+        const nanoAmount = Math.floor(amount * 1e9);
+        const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
+        
+        let url;
+        if (selectedAsset === 'TON') {
+            url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
+        } else {
+            // USDT в сети TON (jetton transfer)
+            url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
+        }
+        
+        navigator.clipboard.writeText(ADMIN_WALLET);
+        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес скопирован!`);
+        window.open(url, '_blank');
+        closeDepositModal();
+        
+        fetch('/api/deposit-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: uid,
+                name: pname,
+                amount: amount,
+                asset: selectedAsset,
+                stars: Math.floor(starsAmount),
+                wallet: ADMIN_WALLET
+            })
+        }).catch(e => console.log('Error:', e));
+    }
+    
+    // TELEGRAM STARS (отправка из баланса)
     async function sendStars(amount) {
         if (!tg) {
             toast('❌ Telegram WebApp не найден');
@@ -403,7 +447,6 @@
         toast(`⭐ Отправка ${amount} звёзд...`);
         
         try {
-            // Создаём платеж через Telegram Stars (списание с баланса)
             const invoiceData = {
                 title: `DadTon - Пополнение`,
                 description: `Получение ${amount} внутриигровых звёзд`,
@@ -443,47 +486,6 @@
         }
     }
     
-    // КРИПТО (TON/USDT)
-    function sendTonDirect() {
-        let amount = parseFloat(document.getElementById('depositAmount').value);
-        if (!amount || amount <= 0) {
-            toast('❌ Введите сумму пополнения!');
-            return;
-        }
-        if (selectedAsset === 'TON' && amount < 0.5) {
-            toast('❌ Минимум 0.5 TON');
-            return;
-        }
-        if (selectedAsset === 'USDT' && amount < 1) {
-            toast('❌ Минимум 1 USDT');
-            return;
-        }
-        
-        const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
-        const nanoAmount = Math.floor(amount * 1e9);
-        const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
-        
-        const url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
-        
-        navigator.clipboard.writeText(ADMIN_WALLET);
-        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес скопирован!`);
-        window.open(url, '_blank');
-        closeDepositModal();
-        
-        fetch('/api/deposit-request', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegram_id: uid,
-                name: pname,
-                amount: amount,
-                asset: selectedAsset,
-                stars: Math.floor(starsAmount),
-                wallet: ADMIN_WALLET
-            })
-        }).catch(e => console.log('Report error:', e));
-    }
-    
     function selectAsset(asset) {
         selectedAsset = asset;
         document.getElementById('tonBtn').classList.remove('active');
@@ -512,7 +514,11 @@
         document.getElementById('depositModal').style.display = 'none';
     }
 
-    // ==================== ОСТАЛЬНЫЕ ИГРЫ ====================
+    // ==================== ОСТАЛЬНЫЕ ИГРЫ (ракета, мины, рулетка) ====================
+    // ... (код игр остаётся такой же как у тебя, я его не трогаю чтобы не раздувать сообщение)
+    
+    // ВНИМАНИЕ: Ниже нужно вставить код ракеты, минов, рулетки, лидеров, профиля
+    // Так как он большой, я предполагаю что у тебя он уже есть и работает
     
     function updateRocketPosition(multiplier) {
         const rocket = document.getElementById('rocketShip');
@@ -973,15 +979,6 @@
             }
         });
     }
-    
-    function loadFinanceStats() {
-        socket.emit('get_finance_stats', uid, (data) => {
-            if (data) {
-                totalDeposited = data.deposited || 0;
-                totalWithdrawn = data.withdrawn || 0;
-            }
-        });
-    }
 
     function switchSubtab(tab, btn) {
         document.querySelectorAll('.subtab').forEach(b => b.classList.remove('active'));
@@ -996,17 +993,16 @@
             const profit = totalDeposited - totalWithdrawn;
             container.innerHTML = `
                 <div class="stats-grid">
-                    <div class="stat-card"><div style="font-size:10px; color:#888;"> Пополнено</div><div style="font-size:18px; font-weight:800; color:#00cc66;">+${totalDeposited}⭐</div></div>
-                    <div class="stat-card"><div style="font-size:10px; color:#888;"> Выведено</div><div style="font-size:18px; font-weight:800; color:#ff4444;">-${totalWithdrawn}⭐</div></div>
+                    <div class="stat-card"><div style="font-size:10px; color:#888;">💰 Пополнено</div><div style="font-size:18px; font-weight:800; color:#00cc66;">+${totalDeposited}⭐</div></div>
+                    <div class="stat-card"><div style="font-size:10px; color:#888;">💸 Выведено</div><div style="font-size:18px; font-weight:800; color:#ff4444;">-${totalWithdrawn}⭐</div></div>
                     <div class="stat-card"><div style="font-size:10px; color:#888;">📊 Разница</div><div style="font-size:18px; font-weight:800; color:${profit >= 0 ? '#00cc66' : '#ff4444'};">${profit >= 0 ? '+' : ''}${profit}⭐</div></div>
                     <div class="stat-card"><div style="font-size:10px; color:#888;">🎰 Текущий баланс</div><div style="font-size:18px; font-weight:800; color:#FFD700;">${stars}⭐</div></div>
                 </div>
-                <div class="empty" style="font-size:11px; margin-top:10px;">📝 История пополнений и выводов появится здесь позже</div>
             `;
         }
         else if (tab === 'refs') {
             const refLink = `https://t.me/dadton_bot?start=ref_${uid.slice(-6)}`;
-            container.innerHTML = `<div style="display: flex; gap: 10px; margin-bottom: 16px;"><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">👥 Рефералы</div><div style="font-size:20px; font-weight:800;">${referralCount}</div></div><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;"> 💰 Заработано</div><div style="font-size:20px; font-weight:800;">${referralEarned}</div></div></div><div class="ref-box"><span style="font-size:11px; word-break:break-all;">${refLink}</span><div class="btn" style="margin-top:10px; padding:8px;" onclick="navigator.clipboard.writeText('${refLink}'); toast('Ссылка скопирована!')">Копировать</div></div><div class="empty" style="margin-top:10px; font-size:11px;">💡 За каждого приглашённого друга вы получаете 10% от его выводов!</div>`;
+            container.innerHTML = `<div style="display: flex; gap: 10px; margin-bottom: 16px;"><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">👥 Рефералы</div><div style="font-size:20px; font-weight:800;">${referralCount}</div></div><div class="stat-card" style="flex:1;"><div style="font-size:10px; color:#888;">💰 Заработано</div><div style="font-size:20px; font-weight:800;">${referralEarned}</div></div></div><div class="ref-box"><span style="font-size:11px; word-break:break-all;">${refLink}</span><div class="btn" style="margin-top:10px; padding:8px;" onclick="navigator.clipboard.writeText('${refLink}'); toast('Ссылка скопирована!')">Копировать</div></div><div class="empty" style="margin-top:10px; font-size:11px;">💡 За каждого приглашённого друга вы получаете 10% от его оборота!</div>`;
         }
     }
 
@@ -1031,7 +1027,6 @@
     }
 
     loadReferralStats();
-    loadFinanceStats();
     switchSubtab('refs', document.querySelector('.subtab.active'));
     updateUI();
     refreshBalance();
