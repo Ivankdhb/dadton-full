@@ -39,78 +39,100 @@ db.serialize(() => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         telegram_id TEXT UNIQUE,
         deposited INTEGER DEFAULT 0,
-        withdrawn INTEGER DEFAULT 0,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS deposit_requests (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id TEXT,
-        amount REAL,
-        asset TEXT,
-        stars INTEGER,
-        status TEXT DEFAULT 'pending',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        withdrawn INTEGER DEFAULT 0
     )`);
 });
 
 console.log('✅ База данных готова');
 
-// ==================== КОНСТАНТЫ ====================
 const MAX_BET = 5000;
 const MIN_BET = 10;
-const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
-const USDT_JETTON = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 const BOT_TOKEN = '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0';
+const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// ==================== TELEGRAM STARS WEBHOOK ====================
-app.post('/webhook/stars', express.json(), (req, res) => {
-    const { pre_checkout_query, successful_payment } = req.body;
+// ==================== TELEGRAM STARS ====================
+
+// Создание инвойса
+app.post('/api/create-invoice', async (req, res) => {
+    const { userId, starsAmount } = req.body;
     
-    if (pre_checkout_query) {
-        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pre_checkout_query_id: pre_checkout_query.id, ok: true })
-        }).catch(e => console.error('PreCheckout error:', e));
-        res.sendStatus(200);
-        return;
+    if (!userId || !starsAmount || starsAmount < 1) {
+        return res.json({ success: false, error: 'Неверная сумма' });
     }
     
-    if (successful_payment) {
-        const payload = JSON.parse(successful_payment.invoice_payload);
-        const starsAmount = successful_payment.total_amount;
-        const telegram_id = payload.telegram_id;
+    try {
+        const response = await fetch(`${TELEGRAM_API}/sendInvoice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: userId,
+                title: "⭐ DadTon - Пополнение",
+                description: `Покупка ${starsAmount} звёзд`,
+                payload: JSON.stringify({ userId: userId, stars: starsAmount }),
+                provider_token: "",
+                currency: "XTR",
+                prices: [{ label: `⭐ ${starsAmount} звёзд`, amount: starsAmount }]
+            })
+        });
+        const data = await response.json();
+        res.json({ success: true, data: data });
+    } catch (error) {
+        console.error('Invoice error:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Webhook для обработки платежей
+app.post('/webhook/telegram', async (req, res) => {
+    const update = req.body;
+    
+    // PreCheckoutQuery
+    if (update.pre_checkout_query) {
+        await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pre_checkout_query_id: update.pre_checkout_query.id,
+                ok: true
+            })
+        });
+        return res.sendStatus(200);
+    }
+    
+    // SuccessfulPayment
+    if (update.message && update.message.successful_payment) {
+        const payment = update.message.successful_payment;
+        const userId = update.message.from.id;
+        const stars = payment.total_amount;
+        const payload = JSON.parse(payment.invoice_payload);
         
-        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [starsAmount, telegram_id]);
+        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars, userId]);
         db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) 
                 VALUES (?, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
-                [telegram_id, starsAmount, starsAmount]);
+                [userId, stars, stars]);
         
-        console.log(`✅ Stars: ${telegram_id} +${starsAmount}⭐`);
-        res.sendStatus(200);
-        return;
+        console.log(`✅ Пользователь ${userId} пополнил ${stars}⭐`);
+        
+        // Отправляем уведомление в чат
+        await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: userId,
+                text: `✅ Пополнение выполнено!\n⭐ +${stars} звёзд на игровой счёт!`
+            })
+        });
+        
+        return res.sendStatus(200);
     }
     
     res.sendStatus(200);
 });
 
-// ==================== API ЭНДПОИНТЫ ====================
+// ==================== ОСТАЛЬНЫЕ API ====================
 app.post('/api/deposit-request', (req, res) => {
     const { telegram_id, name, amount, asset, stars } = req.body;
-    console.log(`📩 ЗАЯВКА: ${name} (${telegram_id}) хочет пополнить ${amount} ${asset} -> ${stars}⭐`);
-    db.run(`INSERT INTO deposit_requests (telegram_id, amount, asset, stars, status) VALUES (?, ?, ?, ?, 'pending')`,
-        [telegram_id, amount, asset, stars]);
-    res.json({ success: true });
-});
-
-app.post('/api/confirm-deposit', (req, res) => {
-    const { telegram_id, stars, admin_key } = req.body;
-    if (admin_key !== 'DADTON_ADMIN') return res.json({ success: false });
-    
-    db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars, telegram_id]);
-    db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
-        [telegram_id, stars, stars]);
+    console.log(`📩 ЗАЯВКА: ${name} хочет пополнить ${amount} ${asset} -> ${stars}⭐`);
     res.json({ success: true });
 });
 
@@ -126,7 +148,7 @@ app.post('/api/withdraw-request', (req, res) => {
         db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn) VALUES (?, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET withdrawn = withdrawn + ?`, 
             [telegram_id, stars_amount, stars_amount]);
         
-        console.log(`📩 ЗАЯВКА НА ВЫВОД: ${telegram_id}, ${stars_amount}⭐ -> ${asset} на ${wallet_address}`);
+        console.log(`📩 ЗАЯВКА НА ВЫВОД: ${telegram_id}, ${stars_amount}⭐ -> ${asset}`);
         res.json({ success: true });
     });
 });
@@ -262,7 +284,6 @@ function calculateRouletteWinner() {
     return null;
 }
 
-// ==================== СОКЕТЫ ====================
 io.on('connection', (socket) => {
     console.log('👤 Игрок подключился');
     
@@ -610,5 +631,4 @@ startRocketCountdown();
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
-    console.log(`💰 Кошелёк: ${ADMIN_WALLET}`);
 });
