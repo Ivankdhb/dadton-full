@@ -39,14 +39,37 @@
         
         .rocket-container { background: #111111; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border); margin-bottom: 16px; position: relative; overflow: hidden; }
         .rocket-canvas { position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; background: #000; }
-        #rocketVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-        #waitingOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 2; transition: 0.3s; }
+        #rocketVideo { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+        
+        /* Оверлей ожидания - чёрный фон с надписью */
+        .waiting-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            border-radius: 12px;
+            transition: opacity 0.1s ease;
+        }
+        .waiting-overlay span {
+            font-size: 24px;
+            font-weight: 800;
+            color: #FFD700;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+        
         .rocket-multiplier { font-size: 48px; font-weight: 900; font-family: monospace; letter-spacing: 2px; margin-top: 10px; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); position: relative; z-index: 10; }
         .rocket-multiplier.flying { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
         .rocket-multiplier.crashed { color: var(--danger); }
         .rocket-countdown { font-size: 40px; font-weight: 900; color: var(--gold); }
         
-        .explosion { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.1s; }
+        .explosion { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; opacity: 0; pointer-events: none; z-index: 25; transition: opacity 0.1s; }
         .explosion.active { opacity: 1; animation: boom 0.5s ease-out forwards; }
         @keyframes boom { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
         
@@ -176,11 +199,11 @@
 <div id="screen-crash" class="screen">
     <div class="rocket-container">
         <div class="rocket-canvas" id="rocketCanvas">
-            <video id="rocketVideo" autoplay muted playsinline loop style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;">
+            <video id="rocketVideo" autoplay muted playsinline loop style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
                 <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4">
             </video>
-            <div id="waitingOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 2;">
-                <span style="color: #FFD700; font-size: 20px; font-weight: 800;">● ОЖИДАНИЕ</span>
+            <div class="waiting-overlay" id="waitingOverlay" style="display: flex;">
+                <span>ОЖИДАНИЕ</span>
             </div>
             <div class="explosion" id="explosion">💥</div>
         </div>
@@ -194,7 +217,7 @@
         <div class="auto-row"><span>⚡ Автовывод</span><div style="display:flex; align-items:center; gap:6px;"><input type="number" id="autoCashoutVal" class="auto-value" value="1.5" step="0.05" min="1.05" max="10"><label class="switch"><input type="checkbox" id="autoCashoutToggle"><span class="slider"></span></label></div></div>
         <div class="btn" id="crashBtn" onclick="rocketAction()">💰 Сделать ставку</div>
     </div>
-    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">● ОЖИДАНИЕ</span></div>
+    <div style="display:flex; justify-content:space-between; margin:12px 0 8px;"><span style="color:#888;">Участники</span><span id="crashStatus" style="color:var(--gold);">● Ожидание</span></div>
     <div class="bets-list" id="crashBets"></div>
 </div>
 
@@ -812,10 +835,16 @@
     
     socket.on('rocket_crash', (mult) => { 
         isFlying = false; 
+        
+        // Останавливаем видео
+        const rocketVideo = document.getElementById('rocketVideo');
+        if (rocketVideo) {
+            rocketVideo.pause();
+        }
+        
         showExplosion();
-        setTimeout(() => { 
-            showWaitingOverlay(); 
-        }, 600);
+        showWaitingOverlay();
+        
         if (hasActiveBet && myBet && !myBet.cashed) { 
             gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
             if (gameHistory.length > 10) gameHistory.pop(); 
@@ -829,6 +858,7 @@
         document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); 
         document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
         document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
+        
         setTimeout(() => { 
             refreshBalance(); 
         }, 500); 
