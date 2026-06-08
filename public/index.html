@@ -827,45 +827,34 @@
         updateButtonUI(); 
     });
     
-    socket.on('rocket_multiplier', (m) => { 
-        currentMultiplier = m; 
-        document.getElementById('crashMult').innerHTML = m.toFixed(2) + 'x'; 
-        checkAutoCashout(); 
-    });
-    
     socket.on('rocket_crash', (mult) => { 
-        isFlying = false; 
-        
-        // Останавливаем видео
-        const rocketVideo = document.getElementById('rocketVideo');
-        if (rocketVideo) {
-            rocketVideo.pause();
-        }
-        
-        showExplosion();
-        showWaitingOverlay();
-        
-        if (hasActiveBet && myBet && !myBet.cashed) { 
-            gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
-            if (gameHistory.length > 10) gameHistory.pop(); 
-            hasActiveBet = false; 
-            myBet = null; 
-            refreshBalance(); 
-            if (tg) tg.HapticFeedback?.notificationOccurred('error'); 
-        } 
-        crashHistory.unshift(mult.toFixed(2)); 
-        if (crashHistory.length > 10) crashHistory.pop(); 
-        document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); 
-        document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
-        document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
-        
-        setTimeout(() => { 
-            refreshBalance(); 
-        }, 500); 
-        updateAutoSettingsLock(); 
-        updateButtonUI(); 
-    });
+    isFlying = false; 
     
+    // Моментально чёрный фон
+    showWaitingOverlay();
+    
+    showExplosion();
+    
+    if (hasActiveBet && myBet && !myBet.cashed) { 
+        gameHistory.unshift({ game: 'Ракета', amount: -myBet.amount, time: new Date().toLocaleTimeString() }); 
+        if (gameHistory.length > 10) gameHistory.pop(); 
+        hasActiveBet = false; 
+        myBet = null; 
+        refreshBalance(); 
+        if (tg) tg.HapticFeedback?.notificationOccurred('error'); 
+    } 
+    crashHistory.unshift(mult.toFixed(2)); 
+    if (crashHistory.length > 10) crashHistory.pop(); 
+    document.getElementById('crashHistory').innerHTML = crashHistory.map(m => `<div class="history-item">${m}x</div>`).join(''); 
+    document.getElementById('crashMult').className = 'rocket-multiplier crashed'; 
+    document.getElementById('crashMult').innerHTML = '💥 ВЗРЫВ!'; 
+    
+    setTimeout(() => { 
+        refreshBalance(); 
+    }, 500); 
+    updateAutoSettingsLock(); 
+    updateButtonUI(); 
+});
     socket.on('rocket_bet_placed', (b) => { betsList.push({ ...b, cashedAt: null }); renderBets(); refreshBalance(); });
     socket.on('rocket_cashout_done', (d) => { if (d.name === pname) { gameHistory.unshift({ game: 'Ракета', amount: d.win, time: new Date().toLocaleTimeString() }); if (gameHistory.length > 10) gameHistory.pop(); refreshBalance(); if (myBet) myBet.cashed = true; hasActiveBet = false; myBet = null; if (tg) tg.HapticFeedback?.notificationOccurred('success'); } const bb = betsList.find(b => b.name === d.name && !b.cashedAt); if (bb) { bb.cashedAt = d.multiplier; bb.winAmount = d.win; } renderBets(); updateAutoSettingsLock(); updateButtonUI(); });
     socket.on('rocket_bets_clear', () => { betsList = []; renderBets(); });
