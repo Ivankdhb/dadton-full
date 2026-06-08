@@ -125,6 +125,42 @@
         .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
         .modal-content .bet-input { padding: 8px !important; font-size: 14px !important; }
+        .stars-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .stars-option:active { transform: scale(0.98); background: #222; border-color: var(--gold); }
+        .custom-stars {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .custom-stars input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .custom-stars button {
+            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #000;
+            font-weight: 700;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -244,9 +280,9 @@
             <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через Tonkeeper</div>
         </div>
         
-        <!-- TELEGRAM STARS ПАНЕЛЬ (РУЧНОЙ ВВОД) -->
+        <!-- TELEGRAM STARS ПАНЕЛЬ -->
         <div id="starsPanel" style="display:none;">
-            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px;">
                 <div class="preset" onclick="setStarsAmount(10)">10⭐</div>
                 <div class="preset" onclick="setStarsAmount(25)">25⭐</div>
                 <div class="preset" onclick="setStarsAmount(50)">50⭐</div>
@@ -254,9 +290,13 @@
                 <div class="preset" onclick="setStarsAmount(250)">250⭐</div>
                 <div class="preset" onclick="setStarsAmount(500)">500⭐</div>
                 <div class="preset" onclick="setStarsAmount(1000)">1000⭐</div>
+                <div class="preset" onclick="setStarsAmount(2500)">2500⭐</div>
+                <div class="preset" onclick="setStarsAmount(5000)">5000⭐</div>
             </div>
-            <input type="number" id="starsInput" class="bet-input" placeholder="Своя сумма" value="50" min="1">
-            <div class="btn" onclick="payWithStars()" style="margin-top:12px;">⭐ Оплатить звёздами</div>
+            <div class="custom-stars">
+                <input type="number" id="starsInput" placeholder="Своя сумма" value="50" min="1">
+                <button onclick="payWithStars()">⭐ Оплатить</button>
+            </div>
             <div style="margin-top:12px; font-size:10px; color:#888; text-align:center;">
                 💡 Звёзды списываются с вашего баланса в Telegram<br>
                 1 звезда = 1 внутриигровая звезда
@@ -413,6 +453,7 @@
         }
     }
     
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ КРИПТО
     function sendCryptoPayment() {
         let amount = parseFloat(document.getElementById('depositAmount').value);
         
@@ -430,14 +471,15 @@
         }
         
         const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
-        const nanoAmount = Math.floor(amount * 1e9);
         const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
         
         let url;
         if (selectedAsset === 'TON') {
+            const nanoAmount = Math.floor(amount * 1e9);
             url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
         } else {
-            url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
+            // Для USDT сумма указывается в ДОЛЛАРАХ (не в нано)
+            url = `ton://transfer/${ADMIN_WALLET}?amount=${amount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
         }
         
         navigator.clipboard.writeText(ADMIN_WALLET);
@@ -487,7 +529,8 @@
         document.getElementById('depositModal').style.display = 'none';
     }
 
-    // ==================== РАКЕТА ====================
+    // ==================== РАКЕТА, МИНЫ, РУЛЕТКА ====================
+    // (весь код игр остаётся без изменений)
     
     function updateRocketPosition(multiplier) {
         const rocket = document.getElementById('rocketShip');
