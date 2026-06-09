@@ -23,9 +23,8 @@ const MIN_BET = 10;
 const MAX_BET = 10000;
 
 // ========== ПОДКЛЮЧЕНИЕ К POSTGRESQL ==========
-// Используем переменную окружения DATABASE_URL (Render даёт автоматически)
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dadton',
+    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/dadton',
     ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
@@ -33,7 +32,6 @@ const pool = new Pool({
 async function initDatabase() {
     const client = await pool.connect();
     try {
-        // Таблица пользователей
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -50,8 +48,6 @@ async function initDatabase() {
                 banned INTEGER DEFAULT 0
             )
         `);
-
-        // Таблица истории крашей
         await client.query(`
             CREATE TABLE IF NOT EXISTS rocket_history (
                 id SERIAL PRIMARY KEY,
@@ -59,8 +55,6 @@ async function initDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
-        // Таблица финансов пользователей
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_finance (
                 id SERIAL PRIMARY KEY,
@@ -71,8 +65,6 @@ async function initDatabase() {
                 admin_removed INTEGER DEFAULT 0
             )
         `);
-
-        // Таблица заявок на вывод
         await client.query(`
             CREATE TABLE IF NOT EXISTS withdraw_requests (
                 id SERIAL PRIMARY KEY,
@@ -86,8 +78,6 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
-        // Таблица рефералов
         await client.query(`
             CREATE TABLE IF NOT EXISTS referrals_log (
                 id SERIAL PRIMARY KEY,
@@ -99,8 +89,6 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
-        // Таблица ожидающих платежей
         await client.query(`
             CREATE TABLE IF NOT EXISTS pending_payments (
                 id SERIAL PRIMARY KEY,
@@ -114,8 +102,6 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
-        // Таблица истории игр
         await client.query(`
             CREATE TABLE IF NOT EXISTS games_history (
                 id SERIAL PRIMARY KEY,
@@ -129,7 +115,6 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
         console.log('✅ Таблицы PostgreSQL созданы/проверены');
     } catch (err) {
         console.error('Ошибка инициализации БД:', err);
@@ -138,7 +123,6 @@ async function initDatabase() {
     }
 }
 
-// Запуск инициализации БД
 initDatabase();
 
 // ========== TON CONNECT MANIFEST ==========
@@ -447,6 +431,13 @@ app.post('/api/save-wallet', async (req, res) => {
     }
     await pool.query("UPDATE users SET wallet_address = $1 WHERE telegram_id = $2", [wallet_address, telegram_id]);
     res.json({ success: true });
+});
+
+// Проверка крипто-платежа
+app.post('/api/check-payment', async (req, res) => {
+    const { telegram_id, tx_hash } = req.body;
+    sendTelegramMessage(ADMIN_ID, `🟡 НОВАЯ КРИПТО-ТРАНЗАКЦИЯ\n👤 ID: ${telegram_id}\n📝 Хеш: ${tx_hash}\n\nПроверьте и начислите баланс вручную через админ-панель.`);
+    res.json({ success: true, msg: 'Транзакция отправлена на проверку' });
 });
 
 app.post('/api/cancel-rocket-bet', (req, res) => {
