@@ -158,7 +158,6 @@
         .referral-username { font-size: 11px; color: #888; }
         .referral-turnover { font-size: 12px; color: var(--gold); margin-top: 4px; }
         
-        /* Loader styles */
         .loader-overlay {
             position: fixed;
             top: 0;
@@ -625,7 +624,7 @@
         }
         
         navigator.clipboard.writeText(ADMIN_WALLET);
-        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес скопирован!`);
+        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес скопирован!\nПосле оплаты напишите @Azower`);
         window.open(url, '_blank');
         closeDepositModal();
         
@@ -638,10 +637,11 @@
                 amount: amount,
                 asset: selectedAsset,
                 stars: Math.floor(starsAmount),
-                wallet: ADMIN_WALLET,
-                tx_hash: 'pending'
+                wallet: ADMIN_WALLET
             })
         }).catch(e => console.log('Error:', e));
+        
+        toast(`📩 Заявка отправлена! @Azower зачислит звёзды после проверки`);
     }
     
     function selectAsset(asset) {
