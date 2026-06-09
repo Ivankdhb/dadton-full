@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,12 +14,28 @@ const ADMIN_ID = "1631627984"; // Твой Telegram ID
 
 app.use(express.json());
 
-// ИСПРАВЛЕНО: Теперь Express правильно раздает статику (включая index.html) из папки public
-app.use(express.static(path.join(__dirname, 'public')));
+// Автоматическое определение правильного пути к папке public
+let publicPath = path.join(__dirname, 'public');
 
-// Инициализация базы данных SQLite (база останется в корне проекта)
+if (!fs.existsSync(publicPath)) {
+    // Если папка public не найдена в корне, проверяем уровень выше (на случай особенностей сборки Render)
+    const альтернативныйПуть = path.join(__dirname, '..', 'public');
+    if (fs.existsSync(альтернативныйПуть)) {
+        publicPath = альтернативныйПуть;
+    }
+}
 
-// СТАЛО:
+console.log(`[СИСТЕМА] Статические файлы будут раздаваться из: ${publicPath}`);
+if (fs.existsSync(path.join(publicPath, 'index.html'))) {
+    console.log(`[УСПЕХ] Файл index.html найден в папке public!`);
+} else {
+    console.error(`[ОШИБКА] Файл index.html НЕ НАЙДЕН в ${publicPath}. Проверьте структуру репозитория на GitHub.`);
+}
+
+// Раздача статики
+app.use(express.static(publicPath));
+
+// Инициализация базы данных SQLite во временной папке контейнера Render
 const db = new sqlite3.Database('/tmp/dadton.db', (err) => {
     if (err) console.error('Ошибка подключения к БД:', err);
     else console.log('База данных успешно создана/открыта в /tmp/dadton.db');
@@ -50,9 +67,28 @@ db.get("SELECT value FROM settings WHERE key = 'is_suspended'", (err, row) => {
 let rocketState = { status: 'waiting', multiplier: 1.00, crashPoint: 1.05, timer: 15, bets: [] };
 let rouletteState = { status: 'waiting', timer: 15, bets: [], history: [] };
 
-// ИСПРАВЛЕНО: Манифест для TON Connect сервер теперь тоже ищет внутри папки public
+// Манифест для TON Connect
 app.get('/tonconnect-manifest.json', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'tonconnect-manifest.json'));
+    const manifestPath = path.join(publicPath, 'tonconnect-manifest.json');
+    if (fs.existsSync(manifestPath)) {
+        res.sendFile(manifestPath);
+    } else {
+        res.json({
+            "url": "https://dadton-full.onrender.com",
+            "name": "DadTon Bot",
+            "iconUrl": "https://dadton-full.onrender.com/icon.png"
+        });
+    }
+});
+
+// Жесткий роут для главной страницы (дополнительная страховка от Cannot GET /)
+app.get('/', (req, res) => {
+    const indexHtmlPath = path.join(publicPath, 'index.html');
+    if (fs.existsSync(indexHtmlPath)) {
+        res.sendFile(indexHtmlPath);
+    } else {
+        res.status(404).send(`Ошибка: index.html не найден сервером. Текущая директория поиска: ${publicPath}`);
+    }
 });
 
 // Синхронизация и авторизация пользователя
@@ -189,51 +225,3 @@ io.on('connection', (socket) => {
     socket.on('roulette_bet', ({ telegram_id, username, bet, color }) => {
         if (systemSuspended) return;
         db.get("SELECT balance FROM users WHERE telegram_id = ?", [telegram_id], (err, user) => {
-            if (user && user.balance >= bet && rouletteState.status === 'waiting') {
-                db.run("UPDATE users SET balance = balance - ?, games_count = games_count + 1, turnover = turnover + ? WHERE telegram_id = ?", [bet, bet, telegram_id]);
-                rouletteState.bets.push({ telegram_id, username, bet, color });
-                io.emit('roulette_state', rouletteState);
-            }
-        });
-    });
-});
-
-// Игровой цикл для "Краш"
-function runRocketLoop() {
-    rocketState = { status: 'waiting', multiplier: 1.00, timer: 15, bets: [], crashPoint: (Math.random() * 6.95 + 1.05).toFixed(2) };
-    let t = setInterval(() => {
-        rocketState.timer--; io.emit('rocket_state', rocketState);
-        if (rocketState.timer <= 0) { clearInterval(t); launchRocket(); }
-    }, 1000);
-}
-
-function launchRocket() {
-    rocketState.status = 'live';
-    let cur = 1.00;
-    let f = setInterval(() => {
-        cur += 0.03; rocketState.multiplier = parseFloat(cur.toFixed(2));
-        
-        rocketState.bets.forEach(b => {
-            if (!b.cashedOut && b.autoWithdraw && rocketState.multiplier >= b.autoWithdraw && rocketState.multiplier <= rocketState.crashPoint) {
-                b.cashedOut = true;
-                db.run("UPDATE users SET balance = balance + ?, wins_count = wins_count + 1 WHERE telegram_id = ?", [b.bet * b.autoWithdraw, b.telegram_id]);
-                db.run("INSERT INTO game_history (telegram_id, game_type, bet, multiplier, profit) VALUES (?, 'ROCKET', ?, ?, ?)", [b.telegram_id, b.bet, b.autoWithdraw, (b.bet * b.autoWithdraw) - b.bet]);
-            }
-        });
-        
-        io.emit('rocket_state', rocketState);
-
-        if (rocketState.multiplier >= rocketState.crashPoint) {
-            clearInterval(f); rocketState.status = 'crashed';
-            rocketState.bets.forEach(b => { if (!b.cashedOut) db.run("INSERT INTO game_history (telegram_id, game_type, bet, multiplier, profit) VALUES (?, 'ROCKET', ?, 0, ?)", [b.telegram_id, b.bet, -b.bet]); });
-            io.emit('rocket_state', rocketState);
-            setTimeout(runRocketLoop, 5000);
-        }
-    }, 100);
-}
-
-// Игровой цикл для "Рулетки"
-function runRouletteLoop() {
-    rouletteState.status = 'waiting'; rouletteState.timer = 15; rouletteState.bets = [];
-    let t = setInterval(() => {
-        rouletteState.timer--; io
