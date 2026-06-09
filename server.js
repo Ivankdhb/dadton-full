@@ -16,7 +16,6 @@ const io = socketIo(server, {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==================== БАЗА ДАННЫХ ====================
 const db = new sqlite3.Database('dadton.db');
 
 db.serialize(() => {
@@ -31,7 +30,8 @@ db.serialize(() => {
         games_played INTEGER DEFAULT 0,
         wins INTEGER DEFAULT 0,
         referrer_id TEXT,
-        wallet_address TEXT
+        wallet_address TEXT,
+        banned INTEGER DEFAULT 0
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS rocket_history (
@@ -80,11 +80,12 @@ db.serialize(() => {
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    
+    db.run(`ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0`, () => {});
 });
 
 console.log('✅ База данных готова');
 
-// ==================== КОНСТАНТЫ ====================
 const ADMIN_ID = '1631627984';
 const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
 const BOT_TOKEN = '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0';
@@ -92,8 +93,12 @@ const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const RATES = { TON: 100, USDT: 50 };
 const MAX_BET = 5000;
 const MIN_BET = 10;
+let botPaused = false;
 
-// ==================== УВЕДОМЛЕНИЯ ====================
+function isAdmin(admin_id) {
+    return admin_id === ADMIN_ID;
+}
+
 async function notifyAdmin(message) {
     try {
         await axios.post(`${TELEGRAM_API}/sendMessage`, {
@@ -114,7 +119,16 @@ async function notifyUser(telegram_id, message) {
     } catch(e) { console.log('Notify user error:', e); }
 }
 
-// ==================== ОСНОВНЫЕ МАРШРУТЫ ====================
+async function broadcastToAll(message) {
+    db.all(`SELECT telegram_id FROM users`, [], (err, rows) => {
+        if (rows) {
+            rows.forEach(user => {
+                notifyUser(user.telegram_id, message);
+            });
+        }
+    });
+}
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -124,10 +138,9 @@ app.get('/tonconnect-manifest.json', (req, res) => {
 });
 
 app.get('/ping', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    res.json({ status: 'ok', time: new Date().toISOString(), bot_paused: botPaused });
 });
 
-// ==================== ПОЛЬЗОВАТЕЛИ ====================
 app.post('/api/register', (req, res) => {
     const { telegram_id, name, username, referrer_id } = req.body;
     
@@ -141,7 +154,7 @@ app.post('/api/register', (req, res) => {
             }
             res.json({ success: true, stars: 0 });
         } else {
-            res.json({ success: true, stars: row.stars, wallet_address: row.wallet_address });
+            res.json({ success: true, stars: row.stars, wallet_address: row.wallet_address, banned: row.banned });
         }
     });
 });
@@ -151,6 +164,180 @@ app.post('/api/get-balance', (req, res) => {
     db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
         res.json({ stars: row?.stars || 0 });
     });
+});
+
+app.post('/api/check-banned', (req, res) => {
+    const { telegram_id } = req.body;
+    db.get(`SELECT banned FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+        res.json({ banned: row?.banned || 0 });
+    });
+});
+
+// ==================== АДМИН-ФУНКЦИИ ====================
+app.post('/api/admin/add-stars', (req, res) => {
+    const { admin_id, target_telegram_id, stars_amount, comment } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.get(`SELECT name FROM users WHERE telegram_id = ?`, [target_telegram_id], (err, row) => {
+        if (!row) return res.json({ success: false, error: 'Пользователь не найден' });
+        
+        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars_amount, target_telegram_id]);
+        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET admin_added = admin_added + ?`, 
+            [target_telegram_id, stars_amount, stars_amount]);
+        
+        notifyUser(target_telegram_id, `👑 Админ пополнил ваш баланс на ${stars_amount}⭐\n📝 ${comment || 'Без комментария'}`);
+        notifyAdmin(`✅ Админ пополнил ${row.name} на ${stars_amount}⭐`);
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/remove-stars', (req, res) => {
+    const { admin_id, target_telegram_id, stars_amount, reason } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.get(`SELECT name, stars FROM users WHERE telegram_id = ?`, [target_telegram_id], (err, row) => {
+        if (!row) return res.json({ success: false, error: 'Пользователь не найден' });
+        if (row.stars < stars_amount) return res.json({ success: false, error: 'Недостаточно средств' });
+        
+        db.run(`UPDATE users SET stars = stars - ? WHERE telegram_id = ?`, [stars_amount, target_telegram_id]);
+        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET withdrawn = withdrawn + ?`, 
+            [target_telegram_id, stars_amount, stars_amount]);
+        
+        notifyUser(target_telegram_id, `👑 Админ списал ${stars_amount}⭐ с вашего баланса\n📝 Причина: ${reason || 'Не указана'}`);
+        notifyAdmin(`❌ Админ списал ${stars_amount}⭐ у ${row.name}`);
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/clear-wallets', (req, res) => {
+    const { admin_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.run(`UPDATE users SET wallet_address = NULL`, [], (err) => {
+        if (err) return res.json({ success: false, error: err.message });
+        notifyAdmin('🗑️ Все кошельки отвязаны');
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/clear-wallet', (req, res) => {
+    const { admin_id, target_telegram_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    if (!target_telegram_id) return res.json({ success: false, error: 'Не указан пользователь' });
+    
+    db.run(`UPDATE users SET wallet_address = NULL WHERE telegram_id = ?`, [target_telegram_id], (err) => {
+        if (err) return res.json({ success: false, error: err.message });
+        notifyAdmin(`🗑️ Админ отвязал кошелёк у пользователя ${target_telegram_id}`);
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/ban-user', (req, res) => {
+    const { admin_id, target_telegram_id, reason } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.run(`UPDATE users SET banned = 1 WHERE telegram_id = ?`, [target_telegram_id], (err) => {
+        if (err) return res.json({ success: false, error: err.message });
+        notifyUser(target_telegram_id, `🔴 Вас заблокировали в боте!\n📝 Причина: ${reason || 'Не указана'}`);
+        notifyAdmin(`🔨 Админ заблокировал пользователя ${target_telegram_id}`);
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/unban-user', (req, res) => {
+    const { admin_id, target_telegram_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.run(`UPDATE users SET banned = 0 WHERE telegram_id = ?`, [target_telegram_id], (err) => {
+        if (err) return res.json({ success: false, error: err.message });
+        notifyUser(target_telegram_id, `🟢 Вы разблокированы в боте! Добро пожаловать обратно.`);
+        notifyAdmin(`✅ Админ разблокировал пользователя ${target_telegram_id}`);
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/send-message', (req, res) => {
+    const { admin_id, target_telegram_id, message } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    notifyUser(target_telegram_id, `📨 <b>Сообщение от администратора:</b>\n${message}`);
+    res.json({ success: true });
+});
+
+app.post('/api/admin/broadcast', (req, res) => {
+    const { admin_id, message } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    broadcastToAll(`📢 <b>РАССЫЛКА ОТ АДМИНА</b>\n${message}`);
+    notifyAdmin(`✅ Рассылка отправлена всем пользователям`);
+    res.json({ success: true });
+});
+
+app.post('/api/admin/pause-bot', (req, res) => {
+    const { admin_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    botPaused = true;
+    notifyAdmin(`⏸️ Бот приостановлен. Игры недоступны.`);
+    res.json({ success: true });
+});
+
+app.post('/api/admin/resume-bot', (req, res) => {
+    const { admin_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    botPaused = false;
+    notifyAdmin(`▶️ Бот возобновлён. Игры доступны.`);
+    res.json({ success: true });
+});
+
+app.post('/api/admin/get-users', (req, res) => {
+    const { admin_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.all(`SELECT telegram_id, name, username, stars, turnover, games_played, wins, banned, wallet_address FROM users ORDER BY stars DESC`, (err, rows) => {
+        res.json({ success: true, users: rows || [] });
+    });
+});
+
+app.post('/api/admin/clear-database', (req, res) => {
+    const { admin_id, confirm } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    if (confirm !== 'CONFIRM_DELETE_ALL') return res.json({ success: false, error: 'Подтверждение неверно' });
+    
+    db.run(`DELETE FROM users`, [], (err) => {
+        if (err) return res.json({ success: false, error: err.message });
+        db.run(`DELETE FROM user_finance`, []);
+        db.run(`DELETE FROM withdraw_requests`, []);
+        db.run(`DELETE FROM referrals_log`, []);
+        db.run(`DELETE FROM pending_payments`, []);
+        db.run(`DELETE FROM rocket_history`, []);
+        db.run(`DELETE FROM sqlite_sequence WHERE name IN ('users', 'user_finance', 'withdraw_requests', 'referrals_log', 'pending_payments', 'rocket_history')`, []);
+        
+        notifyAdmin(`💀 Админ полностью очистил базу данных! Все пользователи удалены.`);
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/get-withdraw-requests', (req, res) => {
+    const { admin_id } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.all(`SELECT * FROM withdraw_requests WHERE status = 'pending' ORDER BY created_at DESC`, (err, rows) => {
+        res.json({ requests: rows || [] });
+    });
+});
+
+app.post('/api/admin/approve-withdraw', (req, res) => {
+    const { admin_id, telegram_id, stars_amount } = req.body;
+    if (!isAdmin(admin_id)) return res.json({ success: false, error: 'Доступ запрещён' });
+    
+    db.run(`UPDATE withdraw_requests SET status = 'approved' WHERE telegram_id = ? AND amount = ? AND status = 'pending'`,
+        [telegram_id, stars_amount]);
+    
+    notifyUser(telegram_id, `✅ Ваша заявка на вывод ${stars_amount}⭐ подтверждена!`);
+    res.json({ success: true });
 });
 
 // ==================== TON CONNECT ====================
@@ -249,7 +436,6 @@ app.post('/api/check-payment', async (req, res) => {
                 return res.json({ success: false, error: 'Платёж не найден' });
             }
             
-            // Для теста зачисляем сразу (в проде проверять через TON API)
             if (payment.status === 'pending') {
                 db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [payment.stars_amount, payment.user_id]);
                 db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, ?, 0, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
@@ -329,7 +515,7 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ==================== ВЫВОД СРЕДСТВ ====================
+// ==================== ВЫВОД ====================
 app.post('/api/withdraw-request', (req, res) => {
     const { telegram_id, stars_amount, asset, wallet_address } = req.body;
     
@@ -353,51 +539,7 @@ app.post('/api/withdraw-request', (req, res) => {
     });
 });
 
-// ==================== АДМИН-ПАНЕЛЬ ====================
-app.post('/api/admin/add-stars', (req, res) => {
-    const { admin_id, target_telegram_id, stars_amount, comment } = req.body;
-    
-    if (admin_id !== ADMIN_ID) {
-        return res.json({ success: false, error: 'Доступ запрещён' });
-    }
-    
-    db.get(`SELECT name FROM users WHERE telegram_id = ?`, [target_telegram_id], (err, row) => {
-        if (!row) {
-            return res.json({ success: false, error: 'Пользователь не найден' });
-        }
-        
-        db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars_amount, target_telegram_id]);
-        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, 0, ?) ON CONFLICT(telegram_id) DO UPDATE SET admin_added = admin_added + ?`, 
-            [target_telegram_id, stars_amount, stars_amount]);
-        
-        notifyUser(target_telegram_id, `👑 Админ пополнил ваш баланс на ${stars_amount}⭐\n📝 ${comment || 'Без комментария'}`);
-        notifyAdmin(`✅ Админ пополнил ${row.name} на ${stars_amount}⭐`);
-        
-        res.json({ success: true });
-    });
-});
-
-app.post('/api/admin/get-withdraw-requests', (req, res) => {
-    const { admin_id } = req.body;
-    if (admin_id !== ADMIN_ID) return res.json({ success: false });
-    
-    db.all(`SELECT * FROM withdraw_requests WHERE status = 'pending' ORDER BY created_at DESC`, (err, rows) => {
-        res.json({ requests: rows || [] });
-    });
-});
-
-app.post('/api/admin/approve-withdraw', (req, res) => {
-    const { admin_id, telegram_id, stars_amount } = req.body;
-    if (admin_id !== ADMIN_ID) return res.json({ success: false });
-    
-    db.run(`UPDATE withdraw_requests SET status = 'approved' WHERE telegram_id = ? AND amount = ? AND status = 'pending'`,
-        [telegram_id, stars_amount]);
-    
-    notifyUser(telegram_id, `✅ Ваша заявка на вывод ${stars_amount}⭐ подтверждена!`);
-    res.json({ success: true });
-});
-
-// ==================== РАКЕТА ====================
+// ==================== ИГРЫ ====================
 let rocketState = {
     status: 'waiting',
     currentMultiplier: 1.00,
@@ -410,6 +552,7 @@ let rocketInterval = null;
 let countdownInterval = null;
 let minesState = new Map();
 let rouletteBets = [];
+let gameInterval = null;
 
 function generateCrashPoint() {
     let r = Math.random();
@@ -422,6 +565,11 @@ function generateCrashPoint() {
 }
 
 function startRocketCountdown() {
+    if (botPaused) {
+        if (gameInterval) clearTimeout(gameInterval);
+        gameInterval = setTimeout(startRocketCountdown, 1000);
+        return;
+    }
     rocketState.status = 'waiting';
     rocketState.countdown = 10;
     rocketState.bets = [];
@@ -431,6 +579,7 @@ function startRocketCountdown() {
     
     if (countdownInterval) clearInterval(countdownInterval);
     countdownInterval = setInterval(() => {
+        if (botPaused) return;
         rocketState.countdown--;
         io.emit('rocket_countdown', rocketState.countdown);
         if (rocketState.countdown <= 0) {
@@ -441,6 +590,11 @@ function startRocketCountdown() {
 }
 
 function startRocketFlying() {
+    if (botPaused) {
+        if (gameInterval) clearTimeout(gameInterval);
+        gameInterval = setTimeout(startRocketFlying, 1000);
+        return;
+    }
     let crash = generateCrashPoint();
     
     rocketState = {
@@ -458,8 +612,9 @@ function startRocketFlying() {
     let lastTime = Date.now();
     
     rocketInterval = setInterval(() => {
-        if (rocketState.status !== 'flying') {
-            clearInterval(rocketInterval);
+        if (botPaused || rocketState.status !== 'flying') {
+            if (botPaused) return;
+            if (rocketState.status !== 'flying') clearInterval(rocketInterval);
             return;
         }
         
@@ -491,7 +646,8 @@ function startRocketFlying() {
             io.emit('rocket_crash', rocketState.currentMultiplier);
             db.run(`INSERT INTO rocket_history (multiplier) VALUES (?)`, [rocketState.currentMultiplier]);
             
-            setTimeout(startRocketCountdown, 1500);
+            if (gameInterval) clearTimeout(gameInterval);
+            gameInterval = setTimeout(startRocketCountdown, 1500);
         } else {
             io.emit('rocket_multiplier', rocketState.currentMultiplier);
         }
@@ -503,7 +659,6 @@ function calculateMinesMultiplier(minesCount, revealed) {
     return Math.min(Math.pow(perCell, revealed), 500);
 }
 
-// ==================== СОКЕТЫ ====================
 io.on('connection', (socket) => {
     console.log('👤 Игрок подключился');
     
@@ -514,8 +669,14 @@ io.on('connection', (socket) => {
                 db.run(`INSERT INTO users (telegram_id, name, avatar, username) VALUES (?, ?, ?, ?)`, [telegram_id, name, avatar, username]);
                 callback({ success: true, stars: 0 });
             } else {
-                callback({ success: true, stars: row.stars, name: row.name, avatar: row.avatar });
+                callback({ success: true, stars: row.stars, name: row.name, avatar: row.avatar, banned: row.banned });
             }
+        });
+    });
+    
+    socket.on('check-banned', (telegram_id, callback) => {
+        db.get(`SELECT banned FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+            callback({ banned: row?.banned || 0 });
         });
     });
     
@@ -532,6 +693,7 @@ io.on('connection', (socket) => {
     });
     
     socket.on('rocket_place_bet', (data, callback) => {
+        if (botPaused) return callback({ success: false, error: 'Бот на техобслуживании' });
         if (rocketState.status !== 'waiting') return callback({ success: false, error: 'Ставки только до взлёта!' });
         
         const { telegram_id, name, amount, autoCashout, avatar } = data;
@@ -579,6 +741,7 @@ io.on('connection', (socket) => {
     });
     
     socket.on('mines_start', (data, callback) => {
+        if (botPaused) return callback({ success: false, error: 'Бот на техобслуживании' });
         const { telegram_id, betAmount, minesCount } = data;
         
         db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
@@ -638,6 +801,7 @@ io.on('connection', (socket) => {
     });
     
     socket.on('roulette_place_bet', (data, callback) => {
+        if (botPaused) return callback({ success: false, error: 'Бот на техобслуживании' });
         const { telegram_id, name, amount, avatar } = data;
         
         db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
