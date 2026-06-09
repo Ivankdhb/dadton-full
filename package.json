@@ -1,13 +1,7 @@
 {
-  "name": "dadton",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.6.1",
-    "sqlite3": "^5.1.6"
-  }
+    "url": "https://dadton-full.onrender.com",
+    "name": "DadTon Casino",
+    "iconUrl": "https://dadton-full.onrender.com/icon.png",
+    "termsOfUseUrl": "https://dadton-full.onrender.com/terms",
+    "privacyPolicyUrl": "https://dadton-full.onrender.com/privacy"
 }
