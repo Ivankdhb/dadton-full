@@ -46,7 +46,6 @@
         .btn-red { background: linear-gradient(90deg, #ff4444, #cc0000); color: #fff; }
         .btn-green { background: linear-gradient(90deg, #00cc66, #009944); color: #fff; animation: pulse 0.8s infinite alternate; }
         .btn-gray { background: #2a2a2a; color: #888; cursor: not-allowed; }
-        .btn-disabled { background: #2a2a2a; color: #888; cursor: not-allowed; opacity: 0.6; }
         @keyframes pulse { 0% { box-shadow: 0 0 4px #00cc66; } 100% { box-shadow: 0 0 16px #00cc66; } }
 
         .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0; }
@@ -77,21 +76,19 @@
         
         .referral-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* НОВЫЙ ДИЗАЙН ПЬЕДЕСТАЛОВ */
-        .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin: 30px 0 40px; }
+        .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin: 30px 0 40px; flex-wrap: wrap; }
         .podium-item { text-align: center; display: flex; flex-direction: column; align-items: center; width: 100px; }
         .podium-base { width: 100%; background: linear-gradient(180deg, #2a2a2a, #1a1a1a); border-radius: 8px 8px 0 0; margin-top: 8px; }
         .podium-1 .podium-base { height: 100px; background: linear-gradient(180deg, #FFD700, #B8860B); box-shadow: 0 -5px 20px rgba(255,215,0,0.3); }
         .podium-2 .podium-base { height: 70px; background: linear-gradient(180deg, #C0C0C0, #808080); }
         .podium-3 .podium-base { height: 50px; background: linear-gradient(180deg, #CD7F32, #8B4513); }
-        .podium-avatar { width: 60px; height: 60px; border-radius: 50%; background: #2a2a2a; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; overflow: hidden; position: relative; z-index: 2; }
+        .podium-avatar { width: 60px; height: 60px; border-radius: 50%; background: #2a2a2a; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; overflow: hidden; }
         .podium-1 .podium-avatar { width: 70px; height: 70px; border: 3px solid #FFD700; box-shadow: 0 0 20px #FFD700; }
         .podium-2 .podium-avatar { width: 60px; height: 60px; border: 3px solid #C0C0C0; }
         .podium-3 .podium-avatar { width: 55px; height: 55px; border: 3px solid #CD7F32; }
         .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .podium-name { font-size: 12px; font-weight: 600; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
         .podium-stars { font-size: 11px; color: #FFD700; margin-top: 4px; }
-        .podium-rank { font-size: 10px; color: #888; margin-top: 2px; }
         
         .leaderboard-list { max-height: 300px; overflow-y: auto; }
         .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #2a2a2a; }
@@ -128,6 +125,8 @@
         @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
         
         .withdraw-rate { font-size: 11px; color: #888; margin-bottom: 10px; padding: 6px; background: #1a1a1a; border-radius: 6px; }
+        
+        #ton-connect-btn-container { display: none; }
         
         @media (max-width: 480px) {
             .leaderboard-podium { gap: 8px; }
@@ -440,59 +439,12 @@
         <div class="nav-item" id="nav-profile" onclick="switchPage('profile')"><span>👤</span>Профиль</div>
     </nav>
 
+    <div id="ton-connect-btn-container" style="display: none;"></div>
+
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-
-        // Инициализация TON Connect
-        let tonConnectUI = null;
-        let isWalletConnected = false;
-        let walletAddress = '';
-        
-        try {
-            tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-                manifestUrl: 'https://dadton-full.onrender.com/tonconnect-manifest.json'
-            });
-            
-            // Подписка на события подключения/отключения кошелька
-            tonConnectUI.onStatusChange((wallet) => {
-                if (wallet) {
-                    isWalletConnected = true;
-                    walletAddress = wallet.account.address;
-                    const shortAddress = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
-                    document.getElementById('wallet-status').innerHTML = `💎 ${shortAddress}`;
-                    document.getElementById('wallet-status').classList.add('connected');
-                    
-                    // Сохраняем кошелёк на сервере
-                    fetch(`${BACKEND_URL}/api/save-wallet`, {
-                        method: 'POST',
-                        headers: { 'content-type': 'application/json' },
-                        body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress })
-                    });
-                } else {
-                    isWalletConnected = false;
-                    walletAddress = '';
-                    document.getElementById('wallet-status').innerHTML = '💎 Подключить кошелёк';
-                    document.getElementById('wallet-status').classList.remove('connected');
-                }
-            });
-        } catch(e) { 
-            console.warn('TON Connect not loaded', e); 
-        }
-
-        async function connectWallet() {
-            if (!tonConnectUI) {
-                tg.showAlert('Ошибка инициализации TON Connect');
-                return;
-            }
-            try {
-                await tonConnectUI.connectWallet();
-            } catch(e) {
-                console.error('Connect error:', e);
-                tg.showAlert('Ошибка подключения кошелька');
-            }
-        }
 
         let user = { telegram_id: "123456", name: "Тест Игрок", avatar: "", username: "test", stars: 1000 };
         if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -506,9 +458,77 @@
         const WS_URL = "wss://dadton-full.onrender.com";
         let ws = null;
         let currentMinesGameStatus = 'idle';
-        let currentRocketBet = null;
         let rocketHasBet = false;
         let reconnectAttempts = 0;
+
+        // ========== TON CONNECT ИНИЦИАЛИЗАЦИЯ ==========
+        let tonConnectUI = null;
+        let isWalletConnected = false;
+        let walletAddress = '';
+
+        function initTonConnect() {
+            if (typeof TON_CONNECT_UI === 'undefined') {
+                console.log('Ждём загрузку TON Connect...');
+                setTimeout(initTonConnect, 500);
+                return;
+            }
+            
+            try {
+                tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+                    manifestUrl: 'https://dadton-full.onrender.com/tonconnect-manifest.json',
+                    buttonRootId: 'ton-connect-btn-container'
+                });
+                
+                tonConnectUI.onStatusChange((wallet) => {
+                    console.log('Wallet status changed:', wallet);
+                    if (wallet) {
+                        isWalletConnected = true;
+                        walletAddress = wallet.account.address;
+                        const shortAddress = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
+                        const walletBtn = document.getElementById('wallet-status');
+                        if (walletBtn) {
+                            walletBtn.innerHTML = `💎 ${shortAddress}`;
+                            walletBtn.classList.add('connected');
+                        }
+                        
+                        fetch(`${BACKEND_URL}/api/save-wallet`, {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress })
+                        });
+                        
+                        showToast('✅ Кошелёк подключён!');
+                    } else {
+                        isWalletConnected = false;
+                        walletAddress = '';
+                        const walletBtn = document.getElementById('wallet-status');
+                        if (walletBtn) {
+                            walletBtn.innerHTML = '💎 Подключить кошелёк';
+                            walletBtn.classList.remove('connected');
+                        }
+                    }
+                });
+                
+                console.log('TON Connect инициализирован');
+            } catch(e) {
+                console.error('TON Connect init error:', e);
+            }
+        }
+
+        setTimeout(initTonConnect, 1000);
+
+        async function connectWallet() {
+            if (!tonConnectUI) {
+                tg.showAlert('⏳ Подождите, инициализация...');
+                return;
+            }
+            try {
+                await tonConnectUI.connectWallet();
+            } catch(e) {
+                console.error('Connect error:', e);
+                tg.showAlert('❌ Ошибка подключения кошелька');
+            }
+        }
 
         function showToast(msg) {
             let toast = document.createElement('div');
@@ -518,6 +538,7 @@
             setTimeout(() => toast.remove(), 2000);
         }
 
+        // Регистрация пользователя
         fetch(`${BACKEND_URL}/api/register`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
@@ -577,21 +598,18 @@
                             <div class="podium-avatar">${top3[1] && top3[1].avatar ? `<img src="${top3[1].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[1].name || '?').charAt(0)}'">` : (top3[1] ? (top3[1].name || '?').charAt(0) : '?')}</div>
                             <div class="podium-name">${top3[1] ? (top3[1].name || '?').substring(0,12) : '-'}</div>
                             <div class="podium-stars">${top3[1] ? (top3[1].turnover || 0) : 0}⭐</div>
-                            <div class="podium-rank">🥈 2 место</div>
                             <div class="podium-base"></div>
                         </div>
                         <div class="podium-item podium-1">
                             <div class="podium-avatar">${top3[0] && top3[0].avatar ? `<img src="${top3[0].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[0].name || '?').charAt(0)}'">` : (top3[0] ? (top3[0].name || '?').charAt(0) : '?')}</div>
                             <div class="podium-name">${top3[0] ? (top3[0].name || '?').substring(0,12) : '-'}</div>
                             <div class="podium-stars">${top3[0] ? (top3[0].turnover || 0) : 0}⭐</div>
-                            <div class="podium-rank">🥇 1 место</div>
                             <div class="podium-base"></div>
                         </div>
                         <div class="podium-item podium-3">
                             <div class="podium-avatar">${top3[2] && top3[2].avatar ? `<img src="${top3[2].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[2].name || '?').charAt(0)}'">` : (top3[2] ? (top3[2].name || '?').charAt(0) : '?')}</div>
                             <div class="podium-name">${top3[2] ? (top3[2].name || '?').substring(0,12) : '-'}</div>
                             <div class="podium-stars">${top3[2] ? (top3[2].turnover || 0) : 0}⭐</div>
-                            <div class="podium-rank">🥉 3 место</div>
                             <div class="podium-base"></div>
                         </div>
                     `;
@@ -695,7 +713,6 @@
                         document.getElementById('rocket-mult').style.display = 'none';
                         updateRocketPlayers(data.bets);
                         
-                        // Проверяем, есть ли у пользователя ставка
                         const hasBet = data.bets.some(b => b.telegram_id === user.telegram_id && !b.cashedOut);
                         rocketHasBet = hasBet;
                         
@@ -714,7 +731,6 @@
                         mEl.style.color = '#FFD700';
                         mEl.innerText = `1.00x`;
                         document.getElementById('rocket-video').play();
-                        // Если у пользователя есть ставка, показываем кнопку "Забрать"
                         if (rocketHasBet) {
                             setRocketButtonState('flying');
                         } else {
@@ -742,16 +758,12 @@
                         let myBet = data.bets.find(b => b.telegram_id === user.telegram_id);
                         if (myBet && !myBet.cashedOut) {
                             rocketHasBet = true;
-                            if (rocketState.status === 'flying') {
-                                setRocketButtonState('flying');
-                            } else {
-                                setRocketButtonState('waiting_with_bet');
-                            }
                             document.getElementById('rocket-cancel-btn').style.display = 'block';
+                            setRocketButtonState('flying');
                         } else {
                             rocketHasBet = false;
-                            setRocketButtonState('bet');
                             document.getElementById('rocket-cancel-btn').style.display = 'none';
+                            setRocketButtonState('bet');
                         }
                     }
                     if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) {
@@ -793,9 +805,6 @@
                         showToast('❌ Ставка отменена');
                         document.getElementById('roulette-cancel-btn').style.display = 'none';
                         updateBalance();
-                    }
-                    if (data.type === 'rocket_state') {
-                        rocketState = data.state;
                     }
                 } catch(e) { console.error('WebSocket message error:', e); }
             };
@@ -1158,7 +1167,6 @@
                 ctx.arc(130, 130, 120, currentAngle, currentAngle + sliceAngle);
                 ctx.fillStyle = b.color || '#FFD700';
                 ctx.fill();
-                ctx.strokeStyle = '#2a2a2a';
                 ctx.stroke();
                 let middleAngle = currentAngle + sliceAngle / 2;
                 let avatarX = 130 + Math.cos(middleAngle) * 70;
@@ -1259,6 +1267,7 @@
             }
         }
 
+        // ========== ПОПОЛНЕНИЕ TELEGRAM STARS ==========
         function processStarsDeposit() {
             let amt = document.getElementById('dep-stars-amount').value;
             if (amt < 1) return showToast('Минимальная сумма 1 звезда');
@@ -1283,14 +1292,28 @@
             });
         }
 
+        // ========== ПОПОЛНЕНИЕ КРИПТОЙ (TON) ==========
         async function processCryptoDeposit() {
-            if (!isWalletConnected || !tonConnectUI) {
-                showToast('❌ Сначала подключите кошелёк TON!');
+            if (!tonConnectUI) {
+                tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
                 return;
             }
+            
+            const connected = await tonConnectUI.connected;
+            if (!connected) {
+                tg.showAlert('❌ Кошелёк не подключён!\n\nНажмите на кнопку "💎 Подключить кошелёк" вверху экрана.');
+                closeModal('deposit-modal');
+                return;
+            }
+            
             let tonAmount = parseFloat(document.getElementById('dep-crypto-amount').value);
-            if (isNaN(tonAmount) || tonAmount < 0.5) return showToast('Минимум 0.5 TON');
-            let nanoAmount = Math.floor(tonAmount * 1000000000).toString();
+            if (isNaN(tonAmount) || tonAmount < 0.5) {
+                showToast('❌ Минимум 0.5 TON');
+                return;
+            }
+            
+            const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
+            
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 360,
                 messages: [{
@@ -1299,13 +1322,25 @@
                     payload: user.telegram_id
                 }]
             };
+            
             try {
+                showToast('🔄 Отправка транзакции...');
                 await tonConnectUI.sendTransaction(transaction);
-                showToast("✅ Транзакция отправлена! Баланс обновится автоматически.");
+                showToast('✅ Транзакция отправлена! Баланс обновится через несколько секунд.');
                 closeModal('deposit-modal');
+                
+                setTimeout(() => {
+                    updateBalance();
+                    showToast('🔄 Баланс обновлён!');
+                }, 10000);
+                
             } catch (e) {
                 console.error('Transaction error:', e);
-                showToast("❌ Ошибка или отмена операции");
+                if (e.message && e.message.toLowerCase().includes('cancel')) {
+                    showToast('❌ Операция отменена');
+                } else {
+                    showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'));
+                }
             }
         }
 
