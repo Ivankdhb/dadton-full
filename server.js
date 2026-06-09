@@ -373,6 +373,21 @@ app.post('/api/user-referrals', (req, res) => {
     });
 });
 
+// НОВЫЙ ЭНДПОИНТ ДЛЯ СОХРАНЕНИЯ КОШЕЛЬКА
+app.post('/api/save-wallet', (req, res) => {
+    const { telegram_id, wallet_address } = req.body;
+    if (!telegram_id || !wallet_address) {
+        return res.json({ success: false, msg: 'Missing data' });
+    }
+    db.run("UPDATE users SET wallet_address = ? WHERE telegram_id = ?", [wallet_address, telegram_id], (err) => {
+        if (err) {
+            console.error('Save wallet error:', err);
+            return res.json({ success: false, msg: err.message });
+        }
+        res.json({ success: true });
+    });
+});
+
 app.post('/api/cancel-rocket-bet', (req, res) => {
     const { telegram_id } = req.body;
     let betIndex = rocketState.bets.findIndex(b => b.telegram_id === telegram_id && !b.cashedOut);
@@ -553,6 +568,7 @@ app.post('/api/create-invoice', async (req, res) => {
             res.json({ success: false, error: 'Ошибка Telegram API' });
         }
     } catch (e) {
+        console.error('Create invoice error:', e.message);
         res.json({ success: false, error: e.message });
     }
 });
