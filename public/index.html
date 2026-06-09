@@ -370,7 +370,7 @@
                 <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
             </div>
             <input type="number" id="depositAmount" class="bet-input" placeholder="Сумма" value="1" step="0.5">
-            <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через Tonkeeper</div>
+            <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через кошелёк</div>
         </div>
         
         <div id="starsPanel" style="display:none;">
@@ -470,6 +470,11 @@
     let selectedAsset = 'TON';
     let selectedWithdrawAsset = 'TON';
     let tonConnectUI = null;
+    let currentWalletAddress = null;
+    let currentCryptoAsset = 'TON';
+    let currentTxHash = null;
+    let checkInterval = null;
+    
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
     const USDT_JETTON = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
     const ADMIN_ID = '1631627984';
@@ -507,13 +512,15 @@
         else av.innerHTML = pname.charAt(0).toUpperCase();
     }
 
-    function refreshBalance() {
-        socket.emit('get_balance', uid, (d) => {
-            if (d && d.stars !== undefined) {
-                stars = d.stars;
-                updateUI();
-            }
+    async function refreshBalance() {
+        const res = await fetch('/api/get-balance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: uid })
         });
+        const data = await res.json();
+        stars = data.stars;
+        updateUI();
     }
     
     function checkBalanceBeforeBet(needAmount) {
@@ -591,55 +598,6 @@
         }
     }
     
-    function sendCryptoPayment() {
-        let amount = parseFloat(document.getElementById('depositAmount').value);
-        
-        if (!amount || amount <= 0) {
-            toast('❌ Введите сумму');
-            return;
-        }
-        if (selectedAsset === 'TON' && amount < 0.5) {
-            toast('❌ Минимум 0.5 TON');
-            return;
-        }
-        if (selectedAsset === 'USDT' && amount < 1) {
-            toast('❌ Минимум 1 USDT');
-            return;
-        }
-        
-        const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
-        const comment = `deposit_${uid}_${Math.floor(starsAmount)}`;
-        
-        let url;
-        if (selectedAsset === 'TON') {
-            const nanoAmount = Math.floor(amount * 1e9);
-            url = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=${encodeURIComponent(comment)}`;
-        } else {
-            const usdtAmount = amount.toFixed(2);
-            url = `ton://transfer/${ADMIN_WALLET}?amount=${usdtAmount}&jetton=${USDT_JETTON}&text=${encodeURIComponent(comment)}`;
-        }
-        
-        navigator.clipboard.writeText(ADMIN_WALLET);
-        toast(`✅ Отправьте ${amount} ${selectedAsset}\nПолучите ${Math.floor(starsAmount)}⭐\nАдрес скопирован!\nПосле оплаты напишите @Azower`);
-        window.open(url, '_blank');
-        closeDepositModal();
-        
-        fetch('/api/deposit-request', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegram_id: uid,
-                name: pname,
-                amount: amount,
-                asset: selectedAsset,
-                stars: Math.floor(starsAmount),
-                wallet: ADMIN_WALLET
-            })
-        }).catch(e => console.log('Error:', e));
-        
-        toast(`📩 Заявка отправлена! @Azower зачислит звёзды после проверки`);
-    }
-    
     function selectAsset(asset) {
         selectedAsset = asset;
         document.getElementById('tonBtn').classList.remove('active');
@@ -687,7 +645,7 @@
         document.getElementById('withdrawModal').style.display = 'none';
     }
     
-    function sendWithdrawRequest() {
+    async function sendWithdrawRequest() {
         let amount = parseInt(document.getElementById('withdrawAmount').value);
         let address = document.getElementById('withdrawAddress').value;
         
@@ -713,7 +671,7 @@
             return;
         }
         
-        fetch('/api/withdraw-request', {
+        const res = await fetch('/api/withdraw-request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -722,18 +680,153 @@
                 asset: assetName,
                 wallet_address: walletAddress
             })
-        }).then(res => res.json()).then(data => {
-            if (data.success) {
-                toast(`✅ Заявка на вывод ${afterFee}⭐ отправлена! (Комиссия ${fee}⭐)`);
-                refreshBalance();
-                closeWithdrawModal();
-            } else {
-                toast(data.error || '❌ Ошибка');
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            toast(`✅ Заявка на вывод ${afterFee}⭐ отправлена! (Комиссия ${fee}⭐)`);
+            refreshBalance();
+            closeWithdrawModal();
+        } else {
+            toast(data.error || '❌ Ошибка');
+        }
+    }
+
+    // ==================== КРИПТО-ПОПОЛНЕНИЕ ЧЕРЕЗ ПРИВЯЗАННЫЙ КОШЕЛЁК ====================
+    function setCryptoAsset(asset) {
+        currentCryptoAsset = asset;
+        document.getElementById('cryptoDepositTonBtn').classList.remove('active');
+        document.getElementById('cryptoDepositUsdtBtn').classList.remove('active');
+        if (asset === 'TON') document.getElementById('cryptoDepositTonBtn').classList.add('active');
+        else document.getElementById('cryptoDepositUsdtBtn').classList.add('active');
+    }
+    
+    function showCryptoDepositModal() {
+        if (!currentWalletAddress) {
+            toast('❌ Сначала подключите кошелёк в профиле');
+            showWalletModal();
+            return;
+        }
+        document.getElementById('cryptoDepositModal').style.display = 'flex';
+    }
+    
+    function closeCryptoDepositModal() {
+        document.getElementById('cryptoDepositModal').style.display = 'none';
+        if (checkInterval) clearInterval(checkInterval);
+    }
+    
+    async function createCryptoInvoice() {
+        const amount = parseFloat(document.getElementById('cryptoAmount').value);
+        
+        if (!amount || amount < 0.5) {
+            toast('❌ Минимальная сумма: 0.5 TON или 1 USDT');
+            return;
+        }
+        
+        if (!currentWalletAddress) {
+            toast('❌ Сначала подключите кошелёк в профиле');
+            showWalletModal();
+            return;
+        }
+        
+        toast('🔄 Создание счёта...');
+        
+        const res = await fetch('/api/create-crypto-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: uid,
+                asset: currentCryptoAsset,
+                amount: amount,
+                wallet_address: currentWalletAddress
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            currentTxHash = data.tx_hash;
+            toast('✅ Счёт создан! Оплатите в вашем кошельке');
+            window.open(data.invoiceUrl, '_blank');
+            startPaymentCheck(currentTxHash);
+        } else {
+            toast('❌ ' + (data.error || 'Ошибка'));
+            if (data.error && data.error.includes('кошелёк')) {
+                showWalletModal();
             }
-        }).catch(e => toast('❌ Ошибка сервера'));
+        }
+    }
+    
+    function startPaymentCheck(tx_hash) {
+        if (checkInterval) clearInterval(checkInterval);
+        
+        checkInterval = setInterval(async () => {
+            const res = await fetch('/api/check-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tx_hash: tx_hash })
+            });
+            const data = await res.json();
+            
+            if (data.success && data.confirmed) {
+                clearInterval(checkInterval);
+                toast(`✅ Пополнение подтверждено! +${data.stars}⭐`);
+                refreshBalance();
+                closeCryptoDepositModal();
+            }
+        }, 3000);
+        
+        setTimeout(() => {
+            if (checkInterval) clearInterval(checkInterval);
+        }, 5 * 60 * 1000);
     }
 
     // ==================== TON CONNECT ====================
+    async function checkWalletStatus() {
+        try {
+            const res = await fetch('/api/get-wallet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: uid })
+            });
+            const data = await res.json();
+            if (data.success && data.wallet_address) {
+                currentWalletAddress = data.wallet_address;
+                const shortAddr = currentWalletAddress.slice(0, 6) + '...' + currentWalletAddress.slice(-6);
+                document.getElementById('wallet-status-info').innerHTML = `
+                    <span style="color:#00cc66;">✅ Кошелёк: ${shortAddr}</span>
+                    <button class="btn btn-secondary" style="margin-top:8px; padding:6px; font-size:11px;" onclick="disconnectWallet()">🔓 Отвязать</button>
+                `;
+            } else {
+                currentWalletAddress = null;
+                document.getElementById('wallet-status-info').innerHTML = '<span style="color:#ff4444;">❌ Кошелёк не подключён</span>';
+            }
+        } catch(e) { console.log('Check wallet error:', e); }
+    }
+    
+    async function disconnectWallet() {
+        if (!confirm('Отвязать кошелёк? Вы сможете подключить другой.')) return;
+        
+        const res = await fetch('/api/disconnect-wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: uid })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            currentWalletAddress = null;
+            if (tonConnectUI) {
+                await tonConnectUI.disconnect();
+            }
+            toast('✅ Кошелёк отвязан');
+            checkWalletStatus();
+            setTimeout(() => closeWalletModal(), 1000);
+        } else {
+            toast('❌ Ошибка отвязки');
+        }
+    }
+    
     function initTonConnect() {
         if (typeof TON_CONNECT_UI !== 'undefined' && !tonConnectUI) {
             try {
@@ -758,14 +851,17 @@
                         });
                         const data = await res.json();
                         if (data.success) {
-                            document.getElementById('wallet-status-info').innerHTML = '<span style="color:#00cc66;">✅ Кошелёк подключён! ' + address.slice(0,6) + '...' + address.slice(-6) + '</span>';
+                            currentWalletAddress = address;
+                            checkWalletStatus();
                             toast('✅ Кошелёк успешно подключён!');
                             setTimeout(() => closeWalletModal(), 1500);
                         }
                     } else {
-                        document.getElementById('wallet-status-info').innerHTML = '<span style="color:#ff4444;">❌ Кошелёк не подключён</span>';
+                        checkWalletStatus();
                     }
                 });
+                
+                checkWalletStatus();
             } catch (err) {
                 console.error("Ошибка инициализации TON Connect:", err);
             }
