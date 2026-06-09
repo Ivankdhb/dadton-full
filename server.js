@@ -225,3 +225,75 @@ io.on('connection', (socket) => {
     socket.on('roulette_bet', ({ telegram_id, username, bet, color }) => {
         if (systemSuspended) return;
         db.get("SELECT balance FROM users WHERE telegram_id = ?", [telegram_id], (err, user) => {
+            if (user && user.balance >= bet && rouletteState.status === 'waiting') {
+                db.run("UPDATE users SET balance = balance - ?, games_count = games_count + 1, turnover = turnover + ? WHERE telegram_id = ?", [bet, bet, telegram_id]);
+                rouletteState.bets.push({ telegram_id, username, bet, color });
+                io.emit('roulette_state', rouletteState);
+            }
+        });
+    });
+});
+
+// Игровые циклы
+function runRocketLoop() {
+    rocketState = { status: 'waiting', multiplier: 1.00, timer: 15, bets: [], crashPoint: (Math.random() * 6.95 + 1.05).toFixed(2) };
+    let t = setInterval(() => {
+        rocketState.timer--; io.emit('rocket_state', rocketState);
+        if (rocketState.timer <= 0) { clearInterval(t); launchRocket(); }
+    }, 1000);
+}
+
+function launchRocket() {
+    rocketState.status = 'live';
+    let cur = 1.00;
+    let f = setInterval(() => {
+        cur += 0.03; rocketState.multiplier = parseFloat(cur.toFixed(2));
+        rocketState.bets.forEach(b => {
+            if (!b.cashedOut && b.autoWithdraw && rocketState.multiplier >= b.autoWithdraw && rocketState.multiplier <= rocketState.crashPoint) {
+                b.cashedOut = true;
+                db.run("UPDATE users SET balance = balance + ?, wins_count = wins_count + 1 WHERE telegram_id = ?", [b.bet * b.autoWithdraw, b.telegram_id]);
+                db.run("INSERT INTO game_history (telegram_id, game_type, bet, multiplier, profit) VALUES (?, 'ROCKET', ?, ?, ?)", [b.telegram_id, b.bet, b.autoWithdraw, (b.bet * b.autoWithdraw) - b.bet]);
+            }
+        });
+        io.emit('rocket_state', rocketState);
+
+        if (rocketState.multiplier >= rocketState.crashPoint) {
+            clearInterval(f); rocketState.status = 'crashed';
+            rocketState.bets.forEach(b => { if (!b.cashedOut) db.run("INSERT INTO game_history (telegram_id, game_type, bet, multiplier, profit) VALUES (?, 'ROCKET', ?, 0, ?)", [b.telegram_id, b.bet, -b.bet]); });
+            io.emit('rocket_state', rocketState);
+            setTimeout(runRocketLoop, 5000);
+        }
+    }, 100);
+}
+
+function runRouletteLoop() {
+    rouletteState.status = 'waiting'; rouletteState.timer = 15; rouletteState.bets = [];
+    let t = setInterval(() => {
+        rouletteState.timer--; io.emit('roulette_state', rouletteState);
+        if (rouletteState.timer <= 0) { clearInterval(t); spinRoulette(); }
+    }, 1000);
+}
+
+function spinRoulette() {
+    if (rouletteState.bets.length < 2) { rouletteState.timer = 15; setTimeout(runRouletteLoop, 2000); return; }
+    rouletteState.status = 'spinning'; io.emit('roulette_state', rouletteState);
+    let total = rouletteState.bets.reduce((a, b) => a + b.bet, 0);
+    let winTkt = Math.random() * total, sum = 0, winner = rouletteState.bets[0];
+    for (let b of rouletteState.bets) { sum += b.bet; if (winTkt <= sum) { winner = b; break; } }
+    
+    db.serialize(() => {
+        db.run("UPDATE users SET balance = balance + ?, wins_count = wins_count + 1 WHERE telegram_id = ?", [total, winner.telegram_id]);
+        rouletteState.bets.forEach(b => {
+            let p = (b.telegram_id === winner.telegram_id) ? (total - b.bet) : -b.bet;
+            db.run("INSERT INTO game_history (telegram_id, game_type, bet, multiplier, profit) VALUES (?, 'ROULETTE', ?, ?, ?)", [b.telegram_id, b.bet, (b.telegram_id === winner.telegram_id ? total/b.bet : 0), p]);
+        });
+    });
+
+    setTimeout(() => {
+        rouletteState.history.unshift({ winner: winner.username, total });
+        io.emit('roulette_result', { winner, total });
+        setTimeout(runRouletteLoop, 7000);
+    }, 3000);
+}
+
+server.listen(PORT, () => { runRocketLoop(); runRouletteLoop(); console.log(`Сервер запущен на порту ${PORT}`); });
