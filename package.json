@@ -1,5 +1,5 @@
 {
-    "name": "dadton-tonconnect",
+    "name": "dadton",
     "version": "1.0.0",
     "scripts": {
         "start": "node server.js"
@@ -8,6 +8,9 @@
         "node": "20.x"
     },
     "dependencies": {
-        "express": "^4.18.2"
+        "express": "^4.18.2",
+        "socket.io": "^4.6.1",
+        "sqlite3": "^5.1.6",
+        "axios": "^1.6.0"
     }
 }
