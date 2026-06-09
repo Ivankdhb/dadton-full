@@ -42,6 +42,7 @@
         .btn-gold { background: linear-gradient(90deg, #FFD700, #FFA500); }
         .btn-red { background: linear-gradient(90deg, #ff4444, #cc0000); color: #fff; }
         .btn-green { background: linear-gradient(90deg, #00cc66, #009944); color: #fff; animation: pulse 0.8s infinite alternate; }
+        .btn-gray { background: #2a2a2a; color: #888; }
         @keyframes pulse { 0% { box-shadow: 0 0 4px #00cc66; } 100% { box-shadow: 0 0 16px #00cc66; } }
 
         .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0; }
@@ -54,11 +55,49 @@
 
         .profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
         .user-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #FFD700; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; }
+        
+        .profile-tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 8px; }
+        .profile-tab { flex: 1; text-align: center; padding: 8px; background: none; border: none; color: #888; font-weight: 600; cursor: pointer; }
+        .profile-tab.active { color: #FFD700; border-bottom: 2px solid #FFD700; }
+        .profile-tab-content { display: none; }
+        .profile-tab-content.active { display: block; }
+        
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .stat-box { background: #111; border: 1px solid #2a2a2a; padding: 10px; border-radius: 8px; text-align: center; }
         .stat-box span { font-size: 11px; color: #888; display: block; }
         .stat-box strong { font-size: 16px; color: #FFD700; font-weight: 800; }
         
+        .history-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .history-win { color: #00cc66; }
+        .history-loss { color: #ff4444; }
+        
+        .referral-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 16px; margin: 20px 0 30px; }
+        .podium-item { text-align: center; width: 80px; }
+        .podium-avatar { width: 50px; height: 50px; border-radius: 50%; background: #2a2a2a; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; }
+        .podium-name { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .podium-stars { font-size: 10px; color: #FFD700; }
+        .podium-1 { transform: translateY(0); }
+        .podium-2 { transform: translateY(15px); }
+        .podium-3 { transform: translateY(30px); }
+        .first-place .podium-avatar { border: 2px solid #FFD700; box-shadow: 0 0 10px #FFD700; }
+        .second-place .podium-avatar { border: 2px solid #C0C0C0; }
+        .third-place .podium-avatar { border: 2px solid #CD7F32; }
+        
+        .leaderboard-list { max-height: 300px; overflow-y: auto; }
+        .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #2a2a2a; }
+        .leaderboard-rank { width: 35px; font-weight: 800; color: #FFD700; }
+        .leaderboard-avatar { width: 30px; height: 30px; border-radius: 50%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .leaderboard-name { flex: 1; }
+        .leaderboard-stars { color: #FFD700; font-weight: 800; }
+
+        .rocket-history { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .crash-badge { background: #1a1a1a; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #ff4444; }
+
+        .stars-presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .stars-preset { background: #2a2a2a; border: none; color: #FFD700; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+
         .modal { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; padding:16px; }
         .modal-content { background:#111; border:1px solid #2a2a2a; border-radius:16px; padding:16px; width:100%; max-width:400px; }
         .modal-tabs { display:flex; gap:8px; margin-bottom:12px; }
@@ -76,9 +115,10 @@
         .mini-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
 
         .admin-row { background: #2a1a1a; margin-bottom: 5px; padding: 6px; border-radius: 6px; }
-        .admin-badge { color: #ff4444; font-size: 11px; }
         .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #FFD700; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: 800; z-index: 1000; animation: fadeOut 2s forwards; }
         @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        
+        .withdraw-rate { font-size: 11px; color: #888; margin-bottom: 10px; padding: 6px; background: #1a1a1a; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -130,11 +170,19 @@
                 <input type="checkbox" id="rocket-auto-check"> Автовывод
                 <input type="number" id="rocket-auto-val" value="1.5" step="0.1" min="1.1" max="100" style="padding:4px; max-width:80px;">
             </div>
-            <button id="rocket-action-btn" class="btn-main btn-gold" onclick="handleRocketAction()">💰 Сделать ставку</button>
+            <div style="display:flex; gap:8px;">
+                <button id="rocket-action-btn" class="btn-main btn-gold" style="flex:2;" onclick="handleRocketAction()">💰 Сделать ставку</button>
+                <button id="rocket-cancel-btn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRocketBet()">❌ Отмена</button>
+            </div>
         </div>
 
         <div class="panel">
-            <div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">Участники</div>
+            <div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">📊 История крашей</div>
+            <div id="rocket-history-list" class="rocket-history"></div>
+        </div>
+
+        <div class="panel">
+            <div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">👥 Участники</div>
             <div id="rocket-players-list" class="list-container"></div>
         </div>
     </div>
@@ -175,15 +223,26 @@
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'max')">MAX</button>
             </div>
-            <button id="roulette-action-btn" class="btn-main btn-gold" onclick="handleRouletteBet()">📥 Сделать ставку</button>
+            <div style="display:flex; gap:8px;">
+                <button id="roulette-action-btn" class="btn-main btn-gold" style="flex:2;" onclick="handleRouletteBet()">📥 Сделать ставку</button>
+                <button id="roulette-cancel-btn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRouletteBet()">❌ Отмена</button>
+            </div>
         </div>
 
         <div class="panel">
             <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">
-                <span>Участники</span>
+                <span>👥 Участники</span>
                 <span id="roulette-total-bank">Банк: 0⭐</span>
             </div>
             <div id="roulette-players-list" class="list-container"></div>
+        </div>
+    </div>
+
+    <div id="page-leaderboard" class="page">
+        <div class="leaderboard-podium" id="leaderboard-podium"></div>
+        <div class="panel">
+            <div style="font-weight:800; color:#FFD700; margin-bottom:8px;">🏆 Топ игроков по обороту</div>
+            <div id="leaderboard-list" class="leaderboard-list"></div>
         </div>
     </div>
 
@@ -196,34 +255,62 @@
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box"><span>Игр</span><strong id="stat-games">0</strong></div>
-            <div class="stat-box"><span>Оборот</span><strong id="stat-turnover">0</strong></div>
-            <div class="stat-box"><span>Побед</span><strong id="stat-wins">0</strong></div>
-            <div class="stat-box"><span>Винрейт</span><strong id="stat-wr">0%</strong></div>
+        <div class="profile-tabs">
+            <button class="profile-tab active" onclick="switchProfileTab('stats')">📊 Статистика</button>
+            <button class="profile-tab" onclick="switchProfileTab('games')">🎮 Мои игры</button>
+            <button class="profile-tab" onclick="switchProfileTab('finance')">💰 Финансы</button>
+            <button class="profile-tab" onclick="switchProfileTab('referrals')">👥 Рефералы</button>
         </div>
 
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button class="btn-main btn-gold" style="padding:10px; font-size:14px;" onclick="openModal('deposit-modal')">💎 Пополнить</button>
-            <button class="btn-main btn-gold" style="padding:10px; font-size:14px; background:#222; color:#fff; border:1px solid #2a2a2a;" onclick="openModal('withdraw-modal')">💸 Вывести</button>
+        <div id="profile-tab-stats" class="profile-tab-content active">
+            <div class="stats-grid">
+                <div class="stat-box"><span>🎮 Игр</span><strong id="stat-games">0</strong></div>
+                <div class="stat-box"><span>⭐ Оборот</span><strong id="stat-turnover">0</strong></div>
+                <div class="stat-box"><span>🏆 Побед</span><strong id="stat-wins">0</strong></div>
+                <div class="stat-box"><span>📈 Винрейт</span><strong id="stat-wr">0%</strong></div>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button class="btn-main btn-gold" style="padding:10px; font-size:14px;" onclick="openModal('deposit-modal')">💎 Пополнить</button>
+                <button class="btn-main btn-gold" style="padding:10px; font-size:14px; background:#222; color:#fff; border:1px solid #2a2a2a;" onclick="openModal('withdraw-modal')">💸 Вывести</button>
+            </div>
+            <div id="ton-connect-btn-container" style="margin-bottom:15px;"></div>
+            <button id="admin-panel-btn" class="btn-main btn-red" style="margin-top:15px; display:none;" onclick="openModal('admin-modal')">👑 АДМИН-ПАНЕЛЬ</button>
         </div>
 
-        <div id="ton-connect-btn-container" style="margin-bottom:15px;"></div>
-
-        <div class="panel" style="font-size:13px;">
-            <div style="font-weight:800; color:#FFD700; margin-bottom:4px;">Реферальная программа</div>
-            <p style="color:#888; font-size:11px; margin-bottom:6px;">Получайте 5% от всех пополнений друзей</p>
-            <button class="btn-preset" style="width:100%; padding:8px;" onclick="copyRefLink()">📋 Копировать реф-ссылку</button>
+        <div id="profile-tab-games" class="profile-tab-content">
+            <div id="games-history-list" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
-        
-        <button id="admin-panel-btn" class="btn-main btn-red" style="margin-top:15px; display:none;" onclick="openModal('admin-modal')">👑 АДМИН-ПАНЕЛЬ</button>
+
+        <div id="profile-tab-finance" class="profile-tab-content">
+            <div class="stats-grid">
+                <div class="stat-box"><span>💰 Пополнено</span><strong id="fin-deposited">0</strong></div>
+                <div class="stat-box"><span>💸 Выведено</span><strong id="fin-withdrawn">0</strong></div>
+                <div class="stat-box"><span>📊 Разница</span><strong id="fin-diff">0</strong></div>
+                <div class="stat-box"><span>🎰 Баланс</span><strong id="fin-balance">0</strong></div>
+            </div>
+        </div>
+
+        <div id="profile-tab-referrals" class="profile-tab-content">
+            <div class="stats-grid">
+                <div class="stat-box"><span>👥 Рефералов</span><strong id="ref-count">0</strong></div>
+                <div class="stat-box"><span>💰 Заработано</span><strong id="ref-earned">0</strong></div>
+            </div>
+            <div class="panel" style="margin-top:8px;">
+                <div style="font-weight:800; margin-bottom:6px;">🔗 Реферальная ссылка</div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="ref-link" readonly value="" style="flex:1; font-size:11px;">
+                    <button class="btn-preset" onclick="copyRefLink()">📋 Копировать</button>
+                </div>
+                <p style="font-size:11px; color:#888; margin-top:8px;">💡 За каждого приглашённого друга вы получаете 5% от ЕГО ПОПОЛНЕНИЯ!</p>
+            </div>
+            <div id="referrals-list" style="margin-top:12px; max-height: 250px; overflow-y: auto;"></div>
+        </div>
     </div>
 
     <!-- Админ-панель модалка -->
     <div id="admin-modal" class="modal">
         <div class="modal-content" style="max-width:500px; max-height:80vh; overflow-y:auto;">
             <div style="font-weight:800; color:#FFD700; margin-bottom:12px;">👑 Админ-панель</div>
-            <div id="admin-stats" style="font-size:12px; margin-bottom:12px;"></div>
             
             <div style="margin-bottom:12px;">
                 <div style="font-weight:800; margin-bottom:6px;">➕ Начислить звёзды</div>
@@ -280,7 +367,18 @@
 
             <div id="dep-tab-stars" style="display:none;">
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">Пополнение через нативные Telegram Stars</p>
-                <input type="number" id="dep-stars-amount" value="50" min="1">
+                <div class="stars-presets">
+                    <button class="stars-preset" onclick="setStarsAmount(10)">10⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(25)">25⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(50)">50⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(100)">100⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(250)">250⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(500)">500⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(1000)">1000⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(2500)">2500⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(5000)">5000⭐</button>
+                </div>
+                <input type="number" id="dep-stars-amount" value="50" min="1" placeholder="Своя сумма" style="margin-top:8px;">
                 <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processStarsDeposit()">⭐ Оплатить</button>
             </div>
 
@@ -291,7 +389,12 @@
     <div id="withdraw-modal" class="modal">
         <div class="modal-content">
             <div style="font-weight:800; font-size:16px; margin-bottom:4px; color:#FFD700;">Вывод средств</div>
-            <div style="background:#1a1a1a; padding:6px; border-radius:6px; font-size:11px; color:#888; margin-bottom:10px;">⚠️ Комиссия: 15%</div>
+            <div class="withdraw-rate">
+                💱 Курсы вывода (после комиссии 15%):<br>
+                • 85⭐ = 1 TON<br>
+                • 43⭐ = 1 USDT<br>
+                • 1⭐ = 1 Star (но комиссия 15%)
+            </div>
             
             <select id="withdraw-asset" onchange="toggleWithdrawFields()">
                 <option value="TON">💎 TON</option>
@@ -310,6 +413,7 @@
 
     <nav>
         <div class="nav-item active" id="nav-home" onclick="switchPage('home')"><span>🏠</span>Главная</div>
+        <div class="nav-item" id="nav-leaderboard" onclick="switchPage('leaderboard')"><span>🏆</span>Лидеры</div>
         <div class="nav-item" id="nav-profile" onclick="switchPage('profile')"><span>👤</span>Профиль</div>
     </nav>
 
@@ -338,6 +442,8 @@
         const WS_URL = "wss://dadton-full.onrender.com";
         let ws = null;
         let currentMinesGameStatus = 'idle';
+        let currentRocketBet = null;
+        let currentRouletteBet = null;
         let reconnectAttempts = 0;
 
         function showToast(msg) {
@@ -359,6 +465,7 @@
                 user = data.user;
                 updateUI();
                 initWebSocket();
+                loadRocketHistory();
                 if (user.telegram_id === "1631627984") {
                     document.getElementById('admin-panel-btn').style.display = 'block';
                 }
@@ -370,18 +477,100 @@
             showToast('Ошибка подключения к серверу');
         });
 
-        function loadUserStats() {
-            fetch(`${BACKEND_URL}/api/user-stats`, {
+        function loadRocketHistory() {
+            fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(data => {
+                const container = document.getElementById('rocket-history-list');
+                if (container) {
+                    container.innerHTML = data.map(m => `<span class="crash-badge">${m}x</span>`).join('') || '<span style="color:#888;">Нет данных</span>';
+                }
+            });
+        }
+
+        function loadLeaderboard() {
+            fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(data => {
+                const podium = document.getElementById('leaderboard-podium');
+                const list = document.getElementById('leaderboard-list');
+                if (!podium || !list) return;
+                
+                const top3 = data.slice(0,3);
+                podium.innerHTML = `
+                    <div class="podium-item second-place">
+                        <div class="podium-avatar">${top3[1] ? (top3[1].avatar ? `<img src="${top3[1].avatar}" style="width:50px;height:50px;border-radius:50%;">` : top3[1].name.charAt(0)) : '?'}</div>
+                        <div class="podium-name">${top3[1] ? top3[1].name.substring(0,10) : '-'}</div>
+                        <div class="podium-stars">${top3[1] ? top3[1].turnover : 0}⭐</div>
+                    </div>
+                    <div class="podium-item first-place">
+                        <div class="podium-avatar">${top3[0] ? (top3[0].avatar ? `<img src="${top3[0].avatar}" style="width:50px;height:50px;border-radius:50%;">` : top3[0].name.charAt(0)) : '?'}</div>
+                        <div class="podium-name">${top3[0] ? top3[0].name.substring(0,10) : '-'}</div>
+                        <div class="podium-stars">${top3[0] ? top3[0].turnover : 0}⭐</div>
+                    </div>
+                    <div class="podium-item third-place">
+                        <div class="podium-avatar">${top3[2] ? (top3[2].avatar ? `<img src="${top3[2].avatar}" style="width:50px;height:50px;border-radius:50%;">` : top3[2].name.charAt(0)) : '?'}</div>
+                        <div class="podium-name">${top3[2] ? top3[2].name.substring(0,10) : '-'}</div>
+                        <div class="podium-stars">${top3[2] ? top3[2].turnover : 0}⭐</div>
+                    </div>
+                `;
+                
+                list.innerHTML = data.slice(3).map((u, idx) => `
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#${idx+4}</div>
+                        <div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%;">` : u.name.charAt(0)}</div>
+                        <div class="leaderboard-name">${u.name.substring(0,20)}</div>
+                        <div class="leaderboard-stars">${u.turnover}⭐</div>
+                    </div>
+                `).join('');
+            });
+        }
+
+        function loadUserGamesHistory() {
+            fetch(`${BACKEND_URL}/api/user-games-history`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ telegram_id: user.telegram_id })
             }).then(r => r.json()).then(data => {
-                if (data.success) {
-                    document.getElementById('stat-games').innerText = data.games_played || 0;
-                    document.getElementById('stat-turnover').innerText = data.turnover || 0;
-                    document.getElementById('stat-wins').innerText = data.wins || 0;
-                    let wr = data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0;
-                    document.getElementById('stat-wr').innerText = wr + '%';
+                const container = document.getElementById('games-history-list');
+                if (container) {
+                    container.innerHTML = data.map(g => `
+                        <div class="history-item">
+                            <span>${g.game_type} ${g.game_name || ''}</span>
+                            <span class="${g.profit >= 0 ? 'history-win' : 'history-loss'}">${g.profit >= 0 ? '+' : ''}${g.profit}⭐</span>
+                        </div>
+                    `).join('') || '<div style="text-align:center; color:#888;">🎮 Сыграйте в игры, чтобы увидеть историю</div>';
+                }
+            });
+        }
+
+        function loadUserFinance() {
+            fetch(`${BACKEND_URL}/api/user-finance`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            }).then(r => r.json()).then(data => {
+                document.getElementById('fin-deposited').innerText = data.deposited || 0;
+                document.getElementById('fin-withdrawn').innerText = data.withdrawn || 0;
+                const diff = (data.deposited || 0) - (data.withdrawn || 0);
+                document.getElementById('fin-diff').innerText = diff;
+                document.getElementById('fin-balance').innerText = user.stars || 0;
+            });
+        }
+
+        function loadUserReferrals() {
+            fetch(`${BACKEND_URL}/api/user-referrals`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            }).then(r => r.json()).then(data => {
+                document.getElementById('ref-count').innerText = data.count || 0;
+                document.getElementById('ref-earned').innerText = data.earned || 0;
+                document.getElementById('ref-link').value = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`;
+                const container = document.getElementById('referrals-list');
+                if (container) {
+                    container.innerHTML = (data.referrals || []).map(r => `
+                        <div class="referral-item">
+                            <span>${r.name || 'Игрок'}</span>
+                            <span style="color:#00cc66;">+${r.earned || 0}⭐</span>
+                        </div>
+                    `).join('') || '<div style="text-align:center; color:#888;">👥 Пока нет приглашённых друзей</div>';
                 }
             });
         }
@@ -404,6 +593,9 @@
                     document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`;
                     document.getElementById('rocket-mult').style.display = 'none';
                     updateRocketPlayers(data.bets);
+                    if (data.hasBet) {
+                        document.getElementById('rocket-cancel-btn').style.display = 'block';
+                    }
                 }
                 if (data.type === 'rocket_start') {
                     document.getElementById('rocket-overlay').style.display = 'none';
@@ -424,17 +616,30 @@
                     mEl.innerText = `💥 ВЗРЫВ! ${data.multiplier}x`;
                     document.getElementById('rocket-video').pause();
                     setRocketButtonState('waiting');
+                    document.getElementById('rocket-cancel-btn').style.display = 'none';
                     updateBalance();
+                    loadRocketHistory();
                 }
                 if (data.type === 'rocket_bets_update') {
                     updateRocketPlayers(data.bets);
                     let myBet = data.bets.find(b => b.telegram_id === user.telegram_id);
-                    if (myBet) setRocketButtonState(myBet.cashedOut ? 'waiting' : 'flying');
+                    if (myBet) {
+                        setRocketButtonState(myBet.cashedOut ? 'waiting' : 'flying');
+                        document.getElementById('rocket-cancel-btn').style.display = myBet.cashedOut ? 'none' : 'block';
+                    }
                 }
                 if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) {
                     tg.HapticFeedback.notificationOccurred('success');
                     showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`);
                     setRocketButtonState('waiting');
+                    document.getElementById('rocket-cancel-btn').style.display = 'none';
+                    updateBalance();
+                    loadUserStats();
+                }
+                if (data.type === 'rocket_bet_cancelled') {
+                    showToast('❌ Ставка отменена');
+                    setRocketButtonState('bet');
+                    document.getElementById('rocket-cancel-btn').style.display = 'none';
                     updateBalance();
                 }
                 if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') {
@@ -442,12 +647,23 @@
                     document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`;
                     updateRoulettePlayers(data.bets || []);
                     drawRoulette(data.bets || [], 0);
+                    let myBet = (data.bets || []).find(b => b.telegram_id === user.telegram_id);
+                    if (myBet) {
+                        document.getElementById('roulette-cancel-btn').style.display = 'block';
+                    } else {
+                        document.getElementById('roulette-cancel-btn').style.display = 'none';
+                    }
                 }
                 if (data.type === 'roulette_roll') {
                     animateRoulette(data.bets || [], data.winner);
                 }
                 if (data.type === 'roulette_wait_players') {
                     document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`;
+                }
+                if (data.type === 'roulette_bet_cancelled') {
+                    showToast('❌ Ставка отменена');
+                    document.getElementById('roulette-cancel-btn').style.display = 'none';
+                    updateBalance();
                 }
             };
             ws.onclose = () => {
@@ -484,6 +700,22 @@
             }
         }
 
+        function loadUserStats() {
+            fetch(`${BACKEND_URL}/api/user-stats`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    document.getElementById('stat-games').innerText = data.games_played || 0;
+                    document.getElementById('stat-turnover').innerText = data.turnover || 0;
+                    document.getElementById('stat-wins').innerText = data.wins || 0;
+                    let wr = data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0;
+                    document.getElementById('stat-wr').innerText = wr + '%';
+                }
+            });
+        }
+
         function switchPage(pageId) {
             tg.HapticFeedback.impactOccurred('medium');
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -493,7 +725,34 @@
             const nav = document.getElementById(`nav-${pageId}`);
             if (nav) nav.classList.add('active');
             if (pageId === 'mines') buildMinesBoard();
-            if (pageId === 'profile') loadUserStats();
+            if (pageId === 'profile') {
+                loadUserStats();
+                loadUserGamesHistory();
+                loadUserFinance();
+                loadUserReferrals();
+            }
+            if (pageId === 'leaderboard') loadLeaderboard();
+        }
+
+        function switchProfileTab(tab) {
+            document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active'));
+            if (tab === 'stats') {
+                document.querySelector('.profile-tab:nth-child(1)').classList.add('active');
+                document.getElementById('profile-tab-stats').classList.add('active');
+            } else if (tab === 'games') {
+                document.querySelector('.profile-tab:nth-child(2)').classList.add('active');
+                document.getElementById('profile-tab-games').classList.add('active');
+                loadUserGamesHistory();
+            } else if (tab === 'finance') {
+                document.querySelector('.profile-tab:nth-child(3)').classList.add('active');
+                document.getElementById('profile-tab-finance').classList.add('active');
+                loadUserFinance();
+            } else if (tab === 'referrals') {
+                document.querySelector('.profile-tab:nth-child(4)').classList.add('active');
+                document.getElementById('profile-tab-referrals').classList.add('active');
+                loadUserReferrals();
+            }
         }
 
         function adjustBet(inputId, action) {
@@ -552,8 +811,33 @@
             }
         }
 
+        function cancelRocketBet() {
+            fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id }));
+                }
+            });
+        }
+
+        function cancelRouletteBet() {
+            fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id }));
+                }
+            });
+        }
+
         function updateRocketPlayers(bets) {
             const container = document.getElementById('rocket-players-list');
+            if (!container) return;
             container.innerHTML = '';
             bets.forEach(b => {
                 container.innerHTML += `
@@ -569,6 +853,7 @@
 
         function buildMinesBoard() {
             const board = document.getElementById('mines-grid-board');
+            if (!board) return;
             board.innerHTML = '';
             for (let i = 0; i < 25; i++) {
                 board.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`;
@@ -613,6 +898,7 @@
                         resetMinesButtons();
                         updateBalance();
                         loadUserStats();
+                        loadUserGamesHistory();
                     }
                 });
             }
@@ -639,6 +925,7 @@
                     resetMinesButtons();
                     updateBalance();
                     loadUserStats();
+                    loadUserGamesHistory();
                 } else {
                     tg.HapticFeedback.impactOccurred('light');
                     tile.classList.add('safe');
@@ -650,6 +937,7 @@
                         resetMinesButtons();
                         updateBalance();
                         loadUserStats();
+                        loadUserGamesHistory();
                     }
                 }
             });
@@ -662,7 +950,6 @@
             btn.innerText = "💣 Новая игра";
         }
 
-        let rouletteBetsCache = [];
         function handleRouletteBet() {
             let amt = parseInt(document.getElementById('roulette-bet-amount').value);
             if (amt > (user.stars || 0)) {
@@ -679,8 +966,8 @@
         }
 
         function updateRoulettePlayers(bets) {
-            rouletteBetsCache = bets;
             const container = document.getElementById('roulette-players-list');
+            if (!container) return;
             container.innerHTML = '';
             bets.forEach(b => {
                 container.innerHTML += `
@@ -696,6 +983,7 @@
 
         function drawRoulette(bets, startRotation = 0) {
             const canvas = document.getElementById('roulette-canvas');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, 260, 260);
             if (!bets || bets.length === 0) {
@@ -774,6 +1062,8 @@
                     showToast(`🎡 Победитель: ${winner.name || 'Игрок'}! +${winner.amount || 0}⭐`);
                     updateBalance();
                     loadUserStats();
+                    loadUserGamesHistory();
+                    document.getElementById('roulette-cancel-btn').style.display = 'none';
                 }
             }
             requestAnimationFrame(animate);
@@ -781,6 +1071,7 @@
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
         function switchDepTab(tab, event) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (tab === 'crypto') {
@@ -791,6 +1082,10 @@
                 document.getElementById('dep-tab-stars').style.display = 'block';
             }
             if (event && event.target) event.target.classList.add('active');
+        }
+
+        function setStarsAmount(amount) {
+            document.getElementById('dep-stars-amount').value = amount;
         }
 
         function toggleWithdrawFields() {
@@ -821,6 +1116,7 @@
                             closeModal('deposit-modal');
                             updateBalance();
                             loadUserStats();
+                            loadUserFinance();
                         }
                     });
                 } else {
@@ -839,7 +1135,7 @@
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 360,
                 messages: [{
-                    address: "EQD__________________________________________EXAMPLE", // ЗАМЕНИТЬ НА РЕАЛЬНЫЙ КОШЕЛЁК
+                    address: "EQD__________________________________________EXAMPLE",
                     amount: nanoAmount,
                     payload: user.telegram_id
                 }]
@@ -879,6 +1175,7 @@
                     showToast(`✅ Заявка на вывод ${amt}⭐ успешно создана!`);
                     closeModal('withdraw-modal');
                     updateBalance();
+                    loadUserFinance();
                 } else {
                     showToast(`Ошибка: ${d.msg}`);
                 }
@@ -886,7 +1183,7 @@
         }
 
         function copyRefLink() {
-            let link = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`;
+            let link = document.getElementById('ref-link').value;
             navigator.clipboard.writeText(link).then(() => showToast("Реферальная ссылка скопирована!"));
         }
 
