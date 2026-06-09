@@ -14,18 +14,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Конфигурация Telegram
-const BOT_TOKEN = process.env.BOT_TOKEN || 'YOUR_BOT_TOKEN_HERE';
+// ========== КОНФИГУРАЦИЯ ==========
+const BOT_TOKEN = '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0';
 const ADMIN_ID = '1631627984';
-const MERCHANT_WALLET = 'EQYourMerchantWalletAddressHere...'; // Для TON платежей
+const MERCHANT_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
 
-// Инициализация БД SQLite
-const db = new sqlite3.Database('./dadton.db', (err) => {
-    if (err) console.error('Ошибка подключения к БД:', err.message);
-    else console.log('Успешное подключение к SQLite БД.');
-});
+const MIN_BET = 10;
+const MAX_BET = 10000;
 
-// Создание таблиц
+// ========== БД ==========
+const db = new sqlite3.Database('./dadton.db');
+
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,27 +66,43 @@ db.serialize(() => {
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS referrals_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_id TEXT,
+        referred_id TEXT,
+        name TEXT,
+        amount INTEGER,
+        earned INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS pending_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        amount REAL,
+        asset TEXT,
+        stars_amount INTEGER,
+        tx_hash TEXT,
+        wallet_address TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS games_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telegram_id TEXT,
+        game_type TEXT,
+        game_name TEXT,
+        bet_amount INTEGER,
+        win_amount INTEGER,
+        profit INTEGER,
+        multiplier REAL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 });
 
-// Глобальное состояние бота и игр
-let botPaused = false;
-let rocketState = {
-    status: 'waiting', // waiting, flying, crashed
-    multiplier: 1.00,
-    crashPoint: 1.00,
-    timer: 10,
-    bets: [] // { telegram_id, name, avatar, amount, cashedOut: false, multiplier: 0 }
-};
-
-let rouletteState = {
-    status: 'waiting', // waiting, rolling, ended
-    timer: 15,
-    bets: [], // { telegram_id, name, avatar, amount, color }
-    totalBank: 0,
-    winner: null
-};
-
-// Функция отправки сообщений админу в ТГ
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 async function sendTelegramMessage(chatId, text) {
     try {
         await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -100,7 +115,6 @@ async function sendTelegramMessage(chatId, text) {
     }
 }
 
-// Помощник для отправки данных всем клиентам конкретной игры
 function broadcast(data) {
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -109,7 +123,6 @@ function broadcast(data) {
     });
 }
 
-// Помощник для точечного обновления баланса
 function sendUserBalance(telegram_id) {
     db.get("SELECT stars FROM users WHERE telegram_id = ?", [telegram_id], (err, row) => {
         if (row) {
@@ -122,7 +135,12 @@ function sendUserBalance(telegram_id) {
     });
 }
 
-// Генератор краш-поинта по ТЗ
+function saveGameHistory(telegram_id, game_type, game_name, bet_amount, win_amount, profit, multiplier) {
+    db.run(`INSERT INTO games_history (telegram_id, game_type, game_name, bet_amount, win_amount, profit, multiplier) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+            [telegram_id, game_type, game_name, bet_amount, win_amount, profit, multiplier]);
+}
+
 function generateCrashPoint() {
     const rand = Math.random() * 100;
     if (rand < 25) return parseFloat((1.05 + Math.random() * 0.15).toFixed(2));
@@ -133,20 +151,29 @@ function generateCrashPoint() {
     return parseFloat((5.00 + Math.random() * 3.00).toFixed(2));
 }
 
-// Логика цикла Ракеты
+// ========== ЛОГИКА РАКЕТЫ ==========
+let botPaused = false;
+let rocketState = {
+    status: 'waiting',
+    multiplier: 1.00,
+    crashPoint: 1.00,
+    timer: 10,
+    bets: []
+};
+
 function runRocketLoop() {
+    if (botPaused) {
+        setTimeout(runRocketLoop, 1000);
+        return;
+    }
+    
     if (rocketState.status === 'waiting') {
         if (rocketState.timer > 0) {
             rocketState.timer--;
-            broadcast({ type: 'rocket_tick', timer: rocketState.timer, bets: rocketState.bets });
+            let hasBet = rocketState.bets.some(b => !b.cashedOut);
+            broadcast({ type: 'rocket_tick', timer: rocketState.timer, bets: rocketState.bets, hasBet });
             setTimeout(runRocketLoop, 1000);
         } else {
-            if (botPaused) {
-                rocketState.timer = 10;
-                broadcast({ type: 'rocket_msg', msg: 'Бот временно приостановлен админом' });
-                setTimeout(runRocketLoop, 3000);
-                return;
-            }
             rocketState.status = 'flying';
             rocketState.multiplier = 1.00;
             rocketState.crashPoint = generateCrashPoint();
@@ -156,13 +183,14 @@ function runRocketLoop() {
     } else if (rocketState.status === 'flying') {
         if (rocketState.multiplier >= rocketState.crashPoint) {
             rocketState.status = 'crashed';
-            db.run("INSERT INTO rocket_history (multiplier) VALUES (?)", [rocketState.multiplier]);
-            broadcast({ type: 'rocket_crash', multiplier: rocketState.multiplier });
+            db.run("INSERT INTO rocket_history (multiplier) VALUES (?)", [rocketState.crashPoint]);
+            broadcast({ type: 'rocket_crash', multiplier: rocketState.crashPoint });
             
-            // Обработка проигравших
             rocketState.bets.forEach(b => {
                 if (!b.cashedOut) {
-                    db.run("UPDATE users SET turnover = turnover + ? WHERE telegram_id = ?", [b.amount, b.telegram_id]);
+                    db.run("UPDATE users SET turnover = turnover + ?, games_played = games_played + 1 WHERE telegram_id = ?", 
+                        [b.amount, b.telegram_id]);
+                    saveGameHistory(b.telegram_id, 'rocket', 'Ракета', b.amount, 0, -b.amount, rocketState.crashPoint);
                     sendUserBalance(b.telegram_id);
                 }
             });
@@ -180,9 +208,9 @@ function runRocketLoop() {
             if (rocketState.multiplier > 5.0) increment = 0.07;
             rocketState.multiplier = parseFloat((rocketState.multiplier + increment).toFixed(2));
             
-            // Проверка автовыводов
             rocketState.bets.forEach(b => {
-                if (!b.cashedOut && b.autoCashout && rocketState.multiplier >= b.autoCashoutValue) {
+                if (!b.cashedOut && b.autoCashout && rocketState.multiplier >= b.autoCashoutValue && !b.cashingOut) {
+                    b.cashingOut = true;
                     handleRocketCashout(b.telegram_id, b.autoCashoutValue);
                 }
             });
@@ -202,13 +230,23 @@ function handleRocketCashout(tgId, forceMultiplier = null) {
     let winAmount = Math.floor(bet.amount * bet.multiplier);
 
     db.serialize(() => {
-        db.run("UPDATE users SET stars = stars + ?, turnover = turnover + ?, games_played = games_played + 1, wins = wins + 1 WHERE telegram_id = ?", [winAmount, bet.amount, tgId]);
+        db.run("UPDATE users SET stars = stars + ?, turnover = turnover + ?, games_played = games_played + 1, wins = wins + 1 WHERE telegram_id = ?", 
+            [winAmount, bet.amount, tgId]);
+        saveGameHistory(tgId, 'rocket', 'Ракета', bet.amount, winAmount, winAmount - bet.amount, bet.multiplier);
         sendUserBalance(tgId);
     });
     broadcast({ type: 'rocket_cashout_success', telegram_id: tgId, multiplier: bet.multiplier, winAmount });
 }
 
-// Логика Рулетки
+// ========== ЛОГИКА РУЛЕТКИ ==========
+let rouletteState = {
+    status: 'waiting',
+    timer: 15,
+    bets: [],
+    totalBank: 0,
+    winner: null
+};
+
 function runRouletteLoop() {
     if (rouletteState.status === 'waiting') {
         if (rouletteState.bets.length >= 2) {
@@ -220,7 +258,6 @@ function runRouletteLoop() {
                 executeRouletteRoll();
             }
         } else {
-            rouletteState.timer = 15; // Сброс таймера если игроков < 2
             broadcast({ type: 'roulette_wait_players', bets: rouletteState.bets });
             setTimeout(runRouletteLoop, 2000);
         }
@@ -246,12 +283,16 @@ function executeRouletteRoll() {
 
     setTimeout(() => {
         db.serialize(() => {
-            // Начисление банка победителю
-            db.run("UPDATE users SET stars = stars + ?, wins = wins + 1, games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", [rouletteState.totalBank, winnerBet.amount, winnerBet.telegram_id]);
-            // Обновление оборота проигравшим
+            db.run("UPDATE users SET stars = stars + ?, wins = wins + 1, games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", 
+                [rouletteState.totalBank, winnerBet.amount, winnerBet.telegram_id]);
+            saveGameHistory(winnerBet.telegram_id, 'roulette', 'Рулетка', winnerBet.amount, rouletteState.totalBank, 
+                rouletteState.totalBank - winnerBet.amount, rouletteState.totalBank / winnerBet.amount);
+            
             rouletteState.bets.forEach(b => {
                 if (b.telegram_id !== winnerBet.telegram_id) {
-                    db.run("UPDATE users SET games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", [b.amount, b.telegram_id]);
+                    db.run("UPDATE users SET games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", 
+                        [b.amount, b.telegram_id]);
+                    saveGameHistory(b.telegram_id, 'roulette', 'Рулетка', b.amount, 0, -b.amount, 0);
                 }
                 sendUserBalance(b.telegram_id);
             });
@@ -266,18 +307,17 @@ function executeRouletteRoll() {
     }, 4000);
 }
 
-// Хендлеры API Эндпоинтов
+// ========== API ЭНДПОИНТЫ ==========
 app.post('/api/register', (req, res) => {
     const { telegram_id, name, avatar, username, referrer_id } = req.body;
     db.get("SELECT * FROM users WHERE telegram_id = ?", [telegram_id], (err, row) => {
         if (row) {
-            // Обновляем аватарку и имя, если они изменились в ТГ
-            db.run("UPDATE users SET name = ?, avatar = ?, username = ? WHERE telegram_id = ?", [name, avatar, username]);
-            return res.json({ success: true, user: { ...row, avatar, name, username } });
+            db.run("UPDATE users SET name = ?, avatar = ?, username = ? WHERE telegram_id = ?", [name, avatar, username, telegram_id]);
+            return res.json({ success: true, user: { ...row, avatar, name, username, stars: row.stars } });
         } else {
             let refId = (referrer_id && referrer_id !== telegram_id) ? referrer_id : null;
             db.run("INSERT INTO users (telegram_id, name, avatar, username, referrer_id) VALUES (?, ?, ?, ?, ?)", 
-            [telegram_id, name, avatar, username, refId], function(err) {
+                [telegram_id, name, avatar, username, refId], function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 db.run("INSERT INTO user_finance (telegram_id) VALUES (?)", [telegram_id]);
                 res.json({ success: true, user: { telegram_id, name, avatar, username, stars: 1000 } });
@@ -293,14 +333,92 @@ app.post('/api/get-balance', (req, res) => {
     });
 });
 
-// Мины API (Логика сессий перенесена на сервер, чтобы исключить накрутки)
-let activeMineGames = {}; // tgId -> { bet, minesCount, board, state: 'active', winFactor: 1.0 }
+app.post('/api/user-stats', (req, res) => {
+    db.get("SELECT games_played, turnover, wins FROM users WHERE telegram_id = ?", [req.body.telegram_id], (err, row) => {
+        if (row) res.json({ success: true, ...row });
+        else res.json({ success: false });
+    });
+});
+
+app.get('/api/rocket-history', (req, res) => {
+    db.all("SELECT multiplier FROM rocket_history ORDER BY timestamp DESC LIMIT 10", [], (err, rows) => {
+        res.json(rows.map(r => r.multiplier));
+    });
+});
+
+app.get('/api/leaderboard', (req, res) => {
+    db.all("SELECT telegram_id, name, avatar, turnover FROM users ORDER BY turnover DESC LIMIT 50", [], (err, rows) => {
+        res.json(rows);
+    });
+});
+
+app.post('/api/user-games-history', (req, res) => {
+    db.all("SELECT game_type, game_name, bet_amount, win_amount, profit, multiplier, created_at FROM games_history WHERE telegram_id = ? ORDER BY created_at DESC LIMIT 20", 
+        [req.body.telegram_id], (err, rows) => {
+            res.json(rows || []);
+        });
+});
+
+app.post('/api/user-finance', (req, res) => {
+    db.get("SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?", [req.body.telegram_id], (err, row) => {
+        res.json(row || { deposited: 0, withdrawn: 0, admin_added: 0 });
+    });
+});
+
+app.post('/api/user-referrals', (req, res) => {
+    const { telegram_id } = req.body;
+    db.all("SELECT * FROM referrals_log WHERE referrer_id = ? ORDER BY created_at DESC", [telegram_id], (err, rows) => {
+        let earned = rows.reduce((sum, r) => sum + r.earned, 0);
+        res.json({ count: rows.length, earned, referrals: rows });
+    });
+});
+
+app.post('/api/cancel-rocket-bet', (req, res) => {
+    const { telegram_id } = req.body;
+    let betIndex = rocketState.bets.findIndex(b => b.telegram_id === telegram_id && !b.cashedOut);
+    if (betIndex !== -1 && rocketState.status === 'waiting') {
+        let bet = rocketState.bets[betIndex];
+        db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [bet.amount, telegram_id], () => {
+            sendUserBalance(telegram_id);
+        });
+        rocketState.bets.splice(betIndex, 1);
+        broadcast({ type: 'rocket_bet_cancelled', telegram_id });
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, msg: 'Нельзя отменить' });
+    }
+});
+
+app.post('/api/cancel-roulette-bet', (req, res) => {
+    const { telegram_id } = req.body;
+    let betIndex = rouletteState.bets.findIndex(b => b.telegram_id === telegram_id);
+    if (betIndex !== -1 && rouletteState.status === 'waiting') {
+        let bet = rouletteState.bets[betIndex];
+        db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [bet.amount, telegram_id], () => {
+            sendUserBalance(telegram_id);
+        });
+        rouletteState.totalBank -= bet.amount;
+        rouletteState.bets.splice(betIndex, 1);
+        broadcast({ type: 'roulette_bets_update', bets: rouletteState.bets, total: rouletteState.totalBank });
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, msg: 'Нельзя отменить' });
+    }
+});
+
+// ========== МИНЫ ==========
+let activeMineGames = {};
+
 app.post('/api/games/mines/start', (req, res) => {
     const { telegram_id, amount, minesCount } = req.body;
+    if (amount < MIN_BET || amount > MAX_BET) {
+        return res.json({ success: false, msg: 'Сумма ставки вне лимитов' });
+    }
+    
     db.get("SELECT stars, banned FROM users WHERE telegram_id = ?", [telegram_id], (err, row) => {
-        if (!row || row.banned || row.stars < amount) return res.json({ success: false, msg: 'Ошибка баланса или блокировка' });
+        if (!row || row.banned) return res.json({ success: false, msg: 'Блокировка' });
+        if (row.stars < amount) return res.json({ success: false, msg: 'Недостаточно средств' });
         
-        // Создаём карту 5x5
         let board = Array(25).fill(false);
         let placed = 0;
         while (placed < minesCount) {
@@ -317,7 +435,7 @@ app.post('/api/games/mines/start', (req, res) => {
                 status: 'active'
             };
             sendUserBalance(telegram_id);
-            res.json({ success: true, msg: 'Игра началась' });
+            res.json({ success: true });
         });
     });
 });
@@ -328,16 +446,16 @@ app.post('/api/games/mines/reveal', (req, res) => {
     if (!game || game.status !== 'active') return res.json({ success: false });
 
     if (game.board[index]) {
-        // Взрыв
         game.status = 'lost';
-        db.run("UPDATE users SET games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", [game.bet, telegram_id]);
+        db.run("UPDATE users SET games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", [game.bet, telegram_id], () => {
+            sendUserBalance(telegram_id);
+        });
+        saveGameHistory(telegram_id, 'mines', `Мины ${game.minesCount}`, game.bet, 0, -game.bet, 0);
         delete activeMineGames[telegram_id];
-        sendUserBalance(telegram_id);
         return res.json({ success: true, hitMine: true, board: game.board });
     } else {
         if (!game.revealed.includes(index)) game.revealed.push(index);
         
-        // Рассчёт множителя по формулам ТЗ
         let base = 1.04;
         if (game.minesCount === 10) base = 1.12;
         if (game.minesCount === 15) base = 1.30;
@@ -348,11 +466,13 @@ app.post('/api/games/mines/reveal', (req, res) => {
         let maxSafe = 25 - game.minesCount;
 
         if (game.revealed.length === maxSafe) {
-            // Авто-выигрыш, открыты все чистые поля
             let winAmount = Math.floor(game.bet * currentMultiplier);
-            db.run("UPDATE users SET stars = stars + ?, wins = wins + 1, games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", [winAmount, game.bet, telegram_id]);
+            db.run("UPDATE users SET stars = stars + ?, wins = wins + 1, games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", 
+                [winAmount, game.bet, telegram_id], () => {
+                    sendUserBalance(telegram_id);
+                });
+            saveGameHistory(telegram_id, 'mines', `Мины ${game.minesCount}`, game.bet, winAmount, winAmount - game.bet, currentMultiplier);
             delete activeMineGames[telegram_id];
-            sendUserBalance(telegram_id);
             return res.json({ success: true, win: true, winAmount, multiplier: currentMultiplier });
         }
 
@@ -374,27 +494,31 @@ app.post('/api/games/mines/cashout', (req, res) => {
     let currentMultiplier = parseFloat(Math.pow(base, game.revealed.length).toFixed(2));
     let winAmount = Math.floor(game.bet * currentMultiplier);
 
-    db.run("UPDATE users SET stars = stars + ?, wins = wins + 1, games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", [winAmount, game.bet, telegram_id]);
+    db.run("UPDATE users SET stars = stars + ?, wins = wins + 1, games_played = games_played + 1, turnover = turnover + ? WHERE telegram_id = ?", 
+        [winAmount, game.bet, telegram_id], () => {
+            sendUserBalance(telegram_id);
+        });
+    saveGameHistory(telegram_id, 'mines', `Мины ${game.minesCount}`, game.bet, winAmount, winAmount - game.bet, currentMultiplier);
     delete activeMineGames[telegram_id];
-    sendUserBalance(telegram_id);
     res.json({ success: true, winAmount, multiplier: currentMultiplier });
 });
 
-// Роуты вывода денег и ТГ оповещений админа
+// ========== ВЫВОД СРЕДСТВ ==========
 app.post('/api/withdraw-request', (req, res) => {
     const { telegram_id, name, username, amount, asset, wallet } = req.body;
+    if (amount < 100) return res.json({ success: false, msg: 'Минимальная сумма вывода 100⭐' });
+    
     db.get("SELECT stars FROM users WHERE telegram_id = ?", [telegram_id], (err, row) => {
         if (!row || row.stars < amount) return res.json({ success: false, msg: 'Недостаточно звёзд' });
         
         db.serialize(() => {
-            db.run("UPDATE users SET stars = stars - ? WHERE telegram_id = ?", [amount, telegram_id]);
+            db.run("UPDATE users SET stars = stars - ? WHERE telegram_id = ?", [amount, telegram_id], () => {
+                sendUserBalance(telegram_id);
+            });
             db.run("INSERT INTO withdraw_requests (telegram_id, name, username, amount, asset, wallet) VALUES (?, ?, ?, ?, ?, ?)",
                 [telegram_id, name, username, amount, asset, wallet]);
             db.run("UPDATE user_finance SET withdrawn = withdrawn + ? WHERE telegram_id = ?", [amount, telegram_id]);
             
-            sendUserBalance(telegram_id);
-
-            // Нативное уведомление админу по ТЗ
             let messageText = `🔴 <b>НОВАЯ ЗАЯВКА НА ВЫВОД</b>\n\n`;
             messageText += `👤 Имя: ${name}\n`;
             messageText += `🔖 Юзернейм: ${username ? '@' + username.replace('@', '') : 'отсутствует'}\n`;
@@ -409,15 +533,17 @@ app.post('/api/withdraw-request', (req, res) => {
     });
 });
 
-// Генерация ссылки инвойса на оплату Telegram Stars
+// ========== TELEGRAM STARS ИНВОЙСЫ ==========
 app.post('/api/create-invoice', async (req, res) => {
     const { telegram_id, amount } = req.body;
+    if (amount < 1) return res.json({ success: false, error: 'Минимальная сумма 1 звезда' });
+    
     try {
         const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-            title: `Пополнение баланса DadTon`,
+            title: `Пополнение DadTon`,
             description: `Зачисление ${amount} звёзд на игровой аккаунт`,
             payload: `stars_deposit_${telegram_id}_${Date.now()}`,
-            provider_token: "", // Пусто для Telegram Stars
+            provider_token: "",
             currency: "XTR",
             prices: [{ label: `${amount} Stars`, amount: parseInt(amount) }]
         });
@@ -431,54 +557,63 @@ app.post('/api/create-invoice', async (req, res) => {
     }
 });
 
-// Вебхук от ТГ для подтверждения транзакций Stars
+// ========== WEBHOOK ДЛЯ ОПЛАТ STARS ==========
 app.post('/webhook/telegram', (req, res) => {
     const update = req.body;
+    
     if (update.pre_checkout_query) {
-        // Отвечаем ТГ, что всё ок, готовы принять платеж
         axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
             pre_checkout_query_id: update.pre_checkout_query.id,
             ok: true
-        });
+        }).catch(e => console.error('PreCheckout error:', e.message));
         return res.sendStatus(200);
     }
 
     if (update.message && update.message.successful_payment) {
         const payment = update.message.successful_payment;
         const payload = payment.invoice_payload;
-        if (payload.startsWith('stars_deposit_')) {
+        if (payload && payload.startsWith('stars_deposit_')) {
             const parts = payload.split('_');
             const tgId = parts[2];
             const amount = payment.total_amount;
 
             db.serialize(() => {
-                db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [amount, tgId]);
+                db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [amount, tgId], () => {
+                    sendUserBalance(tgId);
+                });
                 db.run("UPDATE user_finance SET deposited = deposited + ? WHERE telegram_id = ?", [amount, tgId]);
                 
-                // Начисление 5% рефереру
-                db.get("SELECT referrer_id FROM users WHERE telegram_id = ?", [tgId], (err, uRow) => {
+                db.get("SELECT referrer_id, name FROM users WHERE telegram_id = ?", [tgId], (err, uRow) => {
                     if (uRow && uRow.referrer_id) {
                         let refBonus = Math.floor(amount * 0.05);
-                        db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [refBonus, uRow.referrer_id]);
-                        sendUserBalance(uRow.referrer_id);
+                        db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [refBonus, uRow.referrer_id], () => {
+                            sendUserBalance(uRow.referrer_id);
+                        });
+                        db.run("INSERT INTO referrals_log (referrer_id, referred_id, name, amount, earned) VALUES (?, ?, ?, ?, ?)",
+                            [uRow.referrer_id, tgId, uRow.name || 'Игрок', amount, refBonus]);
                     }
                 });
-                sendUserBalance(tgId);
+                
+                sendTelegramMessage(ADMIN_ID, `🟢 <b>ПОПОЛНЕНИЕ</b>\n👤 ID: ${tgId}\n⭐ Сумма: ${amount} Stars`);
             });
         }
     }
     res.sendStatus(200);
 });
 
-// Админ-панель API
+// ========== АДМИН-ПАНЕЛЬ ==========
 app.post('/api/admin/get-users', (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-    db.all("SELECT * FROM users", [], (err, rows) => { res.json(rows); });
+    db.all("SELECT telegram_id, name, stars, games_played, wins, banned FROM users LIMIT 50", [], (err, rows) => { 
+        res.json(rows || []); 
+    });
 });
 
 app.post('/api/admin/get-withdraw-requests', (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-    db.all("SELECT * FROM withdraw_requests WHERE status = 'pending'", [], (err, rows) => { res.json(rows); });
+    db.all("SELECT * FROM withdraw_requests WHERE status = 'pending' ORDER BY created_at DESC", [], (err, rows) => { 
+        res.json(rows || []); 
+    });
 });
 
 app.post('/api/admin/approve-withdraw', (req, res) => {
@@ -516,15 +651,17 @@ app.post('/api/admin/unban-user', (req, res) => {
 
 app.post('/api/admin/pause-bot', (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-    botPaused = true; res.json({ success: true });
+    botPaused = true;
+    res.json({ success: true });
 });
 
 app.post('/api/admin/resume-bot', (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-    botPaused = false; res.json({ success: true });
+    botPaused = false;
+    res.json({ success: true });
 });
 
-// WebSocket роутинг
+// ========== WEBSOCKET ОБРАБОТКА ==========
 wss.on('connection', (ws) => {
     ws.on('message', (message) => {
         try {
@@ -533,18 +670,25 @@ wss.on('connection', (ws) => {
                 ws.telegram_id = data.telegram_id;
             }
             if (data.type === 'rocket_bet') {
-                if (rocketState.status !== 'waiting') return ws.send(JSON.stringify({ type: 'err', msg: 'Раунд уже идёт!' }));
-                db.get("SELECT stars FROM users WHERE telegram_id = ?", [data.telegram_id], (err, row) => {
-                    if (row && row.stars >= data.amount) {
+                if (rocketState.status !== 'waiting') {
+                    return ws.send(JSON.stringify({ type: 'err', msg: 'Раунд уже идёт!' }));
+                }
+                if (data.amount < MIN_BET || data.amount > MAX_BET) {
+                    return ws.send(JSON.stringify({ type: 'err', msg: 'Сумма вне лимитов' }));
+                }
+                db.get("SELECT stars, banned FROM users WHERE telegram_id = ?", [data.telegram_id], (err, row) => {
+                    if (err || !row || row.banned) return;
+                    if (row.stars >= data.amount) {
                         db.run("UPDATE users SET stars = stars - ? WHERE telegram_id = ?", [data.amount, data.telegram_id], () => {
                             rocketState.bets.push({
                                 telegram_id: data.telegram_id,
                                 name: data.name,
                                 avatar: data.avatar || '',
                                 amount: data.amount,
-                                autoCashout: data.autoCashout,
-                                autoCashoutValue: parseFloat(data.autoCashoutValue),
-                                cashedOut: false
+                                autoCashout: data.autoCashout || false,
+                                autoCashoutValue: parseFloat(data.autoCashoutValue) || 1.5,
+                                cashedOut: false,
+                                cashingOut: false
                             });
                             sendUserBalance(data.telegram_id);
                             broadcast({ type: 'rocket_bets_update', bets: rocketState.bets });
@@ -555,12 +699,25 @@ wss.on('connection', (ws) => {
             if (data.type === 'rocket_cashout') {
                 handleRocketCashout(data.telegram_id);
             }
+            if (data.type === 'cancel_rocket_bet') {
+                let betIndex = rocketState.bets.findIndex(b => b.telegram_id === data.telegram_id && !b.cashedOut);
+                if (betIndex !== -1 && rocketState.status === 'waiting') {
+                    let bet = rocketState.bets[betIndex];
+                    db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [bet.amount, data.telegram_id], () => {
+                        sendUserBalance(data.telegram_id);
+                    });
+                    rocketState.bets.splice(betIndex, 1);
+                    broadcast({ type: 'rocket_bet_cancelled', telegram_id: data.telegram_id });
+                }
+            }
             if (data.type === 'roulette_bet') {
                 if (rouletteState.status !== 'waiting') return;
-                db.get("SELECT stars FROM users WHERE telegram_id = ?", [data.telegram_id], (err, row) => {
-                    if (row && row.stars >= data.amount) {
+                if (data.amount < MIN_BET || data.amount > MAX_BET) return;
+                db.get("SELECT stars, banned FROM users WHERE telegram_id = ?", [data.telegram_id], (err, row) => {
+                    if (err || !row || row.banned) return;
+                    if (row.stars >= data.amount) {
                         db.run("UPDATE users SET stars = stars - ? WHERE telegram_id = ?", [data.amount, data.telegram_id], () => {
-                            const colors = ['#ff4444', '#00cc66', '#3B82F6', '#FFD700', '#A855F7'];
+                            const colors = ['#ff4444', '#00cc66', '#3B82F6', '#FFD700', '#A855F7', '#FF6B6B', '#4ECDC4'];
                             const randomColor = colors[rouletteState.bets.length % colors.length];
                             rouletteState.bets.push({
                                 telegram_id: data.telegram_id,
@@ -576,13 +733,25 @@ wss.on('connection', (ws) => {
                     }
                 });
             }
-        } catch (e) { console.error(e); }
+            if (data.type === 'cancel_roulette_bet') {
+                let betIndex = rouletteState.bets.findIndex(b => b.telegram_id === data.telegram_id);
+                if (betIndex !== -1 && rouletteState.status === 'waiting') {
+                    let bet = rouletteState.bets[betIndex];
+                    db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [bet.amount, data.telegram_id], () => {
+                        sendUserBalance(data.telegram_id);
+                    });
+                    rouletteState.totalBank -= bet.amount;
+                    rouletteState.bets.splice(betIndex, 1);
+                    broadcast({ type: 'roulette_bets_update', bets: rouletteState.bets, total: rouletteState.totalBank });
+                }
+            }
+        } catch (e) { console.error('WebSocket error:', e); }
     });
 });
 
-// Запуск фоновых циклов
+// ========== ЗАПУСК ==========
 runRocketLoop();
 runRouletteLoop();
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
+server.listen(PORT, () => console.log(`✅ Сервер запущен на порту ${PORT}`));
