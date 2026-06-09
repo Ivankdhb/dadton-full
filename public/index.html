@@ -34,7 +34,7 @@
         .multiplier-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 48px; font-weight: 900; color: #FFD700; font-family: monospace; }
         
         .panel { background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px; margin-top: 12px; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         input[type="number"], select, input[type="text"] { flex: 1; background: #1a1a1a; border: 1px solid #2a2a2a; color: #fff; padding: 10px; border-radius: 8px; font-weight: 600; outline: none; }
         .btn-preset { background: #2a2a2a; border: none; color: #fff; padding: 0 12px; border-radius: 8px; font-weight: 800; cursor: pointer; }
         
@@ -56,7 +56,7 @@
         .profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
         .user-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #FFD700; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; }
         
-        .profile-tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 8px; }
+        .profile-tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 8px; flex-wrap: wrap; }
         .profile-tab { flex: 1; text-align: center; padding: 8px; background: none; border: none; color: #888; font-weight: 600; cursor: pointer; }
         .profile-tab.active { color: #FFD700; border-bottom: 2px solid #FFD700; }
         .profile-tab-content { display: none; }
@@ -73,14 +73,12 @@
         
         .referral-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
         
-        .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 16px; margin: 20px 0 30px; }
+        .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 16px; margin: 20px 0 30px; flex-wrap: wrap; }
         .podium-item { text-align: center; width: 80px; }
-        .podium-avatar { width: 50px; height: 50px; border-radius: 50%; background: #2a2a2a; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; }
+        .podium-avatar { width: 50px; height: 50px; border-radius: 50%; background: #2a2a2a; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; overflow: hidden; }
+        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .podium-name { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .podium-stars { font-size: 10px; color: #FFD700; }
-        .podium-1 { transform: translateY(0); }
-        .podium-2 { transform: translateY(15px); }
-        .podium-3 { transform: translateY(30px); }
         .first-place .podium-avatar { border: 2px solid #FFD700; box-shadow: 0 0 10px #FFD700; }
         .second-place .podium-avatar { border: 2px solid #C0C0C0; }
         .third-place .podium-avatar { border: 2px solid #CD7F32; }
@@ -88,7 +86,8 @@
         .leaderboard-list { max-height: 300px; overflow-y: auto; }
         .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #2a2a2a; }
         .leaderboard-rank { width: 35px; font-weight: 800; color: #FFD700; }
-        .leaderboard-avatar { width: 30px; height: 30px; border-radius: 50%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .leaderboard-avatar { width: 30px; height: 30px; border-radius: 50%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 12px; overflow: hidden; }
+        .leaderboard-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .leaderboard-name { flex: 1; }
         .leaderboard-stars { color: #FFD700; font-weight: 800; }
 
@@ -119,6 +118,12 @@
         @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
         
         .withdraw-rate { font-size: 11px; color: #888; margin-bottom: 10px; padding: 6px; background: #1a1a1a; border-radius: 6px; }
+        
+        @media (max-width: 480px) {
+            .leaderboard-podium { gap: 8px; }
+            .podium-item { width: 65px; }
+            .podium-avatar { width: 40px; height: 40px; font-size: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -166,7 +171,7 @@
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'max')">MAX</button>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:#888;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:#888; flex-wrap:wrap;">
                 <input type="checkbox" id="rocket-auto-check"> Автовывод
                 <input type="number" id="rocket-auto-val" value="1.5" step="0.1" min="1.1" max="100" style="padding:4px; max-width:80px;">
             </div>
@@ -178,7 +183,7 @@
 
         <div class="panel">
             <div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">📊 История крашей</div>
-            <div id="rocket-history-list" class="rocket-history"></div>
+            <div id="rocket-history-list" class="rocket-history">Загрузка...</div>
         </div>
 
         <div class="panel">
@@ -378,7 +383,7 @@
                     <button class="stars-preset" onclick="setStarsAmount(2500)">2500⭐</button>
                     <button class="stars-preset" onclick="setStarsAmount(5000)">5000⭐</button>
                 </div>
-                <input type="number" id="dep-stars-amount" value="50" min="1" placeholder="Своя сумма" style="margin-top:8px;">
+                <input type="number" id="dep-stars-amount" value="50" min="1" placeholder="Своя сумма" style="margin-top:8px; width:100%;">
                 <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processStarsDeposit()">⭐ Оплатить</button>
             </div>
 
@@ -442,8 +447,6 @@
         const WS_URL = "wss://dadton-full.onrender.com";
         let ws = null;
         let currentMinesGameStatus = 'idle';
-        let currentRocketBet = null;
-        let currentRouletteBet = null;
         let reconnectAttempts = 0;
 
         function showToast(msg) {
@@ -472,54 +475,76 @@
                 loadUserStats();
             }
             document.getElementById('loading-screen').style.display = 'none';
-        }).catch(() => {
+        }).catch((err) => {
+            console.error('Registration error:', err);
             document.getElementById('loading-screen').style.display = 'none';
             showToast('Ошибка подключения к серверу');
         });
 
         function loadRocketHistory() {
-            fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(data => {
-                const container = document.getElementById('rocket-history-list');
-                if (container) {
-                    container.innerHTML = data.map(m => `<span class="crash-badge">${m}x</span>`).join('') || '<span style="color:#888;">Нет данных</span>';
-                }
-            });
+            fetch(`${BACKEND_URL}/api/rocket-history`)
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('rocket-history-list');
+                    if (container) {
+                        if (data.length > 0) {
+                            container.innerHTML = data.map(m => `<span class="crash-badge">${m}x</span>`).join('');
+                        } else {
+                            container.innerHTML = '<span style="color:#888;">Нет данных</span>';
+                        }
+                    }
+                })
+                .catch(() => {
+                    const container = document.getElementById('rocket-history-list');
+                    if (container) container.innerHTML = '<span style="color:#888;">Нет данных</span>';
+                });
         }
 
         function loadLeaderboard() {
-            fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(data => {
-                const podium = document.getElementById('leaderboard-podium');
-                const list = document.getElementById('leaderboard-list');
-                if (!podium || !list) return;
-                
-                const top3 = data.slice(0,3);
-                podium.innerHTML = `
-                    <div class="podium-item second-place">
-                        <div class="podium-avatar">${top3[1] ? (top3[1].avatar ? `<img src="${top3[1].avatar}" style="width:50px;height:50px;border-radius:50%;">` : top3[1].name.charAt(0)) : '?'}</div>
-                        <div class="podium-name">${top3[1] ? top3[1].name.substring(0,10) : '-'}</div>
-                        <div class="podium-stars">${top3[1] ? top3[1].turnover : 0}⭐</div>
-                    </div>
-                    <div class="podium-item first-place">
-                        <div class="podium-avatar">${top3[0] ? (top3[0].avatar ? `<img src="${top3[0].avatar}" style="width:50px;height:50px;border-radius:50%;">` : top3[0].name.charAt(0)) : '?'}</div>
-                        <div class="podium-name">${top3[0] ? top3[0].name.substring(0,10) : '-'}</div>
-                        <div class="podium-stars">${top3[0] ? top3[0].turnover : 0}⭐</div>
-                    </div>
-                    <div class="podium-item third-place">
-                        <div class="podium-avatar">${top3[2] ? (top3[2].avatar ? `<img src="${top3[2].avatar}" style="width:50px;height:50px;border-radius:50%;">` : top3[2].name.charAt(0)) : '?'}</div>
-                        <div class="podium-name">${top3[2] ? top3[2].name.substring(0,10) : '-'}</div>
-                        <div class="podium-stars">${top3[2] ? top3[2].turnover : 0}⭐</div>
-                    </div>
-                `;
-                
-                list.innerHTML = data.slice(3).map((u, idx) => `
-                    <div class="leaderboard-row">
-                        <div class="leaderboard-rank">#${idx+4}</div>
-                        <div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%;">` : u.name.charAt(0)}</div>
-                        <div class="leaderboard-name">${u.name.substring(0,20)}</div>
-                        <div class="leaderboard-stars">${u.turnover}⭐</div>
-                    </div>
-                `).join('');
-            });
+            fetch(`${BACKEND_URL}/api/leaderboard`)
+                .then(r => r.json())
+                .then(data => {
+                    const podium = document.getElementById('leaderboard-podium');
+                    const list = document.getElementById('leaderboard-list');
+                    if (!podium || !list) return;
+                    
+                    const top3 = data.slice(0,3);
+                    while (top3.length < 3) top3.push({ name: '?', avatar: null, turnover: 0 });
+                    
+                    podium.innerHTML = `
+                        <div class="podium-item second-place">
+                            <div class="podium-avatar">${top3[1] && top3[1].avatar ? `<img src="${top3[1].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[1].name || '?').charAt(0)}'">` : (top3[1] ? (top3[1].name || '?').charAt(0) : '?')}</div>
+                            <div class="podium-name">${top3[1] ? (top3[1].name || '?').substring(0,10) : '-'}</div>
+                            <div class="podium-stars">${top3[1] ? (top3[1].turnover || 0) : 0}⭐</div>
+                        </div>
+                        <div class="podium-item first-place">
+                            <div class="podium-avatar">${top3[0] && top3[0].avatar ? `<img src="${top3[0].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[0].name || '?').charAt(0)}'">` : (top3[0] ? (top3[0].name || '?').charAt(0) : '?')}</div>
+                            <div class="podium-name">${top3[0] ? (top3[0].name || '?').substring(0,10) : '-'}</div>
+                            <div class="podium-stars">${top3[0] ? (top3[0].turnover || 0) : 0}⭐</div>
+                        </div>
+                        <div class="podium-item third-place">
+                            <div class="podium-avatar">${top3[2] && top3[2].avatar ? `<img src="${top3[2].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[2].name || '?').charAt(0)}'">` : (top3[2] ? (top3[2].name || '?').charAt(0) : '?')}</div>
+                            <div class="podium-name">${top3[2] ? (top3[2].name || '?').substring(0,10) : '-'}</div>
+                            <div class="podium-stars">${top3[2] ? (top3[2].turnover || 0) : 0}⭐</div>
+                        </div>
+                    `;
+                    
+                    list.innerHTML = data.slice(3).map((u, idx) => `
+                        <div class="leaderboard-row">
+                            <div class="leaderboard-rank">#${idx+4}</div>
+                            <div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(u.name || '?').charAt(0)}'">` : (u.name || '?').charAt(0)}</div>
+                            <div class="leaderboard-name">${(u.name || 'Игрок').substring(0,20)}</div>
+                            <div class="leaderboard-stars">${u.turnover || 0}⭐</div>
+                        </div>
+                    `).join('');
+                    if (data.length <= 3) list.innerHTML = '<div style="text-align:center; color:#888;">Нет других игроков</div>';
+                })
+                .catch(() => {
+                    const podium = document.getElementById('leaderboard-podium');
+                    const list = document.getElementById('leaderboard-list');
+                    if (podium) podium.innerHTML = '<div style="color:#888;">Ошибка загрузки</div>';
+                    if (list) list.innerHTML = '<div style="color:#888;">Ошибка загрузки</div>';
+                });
         }
 
         function loadUserGamesHistory() {
@@ -530,12 +555,16 @@
             }).then(r => r.json()).then(data => {
                 const container = document.getElementById('games-history-list');
                 if (container) {
-                    container.innerHTML = data.map(g => `
-                        <div class="history-item">
-                            <span>${g.game_type} ${g.game_name || ''}</span>
-                            <span class="${g.profit >= 0 ? 'history-win' : 'history-loss'}">${g.profit >= 0 ? '+' : ''}${g.profit}⭐</span>
-                        </div>
-                    `).join('') || '<div style="text-align:center; color:#888;">🎮 Сыграйте в игры, чтобы увидеть историю</div>';
+                    if (data.length > 0) {
+                        container.innerHTML = data.map(g => `
+                            <div class="history-item">
+                                <span>${g.game_type === 'rocket' ? '🚀' : g.game_type === 'mines' ? '💣' : '🎡'} ${g.game_name || g.game_type}</span>
+                                <span class="${(g.profit || 0) >= 0 ? 'history-win' : 'history-loss'}">${(g.profit || 0) >= 0 ? '+' : ''}${g.profit || 0}⭐</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<div style="text-align:center; color:#888;">🎮 Сыграйте в игры, чтобы увидеть историю</div>';
+                    }
                 }
             });
         }
@@ -565,12 +594,16 @@
                 document.getElementById('ref-link').value = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`;
                 const container = document.getElementById('referrals-list');
                 if (container) {
-                    container.innerHTML = (data.referrals || []).map(r => `
-                        <div class="referral-item">
-                            <span>${r.name || 'Игрок'}</span>
-                            <span style="color:#00cc66;">+${r.earned || 0}⭐</span>
-                        </div>
-                    `).join('') || '<div style="text-align:center; color:#888;">👥 Пока нет приглашённых друзей</div>';
+                    if (data.referrals && data.referrals.length > 0) {
+                        container.innerHTML = data.referrals.map(r => `
+                            <div class="referral-item">
+                                <span>${r.name || 'Игрок'}</span>
+                                <span style="color:#00cc66;">+${r.earned || 0}⭐</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<div style="text-align:center; color:#888;">👥 Пока нет приглашённых друзей</div>';
+                    }
                 }
             });
         }
@@ -583,88 +616,94 @@
                 ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id }));
             };
             ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'balance_update') {
-                    document.getElementById('global-balance').innerText = data.stars;
-                    user.stars = data.stars;
-                }
-                if (data.type === 'rocket_tick') {
-                    document.getElementById('rocket-overlay').style.display = 'flex';
-                    document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`;
-                    document.getElementById('rocket-mult').style.display = 'none';
-                    updateRocketPlayers(data.bets);
-                    if (data.hasBet) {
-                        document.getElementById('rocket-cancel-btn').style.display = 'block';
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'balance_update') {
+                        document.getElementById('global-balance').innerText = data.stars;
+                        user.stars = data.stars;
                     }
-                }
-                if (data.type === 'rocket_start') {
-                    document.getElementById('rocket-overlay').style.display = 'none';
-                    const mEl = document.getElementById('rocket-mult');
-                    mEl.style.display = 'block';
-                    mEl.style.color = '#FFD700';
-                    mEl.innerText = `1.00x`;
-                    document.getElementById('rocket-video').play();
-                    setRocketButtonState('flying');
-                }
-                if (data.type === 'rocket_fly') {
-                    const mEl = document.getElementById('rocket-mult');
-                    mEl.innerText = `${data.multiplier}x`;
-                }
-                if (data.type === 'rocket_crash') {
-                    const mEl = document.getElementById('rocket-mult');
-                    mEl.style.color = '#ff4444';
-                    mEl.innerText = `💥 ВЗРЫВ! ${data.multiplier}x`;
-                    document.getElementById('rocket-video').pause();
-                    setRocketButtonState('waiting');
-                    document.getElementById('rocket-cancel-btn').style.display = 'none';
-                    updateBalance();
-                    loadRocketHistory();
-                }
-                if (data.type === 'rocket_bets_update') {
-                    updateRocketPlayers(data.bets);
-                    let myBet = data.bets.find(b => b.telegram_id === user.telegram_id);
-                    if (myBet) {
-                        setRocketButtonState(myBet.cashedOut ? 'waiting' : 'flying');
-                        document.getElementById('rocket-cancel-btn').style.display = myBet.cashedOut ? 'none' : 'block';
+                    if (data.type === 'rocket_tick') {
+                        document.getElementById('rocket-overlay').style.display = 'flex';
+                        document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`;
+                        document.getElementById('rocket-mult').style.display = 'none';
+                        updateRocketPlayers(data.bets);
+                        if (data.hasBet) {
+                            document.getElementById('rocket-cancel-btn').style.display = 'block';
+                        }
                     }
-                }
-                if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) {
-                    tg.HapticFeedback.notificationOccurred('success');
-                    showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`);
-                    setRocketButtonState('waiting');
-                    document.getElementById('rocket-cancel-btn').style.display = 'none';
-                    updateBalance();
-                    loadUserStats();
-                }
-                if (data.type === 'rocket_bet_cancelled') {
-                    showToast('❌ Ставка отменена');
-                    setRocketButtonState('bet');
-                    document.getElementById('rocket-cancel-btn').style.display = 'none';
-                    updateBalance();
-                }
-                if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') {
-                    if (data.timer) document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`;
-                    document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`;
-                    updateRoulettePlayers(data.bets || []);
-                    drawRoulette(data.bets || [], 0);
-                    let myBet = (data.bets || []).find(b => b.telegram_id === user.telegram_id);
-                    if (myBet) {
-                        document.getElementById('roulette-cancel-btn').style.display = 'block';
-                    } else {
+                    if (data.type === 'rocket_start') {
+                        document.getElementById('rocket-overlay').style.display = 'none';
+                        const mEl = document.getElementById('rocket-mult');
+                        mEl.style.display = 'block';
+                        mEl.style.color = '#FFD700';
+                        mEl.innerText = `1.00x`;
+                        document.getElementById('rocket-video').play();
+                        setRocketButtonState('flying');
+                    }
+                    if (data.type === 'rocket_fly') {
+                        const mEl = document.getElementById('rocket-mult');
+                        mEl.innerText = `${data.multiplier}x`;
+                    }
+                    if (data.type === 'rocket_crash') {
+                        const mEl = document.getElementById('rocket-mult');
+                        mEl.style.color = '#ff4444';
+                        mEl.innerText = `💥 ВЗРЫВ! ${data.multiplier}x`;
+                        document.getElementById('rocket-video').pause();
+                        setRocketButtonState('waiting');
+                        document.getElementById('rocket-cancel-btn').style.display = 'none';
+                        updateBalance();
+                        loadRocketHistory();
+                        loadUserStats();
+                    }
+                    if (data.type === 'rocket_bets_update') {
+                        updateRocketPlayers(data.bets);
+                        let myBet = data.bets.find(b => b.telegram_id === user.telegram_id);
+                        if (myBet) {
+                            setRocketButtonState(myBet.cashedOut ? 'waiting' : 'flying');
+                            document.getElementById('rocket-cancel-btn').style.display = myBet.cashedOut ? 'none' : 'block';
+                        } else {
+                            document.getElementById('rocket-cancel-btn').style.display = 'none';
+                        }
+                    }
+                    if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                        showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`);
+                        setRocketButtonState('waiting');
+                        document.getElementById('rocket-cancel-btn').style.display = 'none';
+                        updateBalance();
+                        loadUserStats();
+                        loadUserGamesHistory();
+                    }
+                    if (data.type === 'rocket_bet_cancelled') {
+                        showToast('❌ Ставка отменена');
+                        setRocketButtonState('bet');
+                        document.getElementById('rocket-cancel-btn').style.display = 'none';
+                        updateBalance();
+                    }
+                    if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') {
+                        if (data.timer) document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`;
+                        document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`;
+                        updateRoulettePlayers(data.bets || []);
+                        drawRoulette(data.bets || [], 0);
+                        let myBet = (data.bets || []).find(b => b.telegram_id === user.telegram_id);
+                        if (myBet) {
+                            document.getElementById('roulette-cancel-btn').style.display = 'block';
+                        } else {
+                            document.getElementById('roulette-cancel-btn').style.display = 'none';
+                        }
+                    }
+                    if (data.type === 'roulette_roll') {
+                        animateRoulette(data.bets || [], data.winner);
+                    }
+                    if (data.type === 'roulette_wait_players') {
+                        document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`;
+                    }
+                    if (data.type === 'roulette_bet_cancelled') {
+                        showToast('❌ Ставка отменена');
                         document.getElementById('roulette-cancel-btn').style.display = 'none';
+                        updateBalance();
                     }
-                }
-                if (data.type === 'roulette_roll') {
-                    animateRoulette(data.bets || [], data.winner);
-                }
-                if (data.type === 'roulette_wait_players') {
-                    document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`;
-                }
-                if (data.type === 'roulette_bet_cancelled') {
-                    showToast('❌ Ставка отменена');
-                    document.getElementById('roulette-cancel-btn').style.display = 'none';
-                    updateBalance();
-                }
+                } catch(e) { console.error('WebSocket message error:', e); }
             };
             ws.onclose = () => {
                 setTimeout(() => {
@@ -673,6 +712,9 @@
                         initWebSocket();
                     }
                 }, 3000);
+            };
+            ws.onerror = (err) => {
+                console.error('WebSocket error:', err);
             };
         }
 
@@ -738,18 +780,18 @@
             document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active'));
             if (tab === 'stats') {
-                document.querySelector('.profile-tab:nth-child(1)').classList.add('active');
+                document.querySelectorAll('.profile-tab')[0].classList.add('active');
                 document.getElementById('profile-tab-stats').classList.add('active');
             } else if (tab === 'games') {
-                document.querySelector('.profile-tab:nth-child(2)').classList.add('active');
+                document.querySelectorAll('.profile-tab')[1].classList.add('active');
                 document.getElementById('profile-tab-games').classList.add('active');
                 loadUserGamesHistory();
             } else if (tab === 'finance') {
-                document.querySelector('.profile-tab:nth-child(3)').classList.add('active');
+                document.querySelectorAll('.profile-tab')[2].classList.add('active');
                 document.getElementById('profile-tab-finance').classList.add('active');
                 loadUserFinance();
             } else if (tab === 'referrals') {
-                document.querySelector('.profile-tab:nth-child(4)').classList.add('active');
+                document.querySelectorAll('.profile-tab')[3].classList.add('active');
                 document.getElementById('profile-tab-referrals').classList.add('active');
                 loadUserReferrals();
             }
@@ -780,9 +822,7 @@
                 btn.innerText = "💸 Забрать";
                 btn.disabled = false;
             } else {
-                btn.className = "btn-main";
-                btn.style.background = "#2a2a2a";
-                btn.style.color = "#888";
+                btn.className = "btn-main btn-gray";
                 btn.innerText = "⏳ Ожидание";
                 btn.disabled = true;
             }
@@ -819,6 +859,8 @@
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id }));
+                } else {
+                    showToast(d.msg || 'Нельзя отменить ставку');
                 }
             });
         }
@@ -831,6 +873,8 @@
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id }));
+                } else {
+                    showToast(d.msg || 'Нельзя отменить ставку');
                 }
             });
         }
@@ -839,6 +883,10 @@
             const container = document.getElementById('rocket-players-list');
             if (!container) return;
             container.innerHTML = '';
+            if (bets.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">Нет участников</div>';
+                return;
+            }
             bets.forEach(b => {
                 container.innerHTML += `
                     <div class="list-row">
@@ -918,10 +966,12 @@
                     tile.classList.add('blown');
                     tile.innerText = '💣';
                     document.getElementById('mines-status-text').innerHTML = "💥 Взрыв! Ставка проиграна.";
-                    d.board.forEach((isMine, i) => {
-                        let t = document.getElementById(`mine-${i}`);
-                        if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; }
-                    });
+                    if (d.board) {
+                        d.board.forEach((isMine, i) => {
+                            let t = document.getElementById(`mine-${i}`);
+                            if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; }
+                        });
+                    }
                     resetMinesButtons();
                     updateBalance();
                     loadUserStats();
@@ -969,6 +1019,10 @@
             const container = document.getElementById('roulette-players-list');
             if (!container) return;
             container.innerHTML = '';
+            if (bets.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">Нет участников</div>';
+                return;
+            }
             bets.forEach(b => {
                 container.innerHTML += `
                     <div class="list-row" style="border-left: 4px solid ${b.color || '#FFD700'}; padding-left: 6px;">
@@ -995,11 +1049,11 @@
                 ctx.stroke();
                 return;
             }
-            let total = bets.reduce((a, b) => a + b.amount, 0);
+            let total = bets.reduce((a, b) => a + (b.amount || 0), 0);
             if (total === 0) return;
             let currentAngle = startRotation;
             bets.forEach(b => {
-                let sliceAngle = (b.amount / total) * 2 * Math.PI;
+                let sliceAngle = ((b.amount || 0) / total) * 2 * Math.PI;
                 ctx.beginPath();
                 ctx.moveTo(130, 130);
                 ctx.arc(130, 130, 120, currentAngle, currentAngle + sliceAngle);
@@ -1069,8 +1123,13 @@
             requestAnimationFrame(animate);
         }
 
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex'; 
+            toggleWithdrawFields();
+        }
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+        }
 
         function switchDepTab(tab, event) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1135,7 +1194,7 @@
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 360,
                 messages: [{
-                    address: "EQD__________________________________________EXAMPLE",
+                    address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP",
                     amount: nanoAmount,
                     payload: user.telegram_id
                 }]
@@ -1258,7 +1317,7 @@
                 requests.forEach(r => {
                     html += `<div class="admin-row"><b>${r.name}</b> | ${r.amount}⭐ | ${r.asset}<br>
                     <small>${r.wallet}</small><br>
-                    <button onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button></div>`;
+                    <button class="btn-green" style="padding:4px 8px; margin-top:4px;" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button></div>`;
                 });
                 document.getElementById('admin-withdraws-list').innerHTML = html || 'Нет заявок';
             });
@@ -1283,7 +1342,7 @@
             }).then(r => r.json()).then(users => {
                 let html = '';
                 users.slice(0, 20).forEach(u => {
-                    html += `<div class="admin-row"><b>${u.name}</b> | ${u.telegram_id}<br>⭐ ${u.stars} | Игр: ${u.games_played || 0}</div>`;
+                    html += `<div class="admin-row"><b>${u.name}</b> | ${u.telegram_id}<br>⭐ ${u.stars} | Игр: ${u.games_played || 0} | ${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</div>`;
                 });
                 document.getElementById('admin-users-list').innerHTML = html;
             });
