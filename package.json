@@ -1,13 +1,16 @@
 {
-  "name": "dadton-server",
+  "name": "dadton-platform",
   "version": "1.0.0",
+  "description": "DadTon WebApp Casino Platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
-    "socket.io": "^4.7.5",
-    "sqlite3": "^5.1.7"
+    "ws": "^8.16.0",
+    "sqlite3": "^5.1.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
   }
 }
