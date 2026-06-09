@@ -767,7 +767,11 @@
         }
     }
 
-    // ==================== TON CONNECT ====================
+  // ==================== TON CONNECT ====================
+    let tonConnectUI = null;
+    let currentWalletAddress = null;
+    
+    // Проверка статуса кошелька на сервере
     async function checkWalletStatus() {
         try {
             const res = await fetch('/api/get-wallet', {
@@ -786,30 +790,43 @@
                     currentWalletAddress = data.wallet_address;
                     const shortAddr = currentWalletAddress.slice(0, 6) + '...' + currentWalletAddress.slice(-6);
                     statusDiv.innerHTML = `✅ Кошелёк: <strong style="color:#FFD700;">${shortAddr}</strong>`;
+                    statusDiv.style.color = '#00cc66';
                     
+                    // Показываем кнопку отвязки в профиле
                     if (disconnectBtn) {
                         disconnectBtn.style.display = 'block';
+                        disconnectBtn.style.background = '#ff4444';
+                        disconnectBtn.style.color = '#fff';
+                        disconnectBtn.style.border = 'none';
+                        disconnectBtn.style.cursor = 'pointer';
                     }
+                    // Включаем кнопку оплаты криптой
                     if (cryptoPayBtn) {
                         cryptoPayBtn.disabled = false;
                         cryptoPayBtn.style.opacity = '1';
+                        cryptoPayBtn.style.cursor = 'pointer';
                     }
                 } else {
                     currentWalletAddress = null;
                     statusDiv.innerHTML = `❌ Кошелёк не подключён`;
+                    statusDiv.style.color = '#ff4444';
                     
+                    // Скрываем кнопку отвязки
                     if (disconnectBtn) {
                         disconnectBtn.style.display = 'none';
                     }
+                    // Отключаем кнопку оплаты криптой
                     if (cryptoPayBtn) {
                         cryptoPayBtn.disabled = true;
                         cryptoPayBtn.style.opacity = '0.5';
+                        cryptoPayBtn.style.cursor = 'not-allowed';
                     }
                 }
             }
         } catch(e) { console.log('Check wallet error:', e); }
     }
     
+    // Отвязка кошелька
     async function disconnectWallet() {
         if (!confirm('Отвязать кошелёк? Вы сможете подключить другой.')) return;
         
@@ -823,18 +840,20 @@
         if (data.success) {
             currentWalletAddress = null;
             if (tonConnectUI) {
-                try { await tonConnectUI.disconnect(); } catch(e) {}
+                try { await tonConnectUI.disconnect(); } catch(e) { console.log('Disconnect error:', e); }
             }
             toast('✅ Кошелёк отвязан');
             checkWalletStatus();
             closeWalletModal();
         } else {
-            toast('❌ Ошибка отвязки');
+            toast('❌ Ошибка отвязки: ' + (data.error || 'неизвестно'));
         }
     }
     
+    // Инициализация TON Connect
     async function initTonConnect() {
         if (typeof TON_CONNECT_UI === 'undefined') {
+            console.log('TON_CONNECT_UI не загружен, повтор через 1 сек');
             setTimeout(initTonConnect, 1000);
             return;
         }
@@ -843,14 +862,22 @@
         
         try {
             const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+            console.log('Загрузка манифеста:', manifestUrl);
+            
             tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
                 manifestUrl: manifestUrl,
                 buttonRootId: 'ton-connect-button'
             });
             
+            // Слушаем изменения статуса кошелька
             tonConnectUI.onStatusChange(async (wallet) => {
+                console.log('Статус кошелька изменился:', wallet);
+                
                 if (wallet && wallet.account) {
                     const address = wallet.account.address;
+                    console.log('Кошелёк подключён через UI:', address);
+                    
+                    // Отправляем на сервер для верификации
                     const res = await fetch('/api/verify-proof', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -861,29 +888,51 @@
                         })
                     });
                     const data = await res.json();
+                    
                     if (data.success) {
                         currentWalletAddress = address;
-                        checkWalletStatus();
+                        await checkWalletStatus();
                         toast('✅ Кошелёк успешно подключён!');
                         setTimeout(() => closeWalletModal(), 1500);
+                    } else {
+                        toast('❌ Ошибка верификации кошелька');
+                        console.error('Verify error:', data);
                     }
                 } else {
-                    checkWalletStatus();
+                    console.log('Кошелёк отключён через UI');
+                    await checkWalletStatus();
                 }
             });
             
-            checkWalletStatus();
+            // Проверяем статус при загрузке
+            await checkWalletStatus();
+            
         } catch (err) {
             console.error("Ошибка инициализации TON Connect:", err);
+            toast('❌ Ошибка подключения TON Connect');
         }
     }
     
+    // Показать модалку TON Connect
     function showWalletModal() {
         const modal = document.getElementById('walletModal');
         if (modal) {
             modal.style.display = 'flex';
-            if (!tonConnectUI) initTonConnect();
-            setTimeout(() => { if (tonConnectUI) tonConnectUI.openModal(); }, 200);
+            if (!tonConnectUI) {
+                initTonConnect().then(() => {
+                    setTimeout(() => {
+                        if (tonConnectUI) {
+                            tonConnectUI.openModal().catch(e => console.log('Open modal error:', e));
+                        }
+                    }, 500);
+                });
+            } else {
+                setTimeout(() => {
+                    if (tonConnectUI) {
+                        tonConnectUI.openModal().catch(e => console.log('Open modal error:', e));
+                    }
+                }, 200);
+            }
         }
     }
     
@@ -892,6 +941,7 @@
         if (modal) modal.style.display = 'none';
     }
     
+    // Добавляем кнопку "Подключить TON" в профиль
     setTimeout(() => {
         const buttonRow = document.querySelector('#screen-profile .button-row');
         if (buttonRow && !document.getElementById('connect-wallet-btn-custom')) {
@@ -900,6 +950,7 @@
             walletBtn.className = 'btn btn-secondary';
             walletBtn.innerHTML = '💎 Подключить TON';
             walletBtn.style.marginTop = '8px';
+            walletBtn.style.cursor = 'pointer';
             walletBtn.onclick = () => showWalletModal();
             buttonRow.parentNode.insertBefore(walletBtn, buttonRow.nextSibling);
         }
