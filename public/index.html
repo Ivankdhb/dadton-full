@@ -370,7 +370,7 @@
                 <div id="usdtBtn" class="asset-btn" onclick="selectAsset('USDT')">💵 USDT<br><span style="font-size:10px;">1 USDT = 50⭐</span></div>
             </div>
             <input type="number" id="depositAmount" class="bet-input" placeholder="Сумма" value="1" step="0.5">
-            <div class="btn" onclick="sendCryptoPayment()">💸 Оплатить через кошелёк</div>
+            <div class="btn" id="cryptoPayBtn" onclick="sendCryptoPayment()">💸 Оплатить через кошелёк</div>
         </div>
         
         <div id="starsPanel" style="display:none;">
@@ -416,9 +416,8 @@
 <!-- Модалка TON Connect -->
 <div id="walletModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 320px;">
-        <h3 style="color:var(--gold); margin-bottom:16px;">💎 Подключить кошелёк</h3>
+        <h3 style="color:var(--gold); margin-bottom:16px;">💎 TON Connect</h3>
         <div style="margin-bottom: 16px;">
-            <p style="font-size: 13px; color:#888; margin-bottom: 16px;">Подключите TON кошелёк для пополнения и вывода средств</p>
             <div id="ton-connect-button"></div>
         </div>
         <div id="wallet-status-info" style="font-size:12px; margin:12px 0; text-align:center;"></div>
@@ -471,9 +470,7 @@
     let selectedWithdrawAsset = 'TON';
     let tonConnectUI = null;
     let currentWalletAddress = null;
-    let currentCryptoAsset = 'TON';
-    let currentTxHash = null;
-    let checkInterval = null;
+    let paymentCheckInterval = null;
     
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
     const USDT_JETTON = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
@@ -532,7 +529,7 @@
         return true;
     }
 
-    // ==================== ПОПОЛНЕНИЕ И ВЫВОД ====================
+    // ==================== ПОПОЛНЕНИЕ ====================
     function showCryptoPanel() {
         document.getElementById('cryptoBtn').classList.add('active');
         document.getElementById('starsBtn').classList.remove('active');
@@ -616,6 +613,83 @@
         document.getElementById('depositModal').style.display = 'none';
     }
     
+    async function sendCryptoPayment() {
+        if (!currentWalletAddress) {
+            toast('❌ Сначала подключите TON кошелёк в профиле');
+            closeDepositModal();
+            showWalletModal();
+            return;
+        }
+        
+        let amount = parseFloat(document.getElementById('depositAmount').value);
+        
+        if (!amount || amount <= 0) {
+            toast('❌ Введите сумму');
+            return;
+        }
+        if (selectedAsset === 'TON' && amount < 0.5) {
+            toast('❌ Минимальная сумма: 0.5 TON');
+            return;
+        }
+        if (selectedAsset === 'USDT' && amount < 1) {
+            toast('❌ Минимальная сумма: 1 USDT');
+            return;
+        }
+        
+        const starsAmount = selectedAsset === 'TON' ? amount * 100 : amount * 50;
+        
+        toast('🔄 Создание счёта...');
+        
+        const res = await fetch('/api/create-crypto-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: uid,
+                asset: selectedAsset,
+                amount: amount,
+                wallet_address: currentWalletAddress
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            toast('✅ Счёт создан! Оплатите в вашем кошельке');
+            window.open(data.invoiceUrl, '_blank');
+            startPaymentCheck(data.tx_hash);
+            closeDepositModal();
+        } else {
+            toast('❌ ' + (data.error || 'Ошибка'));
+            if (data.error && data.error.includes('кошелёк')) {
+                showWalletModal();
+            }
+        }
+    }
+    
+    function startPaymentCheck(tx_hash) {
+        if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+        
+        paymentCheckInterval = setInterval(async () => {
+            const res = await fetch('/api/check-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tx_hash: tx_hash })
+            });
+            const data = await res.json();
+            
+            if (data.success && data.confirmed) {
+                clearInterval(paymentCheckInterval);
+                toast(`✅ Пополнение подтверждено! +${data.stars}⭐`);
+                refreshBalance();
+            }
+        }, 3000);
+        
+        setTimeout(() => {
+            if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+        }, 5 * 60 * 1000);
+    }
+
+    // ==================== ВЫВОД ====================
     function selectWithdrawAsset(asset) {
         selectedWithdrawAsset = asset;
         document.getElementById('withdrawTonBtn').classList.remove('active');
@@ -692,95 +766,6 @@
         }
     }
 
-    // ==================== КРИПТО-ПОПОЛНЕНИЕ ЧЕРЕЗ ПРИВЯЗАННЫЙ КОШЕЛЁК ====================
-    function setCryptoAsset(asset) {
-        currentCryptoAsset = asset;
-        document.getElementById('cryptoDepositTonBtn').classList.remove('active');
-        document.getElementById('cryptoDepositUsdtBtn').classList.remove('active');
-        if (asset === 'TON') document.getElementById('cryptoDepositTonBtn').classList.add('active');
-        else document.getElementById('cryptoDepositUsdtBtn').classList.add('active');
-    }
-    
-    function showCryptoDepositModal() {
-        if (!currentWalletAddress) {
-            toast('❌ Сначала подключите кошелёк в профиле');
-            showWalletModal();
-            return;
-        }
-        document.getElementById('cryptoDepositModal').style.display = 'flex';
-    }
-    
-    function closeCryptoDepositModal() {
-        document.getElementById('cryptoDepositModal').style.display = 'none';
-        if (checkInterval) clearInterval(checkInterval);
-    }
-    
-    async function createCryptoInvoice() {
-        const amount = parseFloat(document.getElementById('cryptoAmount').value);
-        
-        if (!amount || amount < 0.5) {
-            toast('❌ Минимальная сумма: 0.5 TON или 1 USDT');
-            return;
-        }
-        
-        if (!currentWalletAddress) {
-            toast('❌ Сначала подключите кошелёк в профиле');
-            showWalletModal();
-            return;
-        }
-        
-        toast('🔄 Создание счёта...');
-        
-        const res = await fetch('/api/create-crypto-invoice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegram_id: uid,
-                asset: currentCryptoAsset,
-                amount: amount,
-                wallet_address: currentWalletAddress
-            })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            currentTxHash = data.tx_hash;
-            toast('✅ Счёт создан! Оплатите в вашем кошельке');
-            window.open(data.invoiceUrl, '_blank');
-            startPaymentCheck(currentTxHash);
-        } else {
-            toast('❌ ' + (data.error || 'Ошибка'));
-            if (data.error && data.error.includes('кошелёк')) {
-                showWalletModal();
-            }
-        }
-    }
-    
-    function startPaymentCheck(tx_hash) {
-        if (checkInterval) clearInterval(checkInterval);
-        
-        checkInterval = setInterval(async () => {
-            const res = await fetch('/api/check-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tx_hash: tx_hash })
-            });
-            const data = await res.json();
-            
-            if (data.success && data.confirmed) {
-                clearInterval(checkInterval);
-                toast(`✅ Пополнение подтверждено! +${data.stars}⭐`);
-                refreshBalance();
-                closeCryptoDepositModal();
-            }
-        }, 3000);
-        
-        setTimeout(() => {
-            if (checkInterval) clearInterval(checkInterval);
-        }, 5 * 60 * 1000);
-    }
-
     // ==================== TON CONNECT ====================
     async function checkWalletStatus() {
         try {
@@ -790,16 +775,23 @@
                 body: JSON.stringify({ telegram_id: uid })
             });
             const data = await res.json();
+            
+            const statusDiv = document.getElementById('wallet-status-info');
+            if (!statusDiv) return;
+            
             if (data.success && data.wallet_address) {
                 currentWalletAddress = data.wallet_address;
                 const shortAddr = currentWalletAddress.slice(0, 6) + '...' + currentWalletAddress.slice(-6);
-                document.getElementById('wallet-status-info').innerHTML = `
-                    <span style="color:#00cc66;">✅ Кошелёк: ${shortAddr}</span>
-                    <button class="btn btn-secondary" style="margin-top:8px; padding:6px; font-size:11px;" onclick="disconnectWallet()">🔓 Отвязать</button>
+                statusDiv.innerHTML = `
+                    <div style="margin-bottom: 8px;">✅ Кошелёк: <strong style="color:#FFD700;">${shortAddr}</strong></div>
+                    <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; background:#ff4444; color:#fff; border:none;" onclick="disconnectWallet()">🔓 Отвязать кошелёк</button>
                 `;
             } else {
                 currentWalletAddress = null;
-                document.getElementById('wallet-status-info').innerHTML = '<span style="color:#ff4444;">❌ Кошелёк не подключён</span>';
+                statusDiv.innerHTML = `
+                    <div style="margin-bottom: 8px;">❌ Кошелёк не подключён</div>
+                    <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="showWalletModal()">🔗 Подключить кошелёк</button>
+                `;
             }
         } catch(e) { console.log('Check wallet error:', e); }
     }
@@ -817,7 +809,7 @@
         if (data.success) {
             currentWalletAddress = null;
             if (tonConnectUI) {
-                await tonConnectUI.disconnect();
+                try { await tonConnectUI.disconnect(); } catch(e) {}
             }
             toast('✅ Кошелёк отвязан');
             checkWalletStatus();
@@ -838,8 +830,6 @@
                 tonConnectUI.onStatusChange(async (wallet) => {
                     if (wallet && wallet.account) {
                         const address = wallet.account.address;
-                        console.log('Кошелёк подключён:', address);
-                        
                         const res = await fetch('/api/verify-proof', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
