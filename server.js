@@ -11,6 +11,38 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ========== TON CONNECT MANIFEST (прямо в коде) ==========
+app.get('/tonconnect-manifest.json', (req, res) => {
+    res.json({
+        url: "https://dadton-full.onrender.com",
+        name: "DadTon Casino",
+        iconUrl: "https://dadton-full.onrender.com/icon.png",
+        termsOfUseUrl: "https://dadton-full.onrender.com/terms.html",
+        privacyPolicyUrl: "https://dadton-full.onrender.com/privacy.html"
+    });
+});
+
+// Иконка на лету (чтобы не было 404)
+app.get('/icon.png', (req, res) => {
+    const svg = `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+        <rect width="256" height="256" fill="#0a0a0a" rx="40"/>
+        <circle cx="128" cy="128" r="80" fill="#FFD700"/>
+        <text x="128" y="150" font-size="64" text-anchor="middle" fill="#000" font-weight="900" font-family="Arial">D</text>
+    </svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.send(svg);
+});
+
+// Заглушка для terms.html
+app.get('/terms.html', (req, res) => {
+    res.send(`<!DOCTYPE html><html><head><title>Terms of Use</title></head><body><h1>Terms of Use</h1><p>By using DadTon you agree to the terms...</p></body></html>`);
+});
+
+// Заглушка для privacy.html
+app.get('/privacy.html', (req, res) => {
+    res.send(`<!DOCTYPE html><html><head><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1><p>Your data is safe with us...</p></body></html>`);
+});
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -373,7 +405,7 @@ app.post('/api/user-referrals', (req, res) => {
     });
 });
 
-// НОВЫЙ ЭНДПОИНТ ДЛЯ СОХРАНЕНИЯ КОШЕЛЬКА
+// Сохранение кошелька
 app.post('/api/save-wallet', (req, res) => {
     const { telegram_id, wallet_address } = req.body;
     if (!telegram_id || !wallet_address) {
