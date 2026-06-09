@@ -870,6 +870,14 @@ io.on('connection', (socket) => {
 
 startRocketCountdown();
 
+// ВРЕМЕННЫЙ ЭНДПОИНТ ДЛЯ ОЧИСТКИ КОШЕЛЬКОВ (удали потом)
+app.get('/api/debug/clear-wallets', (req, res) => {
+    db.run(`UPDATE users SET wallet_address = NULL`, [], (err) => {
+        if (err) return res.json({ error: err.message });
+        res.json({ success: true, message: 'Все кошельки очищены' });
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
