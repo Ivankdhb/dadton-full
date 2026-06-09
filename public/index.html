@@ -11,28 +11,23 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-user-select: none; }
         body { background-color: #0a0a0a; color: #ffffff; overflow-x: hidden; padding-bottom: 75px; }
         
-        /* Шапка приложения */
-        header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #111; border-bottom: 1px solid #2a2a2a; sticky: top; z-index: 100; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #111; border-bottom: 1px solid #2a2a2a; position: sticky; top: 0; z-index: 100; }
         .logo-area { font-weight: 900; font-size: 18px; color: #FFD700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.4); }
         .balance-plate { background: #1a1a1a; padding: 6px 12px; border-radius: 8px; border: 1px solid #FFD700; color: #FFD700; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
 
-        /* Лоадер */
         #loading-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background:#000; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
         .spinner { width: 50px; height: 50px; border: 5px solid #2a2a2a; border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Страницы */
         .page { display: none; padding: 12px; max-width: 480px; margin: 0 auto; }
         .page.active { display: block; }
         
-        /* Сетка игр (Главная) */
         .game-card { background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .game-card:active { transform: scale(0.98); }
         .game-info h3 { font-size: 18px; font-weight: 800; color: #FFD700; }
         .game-info p { font-size: 12px; color: #888; margin-top: 2px; }
         .game-icon { font-size: 28px; }
 
-        /* Ракета */
         .video-container { position: relative; width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a2a; }
         .video-container video { width: 100%; height: 100%; object-fit: cover; }
         .rocket-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:24px; color:#FFD700; }
@@ -49,17 +44,14 @@
         .btn-green { background: linear-gradient(90deg, #00cc66, #009944); color: #fff; animation: pulse 0.8s infinite alternate; }
         @keyframes pulse { 0% { box-shadow: 0 0 4px #00cc66; } 100% { box-shadow: 0 0 16px #00cc66; } }
 
-        /* Мины */
         .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0; }
         .mine-tile { aspect-ratio: 1; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; cursor: pointer; }
         .mine-tile.safe { background: rgba(0, 204, 102, 0.2); border-color: #00cc66; color: #00cc66; }
         .mine-tile.blown { background: rgba(255, 68, 68, 0.2); border-color: #ff4444; color: #ff4444; }
 
-        /* Рулетка */
         .roulette-wrapper { display: flex; flex-direction: column; align-items: center; margin: 15px 0; }
         #roulette-canvas { background: #111; border-radius: 50%; border: 4px solid #2a2a2a; box-shadow: 0 0 15px rgba(255,215,0,0.1); }
 
-        /* Профиль */
         .profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
         .user-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #FFD700; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
@@ -67,14 +59,12 @@
         .stat-box span { font-size: 11px; color: #888; display: block; }
         .stat-box strong { font-size: 16px; color: #FFD700; font-weight: 800; }
         
-        /* Модальные окна */
         .modal { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; padding:16px; }
         .modal-content { background:#111; border:1px solid #2a2a2a; border-radius:16px; padding:16px; width:100%; max-width:400px; }
         .modal-tabs { display:flex; gap:8px; margin-bottom:12px; }
-        .tab-btn { flex:1; padding:8px; background:#2a2a2a; border:none; border-radius:6px; color:#fff; font-weight:600; }
+        .tab-btn { flex:1; padding:8px; background:#2a2a2a; border:none; border-radius:6px; color:#fff; font-weight:600; cursor: pointer; }
         .tab-btn.active { background:#FFD700; color:#000; }
 
-        /* Навигация */
         nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: #111; border-top: 1px solid #2a2a2a; display: flex; justify-content: space-around; align-items: center; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #888; text-decoration: none; font-size: 10px; font-weight: 600; cursor: pointer; }
         .nav-item.active { color: #FFD700; }
@@ -83,7 +73,12 @@
         .list-container { max-height: 150px; overflow-y: auto; font-size: 12px; margin-top: 8px; }
         .list-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #2a2a2a; }
         .list-user-info { display: flex; align-items: center; gap: 6px; }
-        .mini-avatar { width: 20px; height: 20px; border-radius: 50%; }
+        .mini-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+
+        .admin-row { background: #2a1a1a; margin-bottom: 5px; padding: 6px; border-radius: 6px; }
+        .admin-badge { color: #ff4444; font-size: 11px; }
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #FFD700; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: 800; z-index: 1000; animation: fadeOut 2s forwards; }
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     </style>
 </head>
 <body>
@@ -102,24 +97,15 @@
 
     <div id="page-home" class="page active">
         <div class="game-card" onclick="switchPage('rocket')">
-            <div class="game-info">
-                <h3>🚀 Ракета</h3>
-                <p>Краш-игра • Успей забрать</p>
-            </div>
+            <div class="game-info"><h3>🚀 Ракета</h3><p>Краш-игра • Успей забрать</p></div>
             <div class="game-icon">🚀</div>
         </div>
         <div class="game-card" onclick="switchPage('mines')">
-            <div class="game-info">
-                <h3>💣 Мины</h3>
-                <p>5x5 • Найди безопасные клетки</p>
-            </div>
+            <div class="game-info"><h3>💣 Мины</h3><p>5x5 • Найди безопасные клетки</p></div>
             <div class="game-icon">💣</div>
         </div>
         <div class="game-card" onclick="switchPage('roulette')">
-            <div class="game-info">
-                <h3>🎡 Рулетка</h3>
-                <p>Мультиплеер • Ставь на цвет</p>
-            </div>
+            <div class="game-info"><h3>🎡 Рулетка</h3><p>Мультиплеер • Ставь на цвет</p></div>
             <div class="game-icon">🎡</div>
         </div>
     </div>
@@ -135,14 +121,14 @@
         
         <div class="panel">
             <div class="input-group">
-                <input type="number" id="rocket-bet-amount" value="10" min="10">
+                <input type="number" id="rocket-bet-amount" value="10" min="10" max="10000">
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'min')">MIN</button>
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'max')">MAX</button>
             </div>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:#888;">
                 <input type="checkbox" id="rocket-auto-check"> Автовывод
-                <input type="number" id="rocket-auto-val" value="1.5" step="0.1" style="padding:4px; max-width:80px;">
+                <input type="number" id="rocket-auto-val" value="1.5" step="0.1" min="1.1" max="100" style="padding:4px; max-width:80px;">
             </div>
             <button id="rocket-action-btn" class="btn-main btn-gold" onclick="handleRocketAction()">💰 Сделать ставку</button>
         </div>
@@ -156,7 +142,7 @@
     <div id="page-mines" class="page">
         <div class="panel">
             <div class="input-group">
-                <input type="number" id="mines-bet-amount" value="20" min="10">
+                <input type="number" id="mines-bet-amount" value="20" min="10" max="10000">
                 <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'half')">½</button>
                 <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'double')">×2</button>
                 <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'max')">MAX</button>
@@ -184,7 +170,7 @@
 
         <div class="panel">
             <div class="input-group">
-                <input type="number" id="roulette-bet-amount" value="10" min="10">
+                <input type="number" id="roulette-bet-amount" value="10" min="10" max="10000">
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'min')">MIN</button>
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'max')">MAX</button>
@@ -233,11 +219,57 @@
         <button id="admin-panel-btn" class="btn-main btn-red" style="margin-top:15px; display:none;" onclick="openModal('admin-modal')">👑 АДМИН-ПАНЕЛЬ</button>
     </div>
 
+    <!-- Админ-панель модалка -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content" style="max-width:500px; max-height:80vh; overflow-y:auto;">
+            <div style="font-weight:800; color:#FFD700; margin-bottom:12px;">👑 Админ-панель</div>
+            <div id="admin-stats" style="font-size:12px; margin-bottom:12px;"></div>
+            
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:800; margin-bottom:6px;">➕ Начислить звёзды</div>
+                <input type="text" id="admin-target-id" placeholder="Telegram ID" style="width:100%; margin-bottom:6px;">
+                <input type="number" id="admin-add-amount" placeholder="Сумма" style="width:100%; margin-bottom:6px;">
+                <button class="btn-gold btn-main" style="padding:8px;" onclick="adminAddStars()">Начислить</button>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:800; margin-bottom:6px;">🚫 Бан/Разбан</div>
+                <input type="text" id="admin-ban-id" placeholder="Telegram ID" style="width:100%; margin-bottom:6px;">
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-red btn-main" style="padding:8px;" onclick="adminBanUser()">Забанить</button>
+                    <button class="btn-green btn-main" style="padding:8px;" onclick="adminUnbanUser()">Разбанить</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:800; margin-bottom:6px;">⏸️ Управление ботом</div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-red btn-main" style="padding:8px;" onclick="adminPauseBot()">⏸️ Пауза</button>
+                    <button class="btn-green btn-main" style="padding:8px;" onclick="adminResumeBot()">▶️ Запуск</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:800; margin-bottom:6px;">📋 Заявки на вывод</div>
+                <button class="btn-gold btn-main" style="padding:8px;" onclick="adminLoadWithdraws()">Загрузить заявки</button>
+                <div id="admin-withdraws-list" style="margin-top:8px;"></div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:800; margin-bottom:6px;">👥 Пользователи</div>
+                <button class="btn-gold btn-main" style="padding:8px;" onclick="adminLoadUsers()">Загрузить пользователей</button>
+                <div id="admin-users-list" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+            </div>
+
+            <button class="btn-main" style="background:#2a2a2a; padding:8px; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
+        </div>
+    </div>
+
     <div id="deposit-modal" class="modal">
         <div class="modal-content">
             <div class="modal-tabs">
-                <button class="tab-btn active" onclick="switchDepTab('crypto')">💎 Крипта</button>
-                <button class="tab-btn" onclick="switchDepTab('stars')">⭐ Stars</button>
+                <button class="tab-btn active" onclick="switchDepTab('crypto', event)">💎 Крипта</button>
+                <button class="tab-btn" onclick="switchDepTab('stars', event)">⭐ Stars</button>
             </div>
             
             <div id="dep-tab-crypto">
@@ -286,26 +318,36 @@
         tg.ready();
         tg.expand();
 
-        // Инициализация TON Connect
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://dadton-full.onrender.com/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect-btn-container'
-        });
+        let tonConnectUI = null;
+        try {
+            tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+                manifestUrl: 'https://dadton-full.onrender.com/tonconnect-manifest.json',
+                buttonRootId: 'ton-connect-btn-container'
+            });
+        } catch(e) { console.warn('TON Connect not loaded'); }
 
-        let user = { telegram_id: "123456", name: "Тест Игрок", avatar: "", username: "test" };
+        let user = { telegram_id: "123456", name: "Тест Игрок", avatar: "", username: "test", stars: 1000 };
         if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
             user.telegram_id = tg.initDataUnsafe.user.id.toString();
             user.name = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
             user.username = tg.initDataUnsafe.user.username || '';
-            user.avatar = tg.initDataUnsafe.user.photo_url || ''; // Аватарка напрямую из ТГ API
+            user.avatar = tg.initDataUnsafe.user.photo_url || '';
         }
 
         const BACKEND_URL = "https://dadton-full.onrender.com";
         const WS_URL = "wss://dadton-full.onrender.com";
-        let ws;
+        let ws = null;
         let currentMinesGameStatus = 'idle';
+        let reconnectAttempts = 0;
 
-        // Первичная авторизация
+        function showToast(msg) {
+            let toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
         fetch(`${BACKEND_URL}/api/register`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
@@ -320,40 +362,61 @@
                 if (user.telegram_id === "1631627984") {
                     document.getElementById('admin-panel-btn').style.display = 'block';
                 }
+                loadUserStats();
             }
             document.getElementById('loading-screen').style.display = 'none';
         }).catch(() => {
             document.getElementById('loading-screen').style.display = 'none';
+            showToast('Ошибка подключения к серверу');
         });
 
+        function loadUserStats() {
+            fetch(`${BACKEND_URL}/api/user-stats`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    document.getElementById('stat-games').innerText = data.games_played || 0;
+                    document.getElementById('stat-turnover').innerText = data.turnover || 0;
+                    document.getElementById('stat-wins').innerText = data.wins || 0;
+                    let wr = data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0;
+                    document.getElementById('stat-wr').innerText = wr + '%';
+                }
+            });
+        }
+
         function initWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
             ws = new WebSocket(WS_URL);
             ws.onopen = () => {
+                reconnectAttempts = 0;
                 ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id }));
             };
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                
-                // МГНОВЕННОЕ обновление баланса
                 if (data.type === 'balance_update') {
                     document.getElementById('global-balance').innerText = data.stars;
                     user.stars = data.stars;
                 }
-                
-                // Обработка логики Ракеты
                 if (data.type === 'rocket_tick') {
                     document.getElementById('rocket-overlay').style.display = 'flex';
-                    document.getElementById('rocket-overlay').innerText = `ДО ВЗЛЕТА: ${data.timer}с`;
+                    document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`;
                     document.getElementById('rocket-mult').style.display = 'none';
                     updateRocketPlayers(data.bets);
                 }
-                if (data.type === 'rocket_start' || data.type === 'rocket_fly') {
+                if (data.type === 'rocket_start') {
                     document.getElementById('rocket-overlay').style.display = 'none';
                     const mEl = document.getElementById('rocket-mult');
                     mEl.style.display = 'block';
                     mEl.style.color = '#FFD700';
-                    mEl.innerText = `${data.multiplier || '1.00'}x`;
+                    mEl.innerText = `1.00x`;
                     document.getElementById('rocket-video').play();
+                    setRocketButtonState('flying');
+                }
+                if (data.type === 'rocket_fly') {
+                    const mEl = document.getElementById('rocket-mult');
+                    mEl.innerText = `${data.multiplier}x`;
                 }
                 if (data.type === 'rocket_crash') {
                     const mEl = document.getElementById('rocket-mult');
@@ -370,15 +433,12 @@
                 }
                 if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) {
                     tg.HapticFeedback.notificationOccurred('success');
+                    showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`);
                     setRocketButtonState('waiting');
                     updateBalance();
                 }
-
-                // Обработка логики Рулетки
-                if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update' || data.type === 'roulette_wait_players') {
+                if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') {
                     if (data.timer) document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`;
-                    else document.getElementById('roulette-timer-text').innerText = `Ожидание участников...`;
-                    
                     document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`;
                     updateRoulettePlayers(data.bets || []);
                     drawRoulette(data.bets || [], 0);
@@ -386,6 +446,17 @@
                 if (data.type === 'roulette_roll') {
                     animateRoulette(data.bets || [], data.winner);
                 }
+                if (data.type === 'roulette_wait_players') {
+                    document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`;
+                }
+            };
+            ws.onclose = () => {
+                setTimeout(() => {
+                    if (reconnectAttempts < 5) {
+                        reconnectAttempts++;
+                        initWebSocket();
+                    }
+                }, 3000);
             };
         }
 
@@ -395,8 +466,10 @@
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ telegram_id: user.telegram_id })
             }).then(r => r.json()).then(d => {
-                document.getElementById('global-balance').innerText = d.stars;
-                user.stars = d.stars;
+                if (d.stars !== undefined) {
+                    document.getElementById('global-balance').innerText = d.stars;
+                    user.stars = d.stars;
+                }
             });
         }
 
@@ -405,7 +478,7 @@
             document.getElementById('profile-name').innerText = user.name;
             document.getElementById('profile-username').innerText = user.username ? '@' + user.username : '';
             if (user.avatar) {
-                document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" class="mini-avatar" style="width:100%; height:100%; border-radius:50%;">`;
+                document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
             } else {
                 document.getElementById('user-avatar-container').innerText = user.name.charAt(0);
             }
@@ -415,51 +488,56 @@
             tg.HapticFeedback.impactOccurred('medium');
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
             const target = document.getElementById(`page-${pageId}`);
             if (target) target.classList.add('active');
-            
             const nav = document.getElementById(`nav-${pageId}`);
             if (nav) nav.classList.add('active');
-
             if (pageId === 'mines') buildMinesBoard();
+            if (pageId === 'profile') loadUserStats();
         }
 
         function adjustBet(inputId, action) {
             let el = document.getElementById(inputId);
-            let val = parseInt(el.value) || 10;
+            let val = parseFloat(el.value) || 10;
+            let maxVal = parseInt(user.stars) || 10000;
             if (action === 'min') val = 10;
-            else if (action === 'max') val = parseInt(user.stars) || 10;
+            else if (action === 'max') val = Math.min(maxVal, 10000);
             else if (action === 'half') val = Math.max(10, Math.floor(val / 2));
-            else if (action === 'double') val = val * 2;
-            else if (typeof action === 'number') val += action;
-            el.value = val;
+            else if (action === 'double') val = Math.min(val * 2, maxVal);
+            else if (typeof action === 'number') val = Math.min(val + action, maxVal);
+            el.value = Math.max(10, Math.min(val, maxVal));
         }
 
-        // Логика РАКЕТЫ
-        let currentRocketBtnState = 'bet'; 
+        let currentRocketBtnState = 'bet';
         function setRocketButtonState(state) {
             const btn = document.getElementById('rocket-action-btn');
             currentRocketBtnState = state;
             if (state === 'bet') {
                 btn.className = "btn-main btn-gold";
                 btn.innerText = "💰 Сделать ставку";
+                btn.disabled = false;
             } else if (state === 'flying') {
                 btn.className = "btn-main btn-green";
                 btn.innerText = "💸 Забрать";
+                btn.disabled = false;
             } else {
                 btn.className = "btn-main";
                 btn.style.background = "#2a2a2a";
                 btn.style.color = "#888";
                 btn.innerText = "⏳ Ожидание";
+                btn.disabled = true;
             }
         }
 
         function handleRocketAction() {
             if (currentRocketBtnState === 'bet') {
                 let amt = parseInt(document.getElementById('rocket-bet-amount').value);
+                if (amt > (user.stars || 0)) {
+                    showToast('❌ Недостаточно средств!');
+                    return;
+                }
                 let auto = document.getElementById('rocket-auto-check').checked;
-                let autoVal = document.getElementById('rocket-auto-val').value;
+                let autoVal = parseFloat(document.getElementById('rocket-auto-val').value);
                 ws.send(JSON.stringify({
                     type: 'rocket_bet',
                     telegram_id: user.telegram_id,
@@ -481,15 +559,14 @@
                 container.innerHTML += `
                     <div class="list-row">
                         <div class="list-user-info">
-                            ${b.avatar ? `<img src="${b.avatar}" class="mini-avatar">` : `<div class="mini-avatar" style="background:#444; text-align:center; color:#fff; font-size:10px; line-height:20px;">${b.name.charAt(0)}</div>`}
-                            <span>${b.name}</span>
+                            ${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; color:#fff; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}
+                            <span>${b.name || 'Игрок'}</span>
                         </div>
                         <div>${b.amount}⭐ ${b.cashedOut ? `<span style="color:#00cc66;">(${b.multiplier}x)</span>` : '⏳'}</div>
                     </div>`;
             });
         }
 
-        // Логика МИН
         function buildMinesBoard() {
             const board = document.getElementById('mines-grid-board');
             board.innerHTML = '';
@@ -503,7 +580,10 @@
             if (currentMinesGameStatus === 'idle') {
                 let amt = parseInt(document.getElementById('mines-bet-amount').value);
                 let count = document.getElementById('mines-count-select').value;
-                
+                if (amt > (user.stars || 0)) {
+                    showToast('❌ Недостаточно средств!');
+                    return;
+                }
                 fetch(`${BACKEND_URL}/api/games/mines/start`, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
@@ -511,12 +591,13 @@
                 }).then(r => r.json()).then(d => {
                     if (d.success) {
                         currentMinesGameStatus = 'playing';
-                        // ПУНКТ 4: Кнопка мгновенно меняется на забрать выигрыш
                         btn.className = "btn-main btn-green";
                         btn.innerText = "💰 Забрать (0x)";
-                        document.getElementById('mines-status-text').innerText = "Игра началась! Открывайте клетки.";
+                        document.getElementById('mines-status-text').innerHTML = "Игра началась! Открывайте клетки.";
                         buildMinesBoard();
                         updateBalance();
+                    } else {
+                        showToast(d.msg || 'Ошибка');
                     }
                 });
             } else if (currentMinesGameStatus === 'playing') {
@@ -527,9 +608,11 @@
                 }).then(r => r.json()).then(d => {
                     if (d.success) {
                         tg.HapticFeedback.notificationOccurred('success');
-                        document.getElementById('mines-status-text').innerText = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`;
+                        showToast(`🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`);
+                        document.getElementById('mines-status-text').innerHTML = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`;
                         resetMinesButtons();
                         updateBalance();
+                        loadUserStats();
                     }
                 });
             }
@@ -544,27 +627,29 @@
             }).then(r => r.json()).then(d => {
                 if (!d.success) return;
                 let tile = document.getElementById(`mine-${idx}`);
-                
                 if (d.hitMine) {
                     tg.HapticFeedback.notificationOccurred('error');
                     tile.classList.add('blown');
                     tile.innerText = '💣';
-                    document.getElementById('mines-status-text').innerText = "💥 Взрыв! Ставка проиграна.";
+                    document.getElementById('mines-status-text').innerHTML = "💥 Взрыв! Ставка проиграна.";
                     d.board.forEach((isMine, i) => {
                         let t = document.getElementById(`mine-${i}`);
-                        if (isMine) { t.classList.add('blown'); t.innerText = '💣'; }
+                        if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; }
                     });
                     resetMinesButtons();
                     updateBalance();
+                    loadUserStats();
                 } else {
                     tg.HapticFeedback.impactOccurred('light');
                     tile.classList.add('safe');
                     tile.innerText = '⭐';
-                    document.getElementById('mines-action-btn').innerText = `💰 Забрать (${d.multiplier}x)`;
+                    document.getElementById('mines-action-btn').innerHTML = `💰 Забрать (${d.multiplier}x)`;
                     if (d.win) {
-                        document.getElementById('mines-status-text').innerText = `🎉 ПОБЕДА! Очищено всё поле: ${d.winAmount}⭐`;
+                        showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`);
+                        document.getElementById('mines-status-text').innerHTML = `🎉 ПОБЕДА! Очищено всё поле: ${d.winAmount}⭐`;
                         resetMinesButtons();
                         updateBalance();
+                        loadUserStats();
                     }
                 }
             });
@@ -577,9 +662,13 @@
             btn.innerText = "💣 Новая игра";
         }
 
-        // Логика РУЛЕТКИ С АВАТАРКАМИ В СЕКТОРАХ (ПУНКТ 5)
+        let rouletteBetsCache = [];
         function handleRouletteBet() {
             let amt = parseInt(document.getElementById('roulette-bet-amount').value);
+            if (amt > (user.stars || 0)) {
+                showToast('❌ Недостаточно средств!');
+                return;
+            }
             ws.send(JSON.stringify({
                 type: 'roulette_bet',
                 telegram_id: user.telegram_id,
@@ -590,14 +679,15 @@
         }
 
         function updateRoulettePlayers(bets) {
+            rouletteBetsCache = bets;
             const container = document.getElementById('roulette-players-list');
             container.innerHTML = '';
             bets.forEach(b => {
                 container.innerHTML += `
-                    <div class="list-row" style="border-left: 4px solid ${b.color}; padding-left: 6px;">
+                    <div class="list-row" style="border-left: 4px solid ${b.color || '#FFD700'}; padding-left: 6px;">
                         <div class="list-user-info">
-                            ${b.avatar ? `<img src="${b.avatar}" class="mini-avatar">` : `<div class="mini-avatar" style="background:#444; text-align:center; font-size:10px; line-height:20px;">${b.name.charAt(0)}</div>`}
-                            <span>${b.name}</span>
+                            ${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}
+                            <span>${b.name || 'Игрок'}</span>
                         </div>
                         <div><b>${b.amount}⭐</b></div>
                     </div>`;
@@ -608,8 +698,7 @@
             const canvas = document.getElementById('roulette-canvas');
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, 260, 260);
-            
-            if (bets.length === 0) {
+            if (!bets || bets.length === 0) {
                 ctx.beginPath();
                 ctx.arc(130, 130, 120, 0, 2 * Math.PI);
                 ctx.fillStyle = '#111';
@@ -618,44 +707,52 @@
                 ctx.stroke();
                 return;
             }
-
             let total = bets.reduce((a, b) => a + b.amount, 0);
+            if (total === 0) return;
             let currentAngle = startRotation;
-
             bets.forEach(b => {
                 let sliceAngle = (b.amount / total) * 2 * Math.PI;
                 ctx.beginPath();
                 ctx.moveTo(130, 130);
                 ctx.arc(130, 130, 120, currentAngle, currentAngle + sliceAngle);
-                ctx.fillStyle = b.color;
+                ctx.fillStyle = b.color || '#FFD700';
                 ctx.fill();
+                ctx.strokeStyle = '#2a2a2a';
                 ctx.stroke();
-
-                // ПУНКТ 5: Отрисовка аватарки пользователя внутри его сектора
-                ctx.save();
                 let middleAngle = currentAngle + sliceAngle / 2;
                 let avatarX = 130 + Math.cos(middleAngle) * 70;
                 let avatarY = 130 + Math.sin(middleAngle) * 70;
-                
+                ctx.save();
                 ctx.beginPath();
                 ctx.arc(avatarX, avatarY, 16, 0, 2 * Math.PI);
                 ctx.clip();
-
                 if (b.avatar) {
                     let img = new Image();
                     img.src = b.avatar;
-                    ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32);
+                    if (img.complete) {
+                        ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32);
+                    } else {
+                        img.onload = () => {
+                            ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32);
+                        };
+                        ctx.fillStyle = "#555";
+                        ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32);
+                        ctx.fillStyle = "#fff";
+                        ctx.font = "bold 12px Inter";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY);
+                    }
                 } else {
-                    ctx.fillStyle = "#ffffff";
+                    ctx.fillStyle = "#555";
                     ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32);
-                    ctx.fillStyle = "#000000";
+                    ctx.fillStyle = "#fff";
                     ctx.font = "bold 12px Inter";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    ctx.fillText(b.name.charAt(0), avatarX, avatarY);
+                    ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY);
                 }
                 ctx.restore();
-
                 currentAngle += sliceAngle;
             });
         }
@@ -664,40 +761,36 @@
             let start = performance.now();
             let duration = 3000;
             let totalRotation = 10 * Math.PI + Math.random() * 2 * Math.PI;
-
             function animate(time) {
                 let elapsed = time - start;
                 let progress = Math.min(elapsed / duration, 1);
-                // Изинг замедления вращения
                 let ease = 1 - Math.pow(1 - progress, 3);
                 let currentRot = ease * totalRotation;
-                
                 drawRoulette(bets, currentRot);
-
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    document.getElementById('roulette-timer-text').innerText = `🏆 Победитель: ${winner.name}`;
+                    document.getElementById('roulette-timer-text').innerHTML = `🏆 Победитель: ${winner.name || 'Игрок'}`;
+                    showToast(`🎡 Победитель: ${winner.name || 'Игрок'}! +${winner.amount || 0}⭐`);
                     updateBalance();
+                    loadUserStats();
                 }
             }
             requestAnimationFrame(animate);
         }
 
-        // МОДАЛКИ И ПЛАТЕЖИ (ПУНКТ 6)
         function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function switchDepTab(tab) {
+        function switchDepTab(tab, event) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (tab === 'crypto') {
                 document.getElementById('dep-tab-crypto').style.display = 'block';
                 document.getElementById('dep-tab-stars').style.display = 'none';
-                event.target.classList.add('active');
             } else {
                 document.getElementById('dep-tab-crypto').style.display = 'none';
                 document.getElementById('dep-tab-stars').style.display = 'block';
-                event.target.classList.add('active');
             }
+            if (event && event.target) event.target.classList.add('active');
         }
 
         function toggleWithdrawFields() {
@@ -706,16 +799,16 @@
             let usernameInput = document.getElementById('withdraw-tg-username');
             if (asset === 'Stars') {
                 walletInput.style.display = 'none';
-                usernameInput.style.display = 'block'; // Пункт 8: Поле юзернейма обязательно
+                usernameInput.style.display = 'block';
             } else {
                 walletInput.style.display = 'block';
                 usernameInput.style.display = 'none';
             }
         }
 
-        // РЕАЛЬНОЕ ПОПОЛНЕНИЕ ЧЕРЕЗ TELEGRAM STARS (ПУНКТ 6)
         function processStarsDeposit() {
             let amt = document.getElementById('dep-stars-amount').value;
+            if (amt < 1) return showToast('Минимальная сумма 1 звезда');
             fetch(`${BACKEND_URL}/api/create-invoice`, {
                 method: 'POST',
                 headers: {'content-type':'application/json'},
@@ -724,56 +817,52 @@
                 if (d.success && d.invoice_link) {
                     tg.openInvoice(d.invoice_link, function(status) {
                         if (status === 'paid') {
-                            tg.showAlert('🎉 Зачисление прошло успешно!');
+                            showToast('🎉 Зачисление прошло успешно!');
                             closeModal('deposit-modal');
                             updateBalance();
+                            loadUserStats();
                         }
                     });
+                } else {
+                    showToast('Ошибка создания счёта');
                 }
             });
         }
 
-        // РЕАЛЬНОЕ КРИПТО-ПОПОЛНЕНИЕ ЧЕРЕЗ TON CONNECT (ПУНКТ 6)
         async function processCryptoDeposit() {
-            if (!tonConnectUI.connected) {
+            if (!tonConnectUI || !tonConnectUI.connected) {
                 return tg.showAlert("Сначала подключите кошелёк TON в профиле!");
             }
-            let tonAmount = document.getElementById('dep-crypto-amount').value;
-            let nanoAmount = (parseFloat(tonAmount) * 1000000000).toString(); // перевод в nanotons
-
+            let tonAmount = parseFloat(document.getElementById('dep-crypto-amount').value);
+            if (isNaN(tonAmount) || tonAmount < 0.5) return showToast('Минимум 0.5 TON');
+            let nanoAmount = Math.floor(tonAmount * 1000000000).toString();
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 360,
-                messages: [
-                    {
-                        address: MERCHANT_WALLET,
-                        amount: nanoAmount,
-                        payload: "" // Можно закодировать ID аккаунта в комментарий
-                    }
-                ]
+                messages: [{
+                    address: "EQD__________________________________________EXAMPLE", // ЗАМЕНИТЬ НА РЕАЛЬНЫЙ КОШЕЛЁК
+                    amount: nanoAmount,
+                    payload: user.telegram_id
+                }]
             };
-
             try {
                 await tonConnectUI.sendTransaction(transaction);
-                tg.showAlert("Транзакция отправлена в блокчейн! Баланс обновится автоматически в течение пары минут.");
+                showToast("Транзакция отправлена! Баланс обновится в течение пары минут.");
                 closeModal('deposit-modal');
             } catch (e) {
-                tg.showAlert("Ошибка оплаты кошелька или отмена операции.");
+                showToast("Ошибка или отмена операции");
             }
         }
 
-        // ВЫВОД СРЕДСТВ С ТГ-ОПОВЕЩЕНИЕМ ДЛЯ АДМИНА (ПУНКТ 7, 8)
         function submitWithdraw() {
             let asset = document.getElementById('withdraw-asset').value;
             let amt = parseInt(document.getElementById('withdraw-amount').value);
             let wallet = document.getElementById('withdraw-wallet').value;
             let targetUsername = document.getElementById('withdraw-tg-username').value;
-
-            if (!amt || amt < 100) return tg.showAlert("Минимальная сумма для вывода — 100⭐");
-            if (asset !== 'Stars' && wallet.length < 10) return tg.showAlert("Введите корректный адрес кошелька");
-            if (asset === 'Stars' && !targetUsername) return tg.showAlert("Укажите ваш @юзернейм для перевода звёзд");
-
+            if (!amt || amt < 100) return showToast("Минимальная сумма для вывода — 100⭐");
+            if (amt > (user.stars || 0)) return showToast("Недостаточно средств");
+            if (asset !== 'Stars' && (!wallet || wallet.length < 10)) return showToast("Введите корректный адрес кошелька");
+            if (asset === 'Stars' && !targetUsername) return showToast("Укажите ваш @юзернейм для перевода звёзд");
             let finalWalletText = (asset === 'Stars') ? `На аккаунт: ${targetUsername}` : wallet;
-
             fetch(`${BACKEND_URL}/api/withdraw-request`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
@@ -787,18 +876,120 @@
                 })
             }).then(r => r.json()).then(d => {
                 if (d.success) {
-                    tg.showAlert(`✅ Заявка на вывод ${amt}⭐ успешно создана! С учётом комиссии 15% будет переведено эквивалент ценности.`);
+                    showToast(`✅ Заявка на вывод ${amt}⭐ успешно создана!`);
                     closeModal('withdraw-modal');
                     updateBalance();
                 } else {
-                    tg.showAlert(`Ошибка: ${d.msg}`);
+                    showToast(`Ошибка: ${d.msg}`);
                 }
             });
         }
 
         function copyRefLink() {
             let link = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`;
-            navigator.clipboard.writeText(link).then(() => tg.showAlert("Реферальная ссылка скопирована!"));
+            navigator.clipboard.writeText(link).then(() => showToast("Реферальная ссылка скопирована!"));
+        }
+
+        // Админ-функции
+        function adminAddStars() {
+            let targetId = document.getElementById('admin-target-id').value;
+            let amount = parseInt(document.getElementById('admin-add-amount').value);
+            if (!targetId || !amount) return showToast('Заполните поля');
+            fetch(`${BACKEND_URL}/api/admin/add-stars`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount })
+            }).then(r => r.json()).then(d => {
+                if (d.success) showToast('Начислено!');
+                else showToast('Ошибка');
+            });
+        }
+
+        function adminBanUser() {
+            let targetId = document.getElementById('admin-ban-id').value;
+            if (!targetId) return showToast('Введите ID');
+            fetch(`${BACKEND_URL}/api/admin/ban-user`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId })
+            }).then(r => r.json()).then(d => {
+                if (d.success) showToast('Пользователь забанен');
+                else showToast('Ошибка');
+            });
+        }
+
+        function adminUnbanUser() {
+            let targetId = document.getElementById('admin-ban-id').value;
+            if (!targetId) return showToast('Введите ID');
+            fetch(`${BACKEND_URL}/api/admin/unban-user`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId })
+            }).then(r => r.json()).then(d => {
+                if (d.success) showToast('Пользователь разбанен');
+                else showToast('Ошибка');
+            });
+        }
+
+        function adminPauseBot() {
+            fetch(`${BACKEND_URL}/api/admin/pause-bot`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) showToast('Бот на паузе');
+            });
+        }
+
+        function adminResumeBot() {
+            fetch(`${BACKEND_URL}/api/admin/resume-bot`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) showToast('Бот запущен');
+            });
+        }
+
+        function adminLoadWithdraws() {
+            fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id })
+            }).then(r => r.json()).then(requests => {
+                let html = '';
+                requests.forEach(r => {
+                    html += `<div class="admin-row"><b>${r.name}</b> | ${r.amount}⭐ | ${r.asset}<br>
+                    <small>${r.wallet}</small><br>
+                    <button onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button></div>`;
+                });
+                document.getElementById('admin-withdraws-list').innerHTML = html || 'Нет заявок';
+            });
+        }
+
+        function adminApproveWithdraw(id) {
+            fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id, request_id: id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) showToast('Заявка одобрена');
+                adminLoadWithdraws();
+            });
+        }
+
+        function adminLoadUsers() {
+            fetch(`${BACKEND_URL}/api/admin/get-users`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ admin_id: user.telegram_id })
+            }).then(r => r.json()).then(users => {
+                let html = '';
+                users.slice(0, 20).forEach(u => {
+                    html += `<div class="admin-row"><b>${u.name}</b> | ${u.telegram_id}<br>⭐ ${u.stars} | Игр: ${u.games_played || 0}</div>`;
+                });
+                document.getElementById('admin-users-list').innerHTML = html;
+            });
         }
     </script>
 </body>
