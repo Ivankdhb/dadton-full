@@ -26,7 +26,8 @@ db.serialize(() => {
         turnover INTEGER DEFAULT 0,
         games_played INTEGER DEFAULT 0,
         wins INTEGER DEFAULT 0,
-        referrer_id TEXT
+        referrer_id TEXT,
+        wallet_address TEXT
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS rocket_history (
@@ -63,6 +64,13 @@ db.serialize(() => {
         earned INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    
+    // Добавляем колонку wallet_address если её нет
+    db.run(`ALTER TABLE users ADD COLUMN wallet_address TEXT`, (err) => {
+        if (err && !err.message?.includes('duplicate')) {
+            console.log('Колонка wallet_address готова');
+        }
+    });
 });
 
 console.log('✅ База данных готова');
@@ -188,7 +196,6 @@ app.post('/api/deposit-request', (req, res) => {
     const { telegram_id, name, amount, asset, stars, tx_hash } = req.body;
     console.log(`📩 ЗАЯВКА НА ПОПОЛНЕНИЕ: ${name} (${telegram_id}) -> ${amount} ${asset} = ${stars}⭐`);
     
-    // Автоматическое зачисление при подтверждении транзакции
     if (tx_hash) {
         db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [stars, telegram_id]);
         db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, ?, 0, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
@@ -209,7 +216,6 @@ app.post('/api/withdraw-request', (req, res) => {
             return res.json({ success: false, error: 'Недостаточно звёзд' });
         }
         
-        // Сразу списываем баланс
         db.run(`UPDATE users SET stars = stars - ? WHERE telegram_id = ?`, [stars_amount, telegram_id]);
         db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, 0, ?, 0) ON CONFLICT(telegram_id) DO UPDATE SET withdrawn = withdrawn + ?`, 
             [telegram_id, stars_amount, stars_amount]);
@@ -238,6 +244,34 @@ app.post('/api/finance-stats', (req, res) => {
     const { telegram_id } = req.body;
     db.get(`SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?`, [telegram_id], (err, row) => {
         res.json({ deposited: row?.deposited || 0, withdrawn: row?.withdrawn || 0, admin_added: row?.admin_added || 0 });
+    });
+});
+
+// ==================== TON CONNECT ====================
+app.post('/api/save-wallet', (req, res) => {
+    const { telegram_id, wallet_address } = req.body;
+    
+    if (!telegram_id || !wallet_address) {
+        return res.status(400).json({ success: false, error: 'Не хватает данных' });
+    }
+    
+    db.run(`UPDATE users SET wallet_address = ? WHERE telegram_id = ?`, [wallet_address, telegram_id], (err) => {
+        if (err) {
+            console.error('Ошибка сохранения кошелька:', err);
+            return res.json({ success: false, error: err.message });
+        }
+        res.json({ success: true, message: 'Кошелёк сохранён' });
+    });
+});
+
+app.post('/api/get-wallet', (req, res) => {
+    const { telegram_id } = req.body;
+    
+    db.get(`SELECT wallet_address FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+        if (err) {
+            return res.json({ success: false, error: err.message });
+        }
+        res.json({ success: true, wallet_address: row?.wallet_address || null });
     });
 });
 
@@ -279,7 +313,7 @@ app.post('/api/admin/get-users', (req, res) => {
         return res.json({ success: false, error: 'Доступ запрещён' });
     }
     
-    db.all(`SELECT telegram_id, name, username, stars, turnover FROM users ORDER BY stars DESC LIMIT 100`, (err, rows) => {
+    db.all(`SELECT telegram_id, name, username, stars, turnover, wallet_address FROM users ORDER BY stars DESC LIMIT 100`, (err, rows) => {
         res.json({ success: true, users: rows || [] });
     });
 });
@@ -823,4 +857,4 @@ startRocketCountdown();
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
-}); 
+});
