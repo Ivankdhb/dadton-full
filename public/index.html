@@ -142,7 +142,7 @@
         .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a1a; backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 8px; font-size: 12px; color: var(--gold); border: 1px solid var(--border); z-index: 200; display: none; white-space: nowrap; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #111111; border-radius: 12px; padding: 20px; width: 90%; max-width: 320px; border: 1px solid var(--border); text-align: center; }
+        .modal-content { background: #111111; border-radius: 12px; padding: 20px; width: 90%; max-width: 350px; border: 1px solid var(--border); text-align: center; max-height: 80vh; overflow-y: auto; }
         .asset-btn { flex: 1; text-align: center; padding: 8px; background: #1a1a1a; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; border: 1px solid var(--border); }
         .asset-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
         .modal-content .btn { padding: 10px !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px; }
@@ -786,7 +786,6 @@
                     <div style="margin-bottom: 8px;">✅ Кошелёк: <strong style="color:#FFD700;">${shortAddr}</strong></div>
                     <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; background:#ff4444; color:#fff; border:none;" onclick="disconnectWallet()">🔓 Отвязать кошелёк</button>
                 `;
-                // Включаем кнопку оплаты криптой
                 const cryptoPayBtn = document.getElementById('cryptoPayBtn');
                 if (cryptoPayBtn) {
                     cryptoPayBtn.disabled = false;
@@ -798,7 +797,6 @@
                     <div style="margin-bottom: 8px;">❌ Кошелёк не подключён</div>
                     <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="showWalletModal()">🔗 Подключить кошелёк</button>
                 `;
-                // Отключаем кнопку оплаты криптой
                 const cryptoPayBtn = document.getElementById('cryptoPayBtn');
                 if (cryptoPayBtn) {
                     cryptoPayBtn.disabled = true;
@@ -831,46 +829,48 @@
         }
     }
     
-    function initTonConnect() {
-        if (typeof TON_CONNECT_UI !== 'undefined' && !tonConnectUI) {
-            try {
-                tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-                    manifestUrl: window.location.origin + '/tonconnect-manifest.json',
-                    buttonRootId: 'ton-connect-button'
-                });
-                
-                tonConnectUI.onStatusChange(async (wallet) => {
-                    if (wallet && wallet.account) {
-                        const address = wallet.account.address;
-                        console.log('Кошелёк подключён через UI:', address);
-                        
-                        const res = await fetch('/api/verify-proof', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                telegram_id: uid,
-                                address: address,
-                                proof: wallet.connectItems?.tonProof?.proof || { payload: 'test', signature: 'test' }
-                            })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            currentWalletAddress = address;
-                            checkWalletStatus();
-                            toast('✅ Кошелёк успешно подключěn!');
-                            setTimeout(() => closeWalletModal(), 1500);
-                        }
-                    } else {
-                        if (currentWalletAddress) {
-                            checkWalletStatus();
-                        }
+    async function initTonConnect() {
+        if (typeof TON_CONNECT_UI === 'undefined') {
+            setTimeout(initTonConnect, 1000);
+            return;
+        }
+        
+        if (tonConnectUI) return;
+        
+        try {
+            const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+            tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+                manifestUrl: manifestUrl,
+                buttonRootId: 'ton-connect-button'
+            });
+            
+            tonConnectUI.onStatusChange(async (wallet) => {
+                if (wallet && wallet.account) {
+                    const address = wallet.account.address;
+                    const res = await fetch('/api/verify-proof', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            telegram_id: uid,
+                            address: address,
+                            proof: wallet.connectItems?.tonProof?.proof || { payload: 'test', signature: 'test' }
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        currentWalletAddress = address;
+                        checkWalletStatus();
+                        toast('✅ Кошелёк успешно подключён!');
+                        setTimeout(() => closeWalletModal(), 1500);
                     }
-                });
-                
-                checkWalletStatus();
-            } catch (err) {
-                console.error("Ошибка инициализации TON Connect:", err);
-            }
+                } else {
+                    checkWalletStatus();
+                }
+            });
+            
+            checkWalletStatus();
+        } catch (err) {
+            console.error("Ошибка инициализации TON Connect:", err);
         }
     }
     
@@ -1580,21 +1580,59 @@
             modal.id = 'adminModal';
             modal.className = 'modal';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width: 350px;">
+                <div class="modal-content" style="max-width: 380px; max-height: 80vh; overflow-y: auto;">
                     <h3 style="color:var(--gold); margin-bottom:16px;">👑 АДМИН-ПАНЕЛЬ</h3>
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="color:#fff; margin-bottom:8px;">➕ Пополнить баланс</h4>
+                    
+                    <div style="margin-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">💰 Баланс</h4>
                         <input type="text" id="adminUserId" class="bet-input" placeholder="Telegram ID пользователя" style="margin-bottom:8px;">
                         <input type="number" id="adminStarsAmount" class="bet-input" placeholder="Количество звёзд" value="100" min="1">
                         <input type="text" id="adminComment" class="bet-input" placeholder="Комментарий (необязательно)" style="margin-bottom:8px;">
-                        <div class="btn" onclick="adminAddStars()">💎 Пополнить</div>
+                        <div class="btn" onclick="adminAddStars()" style="margin-bottom:5px;">➕ Пополнить баланс</div>
+                        <div class="btn btn-secondary" onclick="adminRemoveStars()" style="background:#ff4444; color:#fff;">➖ Списать баланс</div>
                     </div>
-                    <div style="margin-bottom: 16px;">
+                    
+                    <div style="margin-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">🔧 Управление пользователем</h4>
+                        <input type="text" id="adminTargetUserId" class="bet-input" placeholder="Telegram ID пользователя" style="margin-bottom:8px;">
+                        <input type="text" id="adminMessageText" class="bet-input" placeholder="Текст сообщения" style="margin-bottom:8px;">
+                        <div class="btn btn-secondary" onclick="adminSendMessage()" style="margin-bottom:5px;">💬 Написать пользователю</div>
+                        <div class="btn btn-secondary" onclick="adminBanUser()" style="background:#ff4444; color:#fff; margin-bottom:5px;">🔨 Заблокировать</div>
+                        <div class="btn btn-secondary" onclick="adminUnbanUser()" style="background:#00cc66; color:#fff; margin-bottom:5px;">🔓 Разблокировать</div>
+                        <div class="btn btn-secondary" onclick="adminClearWallet()">🗑️ Отвязать кошелёк</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">📢 Рассылка</h4>
+                        <textarea id="broadcastMessage" class="bet-input" placeholder="Текст рассылки" rows="3" style="margin-bottom:8px;"></textarea>
+                        <div class="btn" onclick="adminBroadcast()">📢 Сделать рассылку</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">⏸️ Управление ботом</h4>
+                        <div class="btn btn-secondary" onclick="adminPauseBot()" style="background:#ff8800; color:#fff; margin-bottom:5px;">⏸️ Приостановить бота</div>
+                        <div class="btn btn-secondary" onclick="adminResumeBot()" style="background:#00cc66; color:#fff;">▶️ Возобновить бота</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">📋 Список пользователей</h4>
+                        <div class="btn btn-secondary" onclick="adminGetUsers()">👥 Показать всех пользователей</div>
+                        <div id="usersList" style="max-height: 200px; overflow-y: auto; background:#1a1a1a; border-radius:8px; padding:8px; margin-top:8px; display:none; font-size:11px;"></div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
                         <h4 style="color:#fff; margin-bottom:8px;">📋 Заявки на вывод</h4>
-                        <div id="adminWithdrawList" style="max-height: 200px; overflow-y: auto; background:#1a1a1a; border-radius:8px; padding:8px;">
+                        <div id="adminWithdrawList" style="max-height: 150px; overflow-y: auto; background:#1a1a1a; border-radius:8px; padding:8px;">
                             <span style="color:#888;">Загрузка...</span>
                         </div>
                     </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="color:#fff; margin-bottom:8px;">💀 Опасная зона</h4>
+                        <div class="btn btn-secondary" onclick="adminClearAllWallets()" style="background:#ff4444; color:#fff; margin-bottom:5px;">⚠️ Очистить ВСЕ кошельки</div>
+                        <div class="btn btn-secondary" onclick="adminClearDatabase()" style="background:#ff0000; color:#fff;">💀 ПОЛНАЯ ОЧИСТКА БАЗЫ ДАННЫХ</div>
+                    </div>
+                    
                     <div class="btn btn-cancel" onclick="closeAdminPanel()">Закрыть</div>
                 </div>
             `;
@@ -1631,9 +1669,273 @@
         const data = await res.json();
         if (data.success) {
             toast(`✅ ${data.message}`);
-            document.getElementById('adminUserId').value = '';
-            document.getElementById('adminComment').value = '';
             refreshBalance();
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminRemoveStars() {
+        if (!isAdmin()) return;
+        const targetId = document.getElementById('adminUserId').value.trim();
+        const amount = parseInt(document.getElementById('adminStarsAmount').value);
+        const reason = document.getElementById('adminComment').value.trim();
+        
+        if (!targetId || !amount || amount < 1) {
+            toast('❌ Введите ID и сумму');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/remove-stars', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: uid,
+                target_telegram_id: targetId,
+                stars_amount: amount,
+                reason: reason || 'Не указана'
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast(`✅ Списано ${amount}⭐`);
+            refreshBalance();
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminSendMessage() {
+        if (!isAdmin()) return;
+        const targetId = document.getElementById('adminTargetUserId').value.trim();
+        const message = document.getElementById('adminMessageText').value.trim();
+        
+        if (!targetId || !message) {
+            toast('❌ Введите ID и сообщение');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/send-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: uid,
+                target_telegram_id: targetId,
+                message: message
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('✅ Сообщение отправлено');
+            document.getElementById('adminMessageText').value = '';
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminBanUser() {
+        if (!isAdmin()) return;
+        const targetId = document.getElementById('adminTargetUserId').value.trim();
+        const reason = document.getElementById('adminComment').value.trim();
+        
+        if (!targetId) {
+            toast('❌ Введите ID пользователя');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/ban-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: uid,
+                target_telegram_id: targetId,
+                reason: reason || 'Не указана'
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('✅ Пользователь заблокирован');
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminUnbanUser() {
+        if (!isAdmin()) return;
+        const targetId = document.getElementById('adminTargetUserId').value.trim();
+        
+        if (!targetId) {
+            toast('❌ Введите ID пользователя');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/unban-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: uid,
+                target_telegram_id: targetId
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('✅ Пользователь разблокирован');
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminClearWallet() {
+        if (!isAdmin()) return;
+        const targetId = document.getElementById('adminTargetUserId').value.trim();
+        
+        if (!targetId) {
+            toast('❌ Введите ID пользователя');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/clear-wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: uid,
+                target_telegram_id: targetId
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('✅ Кошелёк отвязан');
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminBroadcast() {
+        if (!isAdmin()) return;
+        const message = document.getElementById('broadcastMessage').value.trim();
+        
+        if (!message) {
+            toast('❌ Введите текст рассылки');
+            return;
+        }
+        
+        if (!confirm(`Отправить рассылку всем пользователям?\n\n${message}`)) return;
+        
+        const res = await fetch('/api/admin/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: uid,
+                message: message
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('✅ Рассылка отправлена');
+            document.getElementById('broadcastMessage').value = '';
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminPauseBot() {
+        if (!isAdmin()) return;
+        if (!confirm('Приостановить бота? Игры станут недоступны.')) return;
+        
+        const res = await fetch('/api/admin/pause-bot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: uid })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('⏸️ Бот приостановлен');
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminResumeBot() {
+        if (!isAdmin()) return;
+        
+        const res = await fetch('/api/admin/resume-bot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: uid })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('▶️ Бот возобновлён');
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminGetUsers() {
+        if (!isAdmin()) return;
+        
+        const res = await fetch('/api/admin/get-users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: uid })
+        });
+        const data = await res.json();
+        
+        const usersDiv = document.getElementById('usersList');
+        if (data.success && data.users && data.users.length > 0) {
+            usersDiv.style.display = 'block';
+            usersDiv.innerHTML = data.users.map(u => `
+                <div style="background:#111; border-radius:6px; padding:6px; margin-bottom:4px; border-left: 3px solid ${u.banned ? '#ff4444' : '#00cc66'};">
+                    <div><strong>${u.name}</strong> ${u.username ? '@' + u.username : ''}</div>
+                    <div style="color:#888;">ID: ${u.telegram_id}</div>
+                    <div>⭐ ${u.stars} | 📊 ${u.turnover}</div>
+                    <div>🎮 ${u.games_played} | 🏆 ${u.wins}</div>
+                    <div>${u.banned ? '🔴 ЗАБЛОКИРОВАН' : '🟢 АКТИВЕН'}</div>
+                    <div style="font-size:9px; color:#666;">💰 ${u.wallet_address ? u.wallet_address.slice(0,10)+'...' : 'нет кошелька'}</div>
+                </div>
+            `).join('');
+        } else {
+            usersDiv.innerHTML = '<div style="color:#888;">Нет пользователей</div>';
+            usersDiv.style.display = 'block';
+        }
+    }
+    
+    async function adminClearAllWallets() {
+        if (!isAdmin()) return;
+        if (!confirm('⚠️ ОТВЯЗАТЬ ВСЕ КОШЕЛЬКИ У ВСЕХ ПОЛЬЗОВАТЕЛЕЙ?\nЭто действие необратимо!')) return;
+        
+        const res = await fetch('/api/admin/clear-wallets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: uid })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('✅ Все кошельки отвязаны');
+            if (typeof checkWalletStatus === 'function') checkWalletStatus();
+        } else {
+            toast(`❌ ${data.error}`);
+        }
+    }
+    
+    async function adminClearDatabase() {
+        if (!isAdmin()) return;
+        const confirmText = prompt('💀 ВНИМАНИЕ! Это удалит ВСЕХ пользователей, ВСЮ историю, ВСЕ финансы!\nДля подтверждения введите: CONFIRM_DELETE_ALL');
+        
+        if (confirmText !== 'CONFIRM_DELETE_ALL') {
+            toast('❌ Очистка отменена');
+            return;
+        }
+        
+        const res = await fetch('/api/admin/clear-database', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: uid, confirm: 'CONFIRM_DELETE_ALL' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('💀 База данных полностью очищена!');
+            setTimeout(() => location.reload(), 2000);
         } else {
             toast(`❌ ${data.error}`);
         }
