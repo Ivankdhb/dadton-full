@@ -80,8 +80,6 @@ db.serialize(() => {
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
-    
-    db.run(`ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0`, () => {});
 });
 
 console.log('✅ База данных готова');
@@ -552,7 +550,6 @@ let rocketInterval = null;
 let countdownInterval = null;
 let minesState = new Map();
 let rouletteBets = [];
-let gameInterval = null;
 
 function generateCrashPoint() {
     let r = Math.random();
@@ -566,8 +563,7 @@ function generateCrashPoint() {
 
 function startRocketCountdown() {
     if (botPaused) {
-        if (gameInterval) clearTimeout(gameInterval);
-        gameInterval = setTimeout(startRocketCountdown, 1000);
+        setTimeout(startRocketCountdown, 1000);
         return;
     }
     rocketState.status = 'waiting';
@@ -591,8 +587,7 @@ function startRocketCountdown() {
 
 function startRocketFlying() {
     if (botPaused) {
-        if (gameInterval) clearTimeout(gameInterval);
-        gameInterval = setTimeout(startRocketFlying, 1000);
+        setTimeout(startRocketFlying, 1000);
         return;
     }
     let crash = generateCrashPoint();
@@ -646,8 +641,7 @@ function startRocketFlying() {
             io.emit('rocket_crash', rocketState.currentMultiplier);
             db.run(`INSERT INTO rocket_history (multiplier) VALUES (?)`, [rocketState.currentMultiplier]);
             
-            if (gameInterval) clearTimeout(gameInterval);
-            gameInterval = setTimeout(startRocketCountdown, 1500);
+            setTimeout(startRocketCountdown, 1500);
         } else {
             io.emit('rocket_multiplier', rocketState.currentMultiplier);
         }
@@ -698,6 +692,9 @@ io.on('connection', (socket) => {
         
         const { telegram_id, name, amount, autoCashout, avatar } = data;
         
+        if (amount < MIN_BET) return callback({ success: false, error: `Минимальная ставка ${MIN_BET}⭐` });
+        if (amount > MAX_BET) return callback({ success: false, error: `Максимальная ставка ${MAX_BET}⭐` });
+        
         db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
             if (!row || row.stars < amount) return callback({ success: false, error: 'Недостаточно звёзд!' });
             
@@ -743,6 +740,8 @@ io.on('connection', (socket) => {
     socket.on('mines_start', (data, callback) => {
         if (botPaused) return callback({ success: false, error: 'Бот на техобслуживании' });
         const { telegram_id, betAmount, minesCount } = data;
+        
+        if (betAmount < MIN_BET) return callback({ success: false, error: `Минимальная ставка ${MIN_BET}⭐` });
         
         db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
             if (!row || row.stars < betAmount) return callback({ success: false, error: 'Недостаточно звёзд!' });
@@ -803,6 +802,8 @@ io.on('connection', (socket) => {
     socket.on('roulette_place_bet', (data, callback) => {
         if (botPaused) return callback({ success: false, error: 'Бот на техобслуживании' });
         const { telegram_id, name, amount, avatar } = data;
+        
+        if (amount < MIN_BET) return callback({ success: false, error: `Минимальная ставка ${MIN_BET}⭐` });
         
         db.get(`SELECT stars FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
             if (!row || row.stars < amount) return callback({ success: false, error: 'Недостаточно звёзд!' });
@@ -868,17 +869,11 @@ io.on('connection', (socket) => {
     });
 });
 
+// Запуск ракеты
 startRocketCountdown();
-
-// ВРЕМЕННЫЙ ЭНДПОИНТ ДЛЯ ОЧИСТКИ КОШЕЛЬКОВ (удали потом)
-app.get('/api/debug/clear-wallets', (req, res) => {
-    db.run(`UPDATE users SET wallet_address = NULL`, [], (err) => {
-        if (err) return res.json({ error: err.message });
-        res.json({ success: true, message: 'Все кошельки очищены' });
-    });
-});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`📁 Статика из папки: public`);
 });
