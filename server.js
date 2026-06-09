@@ -12,31 +12,29 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_ID = "1631627984"; // Твой Telegram ID
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
-// Инициализация базы данных SQLite
+// ИСПРАВЛЕНО: Теперь Express правильно раздает статику (включая index.html) из папки public
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Инициализация базы данных SQLite (база останется в корне проекта)
 const db = new sqlite3.Database(path.join(__dirname, 'dadton.db'), (err) => {
     if (err) console.error('Ошибка подключения к БД:', err);
 });
 
 db.serialize(() => {
-    // Таблица пользователей
     db.run(`CREATE TABLE IF NOT EXISTS users (
         telegram_id TEXT PRIMARY KEY, username TEXT, balance REAL DEFAULT 0, wallet TEXT,
         games_count INTEGER DEFAULT 0, turnover REAL DEFAULT 0, wins_count INTEGER DEFAULT 0,
         is_blocked INTEGER DEFAULT 0, referrer_id TEXT
     )`);
-    // История игр
     db.run(`CREATE TABLE IF NOT EXISTS game_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT, game_type TEXT,
         bet REAL, multiplier REAL, profit REAL, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
-    // Заявки на вывод средств
     db.run(`CREATE TABLE IF NOT EXISTS withdrawals (
         id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT, amount REAL,
         currency TEXT, address TEXT, status TEXT DEFAULT 'PENDING', timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
-    // Глобальные настройки системы
     db.run(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES ('is_suspended', '0')");
 });
@@ -46,17 +44,12 @@ db.get("SELECT value FROM settings WHERE key = 'is_suspended'", (err, row) => {
     if (row && row.value === '1') systemSuspended = true;
 });
 
-// Состояния комнат живых мультиплеерных игр
 let rocketState = { status: 'waiting', multiplier: 1.00, crashPoint: 1.05, timer: 15, bets: [] };
 let rouletteState = { status: 'waiting', timer: 15, bets: [], history: [] };
 
-// Манифест для TON Connect
+// ИСПРАВЛЕНО: Манифест для TON Connect сервер теперь тоже ищет внутри папки public
 app.get('/tonconnect-manifest.json', (req, res) => {
-    res.json({
-        "url": "https://dadton-full.onrender.com",
-        "name": "DadTon Bot",
-        "iconUrl": "https://dadton-full.onrender.com/icon.png"
-    });
+    res.sendFile(path.join(__dirname, 'public', 'tonconnect-manifest.json'));
 });
 
 // Синхронизация и авторизация пользователя
@@ -202,7 +195,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// Бесконечный игровой цикл для "Краш" (Краш-Поинт генерируется случайно от 1.05 до 8.00)
+// Игровой цикл для "Краш"
 function runRocketLoop() {
     rocketState = { status: 'waiting', multiplier: 1.00, timer: 15, bets: [], crashPoint: (Math.random() * 6.95 + 1.05).toFixed(2) };
     let t = setInterval(() => {
@@ -236,37 +229,8 @@ function launchRocket() {
     }, 100);
 }
 
-// Игровой цикл для мультиплеерной "Рулетки" по типу "Сплит банка"
+// Игровой цикл для "Рулетки"
 function runRouletteLoop() {
     rouletteState.status = 'waiting'; rouletteState.timer = 15; rouletteState.bets = [];
     let t = setInterval(() => {
-        rouletteState.timer--; io.emit('roulette_state', rouletteState);
-        if (rouletteState.timer <= 0) { clearInterval(t); spinRoulette(); }
-    }, 1000);
-}
-
-function spinRoulette() {
-    if (rouletteState.bets.length < 2) { rouletteState.timer = 15; setTimeout(runRouletteLoop, 2000); return; }
-    rouletteState.status = 'spinning'; io.emit('roulette_state', rouletteState);
-    
-    let total = rouletteState.bets.reduce((a, b) => a + b.bet, 0);
-    let winTkt = Math.random() * total, sum = 0, winner = rouletteState.bets[0];
-    
-    for (let b of rouletteState.bets) { sum += b.bet; if (winTkt <= sum) { winner = b; break; } }
-    
-    db.serialize(() => {
-        db.run("UPDATE users SET balance = balance + ?, wins_count = wins_count + 1 WHERE telegram_id = ?", [total, winner.telegram_id]);
-        rouletteState.bets.forEach(b => {
-            let p = (b.telegram_id === winner.telegram_id) ? (total - b.bet) : -b.bet;
-            db.run("INSERT INTO game_history (telegram_id, game_type, bet, multiplier, profit) VALUES (?, 'ROULETTE', ?, ?, ?)", [b.telegram_id, b.bet, (b.telegram_id === winner.telegram_id ? total/b.bet : 0), p]);
-        });
-    });
-
-    setTimeout(() => {
-        rouletteState.history.unshift({ winner: winner.username, total });
-        io.emit('roulette_result', { winner, total });
-        setTimeout(runRouletteLoop, 7000);
-    }, 3000);
-}
-
-server.listen(PORT, () => { runRocketLoop(); runRouletteLoop(); console.log(`Сервер запущен на порту ${PORT}`); });
+        rouletteState.timer--; io
