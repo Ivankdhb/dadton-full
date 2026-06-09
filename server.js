@@ -17,8 +17,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Инициализация базы данных SQLite (база останется в корне проекта)
-const db = new sqlite3.Database(path.join(__dirname, 'dadton.db'), (err) => {
+
+// СТАЛО:
+const db = new sqlite3.Database('/tmp/dadton.db', (err) => {
     if (err) console.error('Ошибка подключения к БД:', err);
+    else console.log('База данных успешно создана/открыта в /tmp/dadton.db');
 });
 
 db.serialize(() => {
