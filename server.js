@@ -72,10 +72,11 @@ db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS pending_payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT,
-        amount INTEGER,
+        amount REAL,
         asset TEXT,
         stars_amount INTEGER,
         tx_hash TEXT,
+        wallet_address TEXT,
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
@@ -194,24 +195,43 @@ app.post('/api/verify-proof', async (req, res) => {
     }
 });
 
+app.post('/api/get-wallet', (req, res) => {
+    const { telegram_id } = req.body;
+    db.get(`SELECT wallet_address FROM users WHERE telegram_id = ?`, [telegram_id], (err, row) => {
+        res.json({ success: true, wallet_address: row?.wallet_address || null });
+    });
+});
+
+app.post('/api/disconnect-wallet', (req, res) => {
+    const { telegram_id } = req.body;
+    db.run(`UPDATE users SET wallet_address = NULL WHERE telegram_id = ?`, [telegram_id], (err) => {
+        if (err) {
+            res.json({ success: false, error: err.message });
+        } else {
+            console.log(`🔓 Кошелёк отвязан у пользователя ${telegram_id}`);
+            res.json({ success: true });
+        }
+    });
+});
+
 // ==================== КРИПТО-ПОПОЛНЕНИЕ ====================
 app.post('/api/create-crypto-invoice', async (req, res) => {
     try {
-        const { telegram_id, asset, amount } = req.body;
+        const { telegram_id, asset, amount, wallet_address } = req.body;
         
-        db.get(`SELECT wallet_address FROM users WHERE telegram_id = ?`, [telegram_id], async (err, user) => {
-            if (err || !user || !user.wallet_address) {
-                return res.json({ success: false, error: 'Сначала подключите TON кошелёк' });
+        db.get(`SELECT wallet_address FROM users WHERE telegram_id = ?`, [telegram_id], (err, user) => {
+            if (err || !user || user.wallet_address !== wallet_address) {
+                return res.json({ success: false, error: 'Кошелёк не привязан или не совпадает' });
             }
             
             const starsAmount = Math.floor(amount * RATES[asset]);
             const tx_hash = crypto.randomBytes(16).toString('hex');
             
-            db.run(`INSERT INTO pending_payments (user_id, amount, asset, stars_amount, tx_hash) VALUES (?, ?, ?, ?, ?)`,
-                [telegram_id, amount, asset, starsAmount, tx_hash]);
+            db.run(`INSERT INTO pending_payments (user_id, amount, asset, stars_amount, tx_hash, wallet_address) VALUES (?, ?, ?, ?, ?, ?)`,
+                [telegram_id, amount, asset, starsAmount, tx_hash, wallet_address]);
             
             const nanoAmount = Math.floor(amount * 1e9);
-            const invoiceUrl = `ton://transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=deposit_${tx_hash}`;
+            const invoiceUrl = `https://app.tonkeeper.com/transfer/${ADMIN_WALLET}?amount=${nanoAmount}&text=deposit_${tx_hash}`;
             
             res.json({ success: true, invoiceUrl, tx_hash });
         });
@@ -229,13 +249,11 @@ app.post('/api/check-payment', async (req, res) => {
                 return res.json({ success: false, error: 'Платёж не найден' });
             }
             
-            // В продакшене здесь проверка реальной транзакции через TON API
-            // Для теста зачисляем сразу
+            // Для теста зачисляем сразу (в проде проверять через TON API)
             if (payment.status === 'pending') {
-                db.run(`UPDATE users SET stars = stars + ?, deposited = deposited + ? WHERE telegram_id = ?`, 
-                    [payment.stars_amount, payment.stars_amount, payment.user_id]);
-                db.run(`UPDATE user_finance SET deposited = deposited + ? WHERE telegram_id = ?`, 
-                    [payment.stars_amount, payment.user_id]);
+                db.run(`UPDATE users SET stars = stars + ? WHERE telegram_id = ?`, [payment.stars_amount, payment.user_id]);
+                db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, ?, 0, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
+                    [payment.user_id, payment.stars_amount, payment.stars_amount]);
                 db.run(`UPDATE pending_payments SET status = 'completed' WHERE tx_hash = ?`, [tx_hash]);
                 
                 console.log(`✅ Зачислено ${payment.stars_amount}⭐ пользователю ${payment.user_id}`);
@@ -301,8 +319,8 @@ app.post('/webhook/telegram', async (req, res) => {
         
         db.run(`UPDATE users SET stars = stars + ?, deposited = deposited + ? WHERE telegram_id = ?`, 
             [starsAmount, starsAmount, userId.toString()]);
-        db.run(`UPDATE user_finance SET deposited = deposited + ? WHERE telegram_id = ?`, 
-            [starsAmount, userId.toString()]);
+        db.run(`INSERT INTO user_finance (telegram_id, deposited, withdrawn, admin_added) VALUES (?, ?, 0, 0) ON CONFLICT(telegram_id) DO UPDATE SET deposited = deposited + ?`, 
+            [userId.toString(), starsAmount, starsAmount]);
         
         console.log(`✅ Пользователь ${userId} пополнил ${starsAmount}⭐ через Stars`);
         notifyUser(userId, `✅ Ваш баланс пополнен на ${starsAmount}⭐ через Telegram Stars!`);
@@ -513,7 +531,6 @@ io.on('connection', (socket) => {
         });
     });
     
-    // РАКЕТА
     socket.on('rocket_place_bet', (data, callback) => {
         if (rocketState.status !== 'waiting') return callback({ success: false, error: 'Ставки только до взлёта!' });
         
@@ -561,7 +578,6 @@ io.on('connection', (socket) => {
         });
     });
     
-    // МИНЫ
     socket.on('mines_start', (data, callback) => {
         const { telegram_id, betAmount, minesCount } = data;
         
@@ -621,7 +637,6 @@ io.on('connection', (socket) => {
         callback({ success: true, winAmount });
     });
     
-    // РУЛЕТКА
     socket.on('roulette_place_bet', (data, callback) => {
         const { telegram_id, name, amount, avatar } = data;
         
