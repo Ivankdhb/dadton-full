@@ -6,6 +6,7 @@
     <title>DadTon - Премиум</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
@@ -412,7 +413,7 @@
     </div>
 </div>
 
-<!-- Модалка для TON Connect -->
+<!-- TON Connect Modal -->
 <div id="walletModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 320px;">
         <h3 style="color:var(--gold); margin-bottom:16px;">💎 Подключить кошелёк</h3>
@@ -424,8 +425,6 @@
         <div class="btn btn-secondary" onclick="closeWalletModal()">Закрыть</div>
     </div>
 </div>
-
-<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
 <script>
     // ==================== ЗАГРУЗОЧНЫЙ ЭКРАН ====================
@@ -474,77 +473,6 @@
     const ADMIN_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
     const USDT_JETTON = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 
-    // ==================== TON CONNECT ====================
-    let tonConnectUI = null;
-    const manifestUrl = 'https://dadton-full.onrender.com/tonconnect-manifest.json';
-    
-    function initTonConnect() {
-        if (typeof TONConnectUI !== 'undefined' && !tonConnectUI) {
-            tonConnectUI = new TONConnectUI.TonConnectUI({
-                manifestUrl: manifestUrl,
-                buttonRootId: 'ton-connect-button'
-            });
-            
-            tonConnectUI.onStatusChange(async (wallet) => {
-                if (wallet && wallet.account) {
-                    const address = wallet.account.address;
-                    console.log('Кошелёк подключён:', address);
-                    
-                    const res = await fetch('/api/save-wallet', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            telegram_id: uid,
-                            wallet_address: address
-                        })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        document.getElementById('wallet-status-info').innerHTML = '<span style="color:#00cc66;">✅ Кошелёк подключён! ' + address.slice(0,6) + '...' + address.slice(-6) + '</span>';
-                        toast('✅ Кошелёк успешно подключён!');
-                        setTimeout(() => closeWalletModal(), 1500);
-                    }
-                } else {
-                    console.log('Кошелёк отключён');
-                    document.getElementById('wallet-status-info').innerHTML = '<span style="color:#ff4444;">❌ Кошелёк не подключён</span>';
-                }
-            });
-        }
-    }
-    
-    function showWalletModal() {
-        const modal = document.getElementById('walletModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            if (!tonConnectUI) {
-                initTonConnect();
-                setTimeout(() => {
-                    if (tonConnectUI) tonConnectUI.openModal();
-                }, 500);
-            } else {
-                tonConnectUI.openModal();
-            }
-        }
-    }
-    
-    function closeWalletModal() {
-        const modal = document.getElementById('walletModal');
-        if (modal) modal.style.display = 'none';
-    }
-    
-    // Добавляем кнопку подключения кошелька в профиль
-    setTimeout(() => {
-        const buttonRow = document.querySelector('#screen-profile .button-row');
-        if (buttonRow && !document.getElementById('connect-wallet-btn-custom')) {
-            const walletBtn = document.createElement('div');
-            walletBtn.id = 'connect-wallet-btn-custom';
-            walletBtn.className = 'btn btn-secondary';
-            walletBtn.innerHTML = '💎 Подключить TON';
-            walletBtn.style.marginTop = '8px';
-            walletBtn.onclick = () => showWalletModal();
-            buttonRow.parentNode.insertBefore(walletBtn, buttonRow.nextSibling);
-        }
-    }, 1000);
     function calculateMinesMultiplier(minesCount, revealed) {
         let perCellMultiplier = 1;
         if (minesCount === 5) perCellMultiplier = 1.04;
@@ -823,6 +751,82 @@
             }
         }).catch(e => toast('❌ Ошибка сервера'));
     }
+
+    // ==================== TON CONNECT ====================
+    let tonConnectUI = null;
+    
+    function initTonConnect() {
+        if (typeof TONConnectUI !== 'undefined' && !tonConnectUI) {
+            try {
+                tonConnectUI = new TONConnectUI({
+                    manifestUrl: window.location.origin + '/tonconnect-manifest.json',
+                    buttonRootId: 'ton-connect-button'
+                });
+                
+                tonConnectUI.onStatusChange(async (wallet) => {
+                    if (wallet && wallet.account) {
+                        const address = wallet.account.address;
+                        console.log('Кошелёк подключён:', address);
+                        
+                        const res = await fetch('/api/save-wallet', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                telegram_id: uid,
+                                wallet_address: address
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            document.getElementById('wallet-status-info').innerHTML = '<span style="color:#00cc66;">✅ Кошелёк подключён! ' + address.slice(0,6) + '...' + address.slice(-6) + '</span>';
+                            toast('✅ Кошелёк успешно подключён!');
+                            setTimeout(() => closeWalletModal(), 1500);
+                        }
+                    } else {
+                        console.log('Кошелёк отключён');
+                        document.getElementById('wallet-status-info').innerHTML = '<span style="color:#ff4444;">❌ Кошелёк не подключён</span>';
+                    }
+                });
+            } catch (err) {
+                console.error("Ошибка инициализации TON Connect:", err);
+            }
+        }
+    }
+    
+    function showWalletModal() {
+        const modal = document.getElementById('walletModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            if (!tonConnectUI) {
+                initTonConnect();
+            }
+            
+            setTimeout(() => {
+                if (tonConnectUI) {
+                    tonConnectUI.openModal().catch(e => console.log("Окно закрыто или ошибка:", e));
+                }
+            }, 200);
+        }
+    }
+    
+    function closeWalletModal() {
+        const modal = document.getElementById('walletModal');
+        if (modal) modal.style.display = 'none';
+    }
+    
+    setTimeout(() => {
+        const buttonRow = document.querySelector('#screen-profile .button-row');
+        if (buttonRow && !document.getElementById('connect-wallet-btn-custom')) {
+            const walletBtn = document.createElement('div');
+            walletBtn.id = 'connect-wallet-btn-custom';
+            walletBtn.className = 'btn btn-secondary';
+            walletBtn.innerHTML = '💎 Подключить TON';
+            walletBtn.style.marginTop = '8px';
+            walletBtn.onclick = () => showWalletModal();
+            buttonRow.parentNode.insertBefore(walletBtn, buttonRow.nextSibling);
+        }
+    }, 1000);
 
     // ==================== РАКЕТА ====================
     const waitingOverlay = document.getElementById('waitingOverlay');
