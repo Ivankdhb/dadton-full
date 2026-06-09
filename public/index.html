@@ -338,6 +338,7 @@
             <div class="btn btn-secondary" onclick="showDepositModal()">💎 Пополнить</div>
             <div class="btn btn-secondary" onclick="showWithdrawModal()">💸 Вывести</div>
         </div>
+        <div id="disconnect-wallet-btn" class="btn btn-secondary" style="display: none; margin-top: 8px; background: #ff4444; color: #fff;" onclick="disconnectWallet()">🔓 Отвязать кошелёк</div>
     </div>
     <div class="subtab-bar">
         <button class="subtab" onclick="switchSubtab('games', this)">Мои игры</button>
@@ -777,30 +778,33 @@
             const data = await res.json();
             
             const statusDiv = document.getElementById('wallet-status-info');
-            if (!statusDiv) return;
+            const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+            const cryptoPayBtn = document.getElementById('cryptoPayBtn');
             
-            if (data.success && data.wallet_address) {
-                currentWalletAddress = data.wallet_address;
-                const shortAddr = currentWalletAddress.slice(0, 6) + '...' + currentWalletAddress.slice(-6);
-                statusDiv.innerHTML = `
-                    <div style="margin-bottom: 8px;">✅ Кошелёк: <strong style="color:#FFD700;">${shortAddr}</strong></div>
-                    <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; background:#ff4444; color:#fff; border:none;" onclick="disconnectWallet()">🔓 Отвязать кошелёк</button>
-                `;
-                const cryptoPayBtn = document.getElementById('cryptoPayBtn');
-                if (cryptoPayBtn) {
-                    cryptoPayBtn.disabled = false;
-                    cryptoPayBtn.style.opacity = '1';
-                }
-            } else {
-                currentWalletAddress = null;
-                statusDiv.innerHTML = `
-                    <div style="margin-bottom: 8px;">❌ Кошелёк не подключён</div>
-                    <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="showWalletModal()">🔗 Подключить кошелёк</button>
-                `;
-                const cryptoPayBtn = document.getElementById('cryptoPayBtn');
-                if (cryptoPayBtn) {
-                    cryptoPayBtn.disabled = true;
-                    cryptoPayBtn.style.opacity = '0.5';
+            if (statusDiv) {
+                if (data.success && data.wallet_address) {
+                    currentWalletAddress = data.wallet_address;
+                    const shortAddr = currentWalletAddress.slice(0, 6) + '...' + currentWalletAddress.slice(-6);
+                    statusDiv.innerHTML = `✅ Кошелёк: <strong style="color:#FFD700;">${shortAddr}</strong>`;
+                    
+                    if (disconnectBtn) {
+                        disconnectBtn.style.display = 'block';
+                    }
+                    if (cryptoPayBtn) {
+                        cryptoPayBtn.disabled = false;
+                        cryptoPayBtn.style.opacity = '1';
+                    }
+                } else {
+                    currentWalletAddress = null;
+                    statusDiv.innerHTML = `❌ Кошелёк не подключён`;
+                    
+                    if (disconnectBtn) {
+                        disconnectBtn.style.display = 'none';
+                    }
+                    if (cryptoPayBtn) {
+                        cryptoPayBtn.disabled = true;
+                        cryptoPayBtn.style.opacity = '0.5';
+                    }
                 }
             }
         } catch(e) { console.log('Check wallet error:', e); }
@@ -823,7 +827,7 @@
             }
             toast('✅ Кошелёк отвязан');
             checkWalletStatus();
-            setTimeout(() => closeWalletModal(), 1000);
+            closeWalletModal();
         } else {
             toast('❌ Ошибка отвязки');
         }
@@ -927,7 +931,7 @@
     function updateCrashBet() {
         if (hasActiveBet) { toast("❌ Нельзя менять ставку после её создания"); return; }
         let val = parseInt(document.getElementById('crashBetInput').value);
-        if (isNaN(val)) val = 10;
+        if (isNaN(val) || val < 10) val = 10;
         currentBet = Math.min(Math.max(val, 10), stars);
         document.getElementById('crashBetInput').value = currentBet;
         updateUI();
@@ -937,7 +941,7 @@
         if (hasActiveBet) { toast("❌ Нельзя менять ставку после её создания"); return; }
         let input = document.getElementById('crashBetInput');
         let val = parseInt(input.value);
-        if (isNaN(val)) val = 10;
+        if (isNaN(val) || val < 10) val = 10;
         if (type === 'min') val = 10;
         if (type === 'add') val += 10;
         if (type === 'max') val = stars;
@@ -979,13 +983,23 @@
 
     function placeBet() {
         if (hasActiveBet) { toast("❌ У вас уже есть активная ставка в этом раунде!"); return; }
-        if (!checkBalanceBeforeBet(currentBet)) return;
+        
+        let betAmount = currentBet;
+        if (betAmount < 10) {
+            toast("❌ Минимальная ставка 10⭐");
+            betAmount = 10;
+            currentBet = 10;
+            document.getElementById('crashBetInput').value = 10;
+            return;
+        }
+        
+        if (!checkBalanceBeforeBet(betAmount)) return;
         autoEnabled = document.getElementById('autoCashoutToggle').checked;
         autoValue = parseFloat(document.getElementById('autoCashoutVal').value);
-        socket.emit('rocket_place_bet', { telegram_id: uid, name: pname, amount: currentBet, autoCashout: autoEnabled ? autoValue : 0, avatar: userAvatarUrl || pname.charAt(0) }, (res) => {
+        socket.emit('rocket_place_bet', { telegram_id: uid, name: pname, amount: betAmount, autoCashout: autoEnabled ? autoValue : 0, avatar: userAvatarUrl || pname.charAt(0) }, (res) => {
             if (res?.success) {
                 hasActiveBet = true;
-                myBet = { amount: currentBet, autoCashout: autoEnabled ? autoValue : 0, cashed: false };
+                myBet = { amount: betAmount, autoCashout: autoEnabled ? autoValue : 0, cashed: false };
                 refreshBalance();
                 updateAutoSettingsLock();
                 updateButtonUI();
@@ -1912,7 +1926,7 @@
         const data = await res.json();
         if (data.success) {
             toast('✅ Все кошельки отвязаны');
-            if (typeof checkWalletStatus === 'function') checkWalletStatus();
+            checkWalletStatus();
         } else {
             toast(`❌ ${data.error}`);
         }
