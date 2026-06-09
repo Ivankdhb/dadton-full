@@ -2,1043 +2,1357 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DadTon Arena Premium Core</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>DadTon — Казино-Платформа</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    
     <style>
-        /* ГЛОБАЛЬНЫЕ СТИЛИ И ИНТЕРФЕЙСНЫЕ КОНСТАНТЫ (ВЫСОКАЯ ПЛОТНОСТЬ) */
-        :root {
-            --bg-main: #060913;
-            --surface-panel: #0d1222;
-            --surface-card: #131b31;
-            --border-primary: #1e2942;
-            --border-glow: #3b82f6;
-            
-            --accent-gold: linear-gradient(135deg, #ffe066 0%, #f59e0b 100%);
-            --accent-silver: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
-            --accent-bronze: linear-gradient(135deg, #ffedd5 0%, #ea580c 100%);
-            
-            --text-white: #f8fafc;
-            --text-slate: #94a3b8;
-            --text-muted: #475569;
-            --neon-blue: #38bdf8;
-            --neon-green: #10b981;
-            --neon-red: #ef4444;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-white);
-            overflow: hidden;
-            font-size: 11px;
-            line-height: 1.25;
-        }
-
-        /* ОСНОВНОЙ МОБИЛЬНЫЙ КАРКАС ПОД ОГРАНИЧЕНИЯ (FIT ON SCREEN) */
-        #app-viewport-container {
-            width: 100%;
-            max-width: 390px;
-            margin: 0 auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            background: var(--bg-main);
-        }
-
-        /* УЛЬТРА-КОМПАКТНЫЙ ХЕДЕР С БАЛАНСОМ */
-        header {
-            background: var(--surface-panel);
-            padding: 4px 10px;
-            border-bottom: 1px solid var(--border-primary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 38px;
-            z-index: 100;
-        }
-
-        .brand-logo-zone {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 13px;
-            letter-spacing: 0.5px;
-            background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .balance-pill-badge {
-            background: rgba(56, 189, 248, 0.08);
-            padding: 3px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            font-weight: 800;
-            font-size: 12px;
-            color: var(--neon-blue);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* СИСТЕМА ГЛОБАЛЬНЫХ ВКЛАДОК (SPA) */
-        .main-content-viewport {
-            flex: 1;
-            overflow-y: auto;
-            padding: 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .layout-page-view {
-            display: none;
-            flex-direction: column;
-            gap: 4px;
-            width: 100%;
-            height: 100%;
-        }
-
-        .layout-page-view.active-view {
-            display: flex;
-        }
-
-        /* СЕТКА ПЕРЕКЛЮЧЕНИЯ ИГР НА ГЛАВНОЙ */
-        .game-switcher-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 4px;
-            margin-bottom: 2px;
-        }
-
-        .game-nav-card {
-            background: var(--surface-panel);
-            border: 1px solid var(--border-primary);
-            border-radius: 8px;
-            padding: 5px 2px;
-            text-align: center;
-            color: var(--text-slate);
-            font-weight: 700;
-            font-size: 10px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .game-nav-card.active-card {
-            background: rgba(59, 130, 246, 0.12);
-            border-color: var(--border-glow);
-            color: var(--text-white);
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.15);
-        }
-
-        .game-nav-card .card-icon {
-            font-size: 16px;
-        }
-
-        /* КОРНЕВЫЕ КОНТЕЙНЕРЫ ДЛЯ ИГРОВЫХ МОДУЛЕЙ */
-        .game-runtime-zone {
-            display: none;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .game-runtime-zone.active-zone {
-            display: flex;
-        }
-
-        .macro-ui-panel {
-            background: var(--surface-panel);
-            border-radius: 8px;
-            border: 1px solid var(--border-primary);
-            padding: 6px;
-        }
-
-        .panel-micro-header {
-            font-size: 8px;
-            font-weight: 800;
-            margin-bottom: 3px;
-            text-transform: uppercase;
-            color: var(--text-slate);
-            letter-spacing: 0.5px;
-        }
-
-        /* УНИВЕРСАЛЬНЫЕ КОМПОНЕНТЫ ВВОДА И УПРАВЛЕНИЯ */
-        .arena-action-button {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: var(--text-white);
-            border: none;
-            padding: 7px;
-            border-radius: 5px;
-            font-weight: 700;
-            font-size: 11px;
-            cursor: pointer;
-            width: 100%;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.15s ease;
-        }
-
-        .arena-action-button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-            background: var(--text-muted) !important;
-        }
-
-        .dense-input-box {
-            background: #03050a;
-            border: 1px solid var(--border-primary);
-            border-radius: 4px;
-            padding: 4px 6px;
-            color: #fff;
-            font-size: 11px;
-            width: 100%;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-        }
-
-        .dense-input-box:focus {
-            outline: none;
-            border-color: var(--border-glow);
-        }
-
-        .dense-select-dropdown {
-            background: #03050a;
-            border: 1px solid var(--border-primary);
-            border-radius: 4px;
-            padding: 4px;
-            color: #fff;
-            font-size: 11px;
-            width: 100%;
-            font-weight: 600;
-        }
-
-        /* --- СТИЛИ ИГРЫ: РАКЕТА (CRASH) --- */
-        .crash-canvas-fallback {
-            height: 95px;
-            background: #03050a;
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 26px;
-            font-weight: 900;
-            color: var(--neon-blue);
-            border: 1px solid var(--border-primary);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .crash-canvas-fallback .rocket-particle {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            font-size: 20px;
-            transition: all 0.1s linear;
-        }
-
-        .crash-history-tape {
-            display: flex;
-            gap: 3px;
-            overflow-x: hidden;
-            font-size: 8px;
-            padding: 1px 0;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .crash-tape-badge {
-            padding: 1px 4px;
-            background: var(--surface-card);
-            border: 1px solid var(--border-primary);
-            border-radius: 3px;
-            color: var(--neon-blue);
-            font-weight: 700;
-        }
-
-        /* --- СТИЛИ ИГРЫ: МИНЫ (MINES) --- */
-        .mines-grid-matrix {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 3px;
-        }
-
-        .mines-grid-cell {
-            aspect-ratio: 1;
-            background: #03050a;
-            border: 1px solid var(--border-primary);
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.1s ease;
-        }
-
-        .mines-grid-cell.cell-selected-safe {
-            background: rgba(16, 185, 129, 0.12);
-            border-color: var(--neon-green);
-            box-shadow: inset 0 0 6px rgba(16, 185, 129, 0.2);
-        }
-
-        .mines-grid-cell.cell-selected-mine {
-            background: rgba(239, 68, 68, 0.15);
-            border-color: var(--neon-red);
-            box-shadow: inset 0 0 6px rgba(239, 68, 68, 0.2);
-        }
-
-        /* --- СТИЛИ ИГРЫ: РУЛЕТКА КЕЙСОВ (CS:GO REEL) --- */
-        .case-scroller-viewport {
-            overflow: hidden;
-            width: 100%;
-            height: 48px;
-            background: #03050a;
-            border: 1px solid var(--border-primary);
-            border-radius: 6px;
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .case-scroller-track {
-            display: flex;
-            gap: 4px;
-            position: absolute;
-            left: 0;
-            padding: 0 8px;
-            will-change: transform;
-        }
-
-        .case-drop-card {
-            min-width: 55px;
-            max-width: 55px;
-            height: 36px;
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
-            font-weight: 800;
-            color: #fff;
-            text-transform: uppercase;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .case-center-marker {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 2px;
-            height: 100%;
-            background: var(--neon-red);
-            z-index: 10;
-            box-shadow: 0 0 6px var(--neon-red);
-        }
-
-        /* --- ВЕРСТКА МОДУЛЯ КРУТЫХ 3D ПЬЕДЕСТАЛОВ КЕЙСОВ --- */
-        .leaderboard-podium-zone {
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            gap: 6px;
-            height: 125px;
-            background: rgba(13, 18, 34, 0.4);
-            border-radius: 10px;
-            border: 1px solid var(--border-primary);
-            padding: 4px;
-            position: relative;
-            margin-top: 2px;
-        }
-
-        .podium-column-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex: 1;
-            position: relative;
-        }
-
-        .podium-avatar-container {
-            position: relative;
-            width: 32px;
-            height: 32px;
-            margin-bottom: 2px;
-        }
-
-        .podium-avatar-node {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid var(--border-primary);
-            object-fit: cover;
-        }
-
-        .podium-crown-tag {
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 8px;
-        }
-
-        .podium-user-title {
-            font-size: 9px;
-            font-weight: 700;
-            text-align: center;
-            max-width: 75px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .podium-metric-label {
-            font-size: 9px;
-            color: #eab308;
-            font-weight: 700;
-            margin-bottom: 2px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* Разновысотные 3D блоки пьедестала */
-        .podium-solid-block {
-            width: 100%;
-            border-radius: 4px 4px 0 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 800;
-            font-size: 13px;
-            color: #000;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #0a0a0a; color: #ffffff; overflow: hidden; height: 100vh; font-size: 13px; }
         
-        .block-rank-1 { height: 46px; background: var(--accent-gold); box-shadow: 0 0 10px rgba(245,158,11,0.25); }
-        .block-rank-2 { height: 32px; background: var(--accent-silver); }
-        .block-rank-3 { height: 20px; background: var(--accent-bronze); }
-
-        /* СПИСОК ОСТАЛЬНЫХ УЧАСТНИКОВ */
-        .leaderboard-scroll-box {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            max-height: 240px;
-            padding-right: 1px;
+        /* Цвета платформы */
+        :root {
+            --bg-main: #0a0a0a;
+            --bg-card: #111111;
+            --border: #2a2a2a;
+            --accent: #FFD700;
+            --success: #00cc66;
+            --danger: #ff4444;
+            --text-secondary: #888888;
         }
 
-        .leaderboard-table-row {
-            background: var(--surface-panel);
-            border: 1px solid var(--border-primary);
-            border-radius: 6px;
-            padding: 4px 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+        /* Общие компоненты ультра-сжатия (Без лишних пробелов/отступов) */
+        .btn { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; border: none; border-radius: 8px; font-weight: 800; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: transform 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .btn:active { transform: scale(0.96); }
+        .btn-danger { background: linear-gradient(135deg, #ff4444, #cc0000); color: #fff; }
+        .btn-success { background: linear-gradient(135deg, #00cc66, #009944); color: #fff; }
+        .btn-secondary { background: #222; color: #fff; border: 1px solid var(--border); }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+        
+        /* Сетка Шапки (Плотная) */
+        header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(17,17,17,0.85); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: fixed; top:0; width:100%; z-index:100; height: 44px; }
+        .logo-area { font-weight: 900; font-size: 15px; color: var(--accent); letter-spacing: 0.5px; animation: glow 1.5s infinite alternate; }
+        .balance-area { display: flex; align-items: center; background: #1a1a1a; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-weight: 800; color: var(--accent); cursor: pointer; }
+        
+        /* Загрузочный экран */
+        #loader { position: fixed; top:0; left:0; width:100vw; height:100vh; background:#000; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
+        .load-text { font-weight: 800; color: var(--accent); letter-spacing: 2px; font-size: 14px; }
+        .dots span { animation: jump 1.4s infinite; display: inline-block; }
+        .dots span:nth-child(2) { animation-delay: 0.2s; }
+        .dots span:nth-child(3) { animation-delay: 0.4s; }
 
-        .row-player-meta {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        /* Навигация фиксированная нижняя */
+        nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: rgba(17,17,17,0.9); border-top: 1px solid var(--border); display: flex; z-index: 100; backdrop-filter: blur(10px); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer; font-size: 10px; font-weight: 600; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item svg { width: 18px; height: 18px; margin-bottom: 2px; fill: currentColor; }
 
-        .row-player-index {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--text-slate);
-            width: 12px;
-            font-family: 'Orbitron', sans-serif;
-        }
+        /* Основной контейнер окон */
+        main { margin-top: 44px; margin-bottom: 50px; height: calc(100vh - 94px); overflow-y: auto; padding: 8px; }
+        .screen { display: none; }
+        .screen.active { display: block; }
 
-        .row-player-avatar {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid var(--border-primary);
-        }
+        /* Экран HOME (Вертикальные карточки) */
+        .game-card { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 12px; background: linear-gradient(90deg, #111 0%, #161616 100%); border: 1px solid var(--border); margin-bottom: 10px; cursor: pointer; position: relative; overflow: hidden; }
+        .game-card::after { content: ''; position: absolute; top:0; left:0; width:4px; height:100%; background: var(--accent); }
+        .game-info h2 { font-size: 16px; font-weight: 900; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+        .game-info p { color: var(--text-secondary); font-size: 11px; }
+        .game-arrow { font-size: 18px; color: var(--text-secondary); }
 
-        .row-player-name {
-            font-weight: 600;
-            font-size: 10.5px;
-            max-width: 130px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
+        /* РАКЕТА (CRASH) ИНТЕРФЕЙС */
+        .video-container { width: 100%; height: 170px; background: #000; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+        .video-container video { width: 100%; height: 100%; object-fit: cover; }
+        .rocket-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:5; }
+        .live-multiplier { font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 900; color: var(--accent); text-shadow: 0 0 15px rgba(255,215,0,0.4); }
+        .live-multiplier.crashed { color: var(--danger); }
+        .history-ribbon { display: flex; gap: 5px; overflow-x: auto; padding: 4px 0; margin-bottom: 6px; scrollbar-width: none; }
+        .history-item { background: #1a1a1a; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; color: var(--accent); }
+        .bet-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+        .input-group { background: #161616; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; }
+        .input-group label { font-size: 9px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
+        .input-group input { background: transparent; border: none; color: #fff; font-size: 14px; font-weight: 800; outline: none; margin-top: 2px; }
+        .presets { display: flex; gap: 4px; margin-top: 4px; }
+        .preset-btn { flex:1; background: #222; border: 1px solid var(--border); color:#fff; font-size: 10px; padding: 3px; border-radius: 4px; font-weight: 700; }
+        .action-btn { width: 100%; padding: 12px; font-size: 15px; text-transform: uppercase; margin-bottom: 8px; }
+        .action-btn.pulse { animation: pulse 0.8s infinite alternate; }
+        .users-list { font-size: 11px; max-height: 120px; overflow-y: auto; }
+        .user-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1a1a1a; }
 
-        .row-player-score {
-            color: #eab308;
-            font-weight: 700;
-            font-size: 10.5px;
-            font-family: 'Orbitron', sans-serif;
-        }
+        /* МИНЫ (MINES) ИНТЕРФЕЙС */
+        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 290px; margin: 8px auto; }
+        .mine-cell { aspect-ratio: 1; background: linear-gradient(135deg, #1a1a1a, #111); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; cursor: pointer; transition: background 0.2s; }
+        .mine-cell.opened-safe { background: rgba(0,204,102,0.15); border-color: var(--success); color: var(--success); }
+        .mine-cell.opened-bomb { background: rgba(255,68,68,0.2); border-color: var(--danger); color: var(--danger); }
+        
+        /* РУЛЕТКА ИНТЕРФЕЙС */
+        .roulette-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
+        .wheel-container { width: 200px; height: 200px; border-radius: 50%; border: 4px solid var(--border); position: relative; overflow: hidden; transition: transform 3s cubic-bezier(0.1, 0.8, 0.1, 1); background: #111; }
+        .wheel-pointer { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 15px solid var(--accent); position: absolute; top: -5px; z-index: 10; }
+        .avatar-on-wheel { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent); transform-origin: 50% 100px; }
 
-        /* --- НИЖНИЙ НАВИГАЦИОННЫЙ БАР (СТРОГО 3 КНОПКИ) --- */
-        nav {
-            background: var(--surface-panel);
-            border-top: 1px solid var(--border-primary);
-            display: flex;
-            height: 48px;
-            width: 100%;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
+        /* ПРОФИЛЬ И ВКЛАДКИ */
+        .profile-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .p-avatar { width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--accent); background: #222; display:flex; align-items:center; justify-content:center; font-size:24px; }
+        .p-info h3 { font-size: 15px; font-weight: 800; }
+        .p-info p { color: var(--text-secondary); font-size: 11px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+        .stat-box { background: #111; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+        .stat-box label { font-size: 9px; color: var(--text-secondary); }
+        .stat-box div { font-size: 13px; font-weight: 800; margin-top: 2px; }
+        .tabs-header { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+        .tab-btn { flex: 1; padding: 6px; background: transparent; border: none; color: var(--text-secondary); font-weight: 600; font-size: 11px; text-align: center; cursor: pointer; }
+        .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
-        .tab-menu-button {
-            background: none;
-            border: none;
-            color: var(--text-slate);
-            font-size: 9px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            cursor: pointer;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: color 0.15s ease;
-        }
+        /* МОДАЛЬНЫЕ ОКНА */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; padding: 15px; }
+        .modal-content { background: #111; border: 1px solid var(--border); width: 100%; max-width: 350px; border-radius: 12px; padding: 12px; position: relative; }
+        .modal-close { position: absolute; top: 8px; right: 10px; font-size: 16px; color: var(--text-secondary); cursor: pointer; }
+        
+        /* ЛИДЕРБОРД ПОДИУМ */
+        .podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-bottom: 15px; padding-top: 10px; }
+        .podium-place { display: flex; flex-direction: column; align-items: center; font-size: 11px; }
+        .podium-pedestal { background: linear-gradient(180deg, #222, #111); border: 1px solid var(--border); border-bottom: none; width: 75px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; color:#000; border-radius: 6px 6px 0 0; margin-top: 4px; }
+        .p-1 { height: 65px; background: linear-gradient(180deg, #FFD700, #B8860B); }
+        .p-2 { height: 50px; background: linear-gradient(180deg, #C0C0C0, #808080); }
+        .p-3 { height: 40px; background: linear-gradient(180deg, #CD7F32, #8B4513); }
 
-        .tab-menu-button.active-tab {
-            color: var(--border-glow);
-        }
+        /* АДМИНКА */
+        .admin-block { border: 1px dashed var(--danger); padding: 8px; border-radius: 8px; margin-bottom: 8px; background: #161111; }
+        .admin-block h4 { font-size: 11px; color: var(--danger); text-transform: uppercase; margin-bottom: 4px; font-weight: 800; }
+        .admin-input { width: 100%; background: #222; border: 1px solid var(--border); padding: 5px; border-radius: 4px; color: #fff; font-size: 11px; margin-bottom: 4px; outline: none; }
 
-        .tab-menu-button .tab-icon {
-            font-size: 15px;
-            margin-bottom: 2px;
-        }
-
-        /* КРИТИЧЕСКИЙ ЭКРАН ЗАГРУЗКИ */
-        #core-splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: var(--bg-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .spinner-node {
-            border: 2px solid rgba(56, 189, 248, 0.1);
-            border-top: 2px solid var(--neon-blue);
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spinAction 0.6s linear infinite;
-        }
-
-        @keyframes spinAction {
-            100% { transform: rotate(360deg); }
-        }
+        /* АНИМАЦИИ КЛАССЫ */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes glow { from { text-shadow: 0 0 4px rgba(255,215,0,0.2); } to { text-shadow: 0 0 12px rgba(255,215,0,0.7); } }
+        @keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes pulse { from { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,204,102,0.4); } to { transform: scale(1.02); box-shadow: 0 0 10px 4px rgba(0,204,102,0.1); } }
     </style>
 </head>
 <body>
 
-    <div id="core-splash-screen">
-        <div class="spinner-node"></div>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div class="load-text">🎲 DADTON<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
     </div>
-    
-    <div id="app-viewport-container">
+
+    <header>
+        <div class="logo-area">🎲 DadTon</div>
+        <div class="balance-area" onclick="openModal('depositModal')">
+            <span style="margin-right:4px;">⭐</span>
+            <span id="headerBalance">0</span>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-item active" onclick="switchScreen('home', this)">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            Главная
+        </div>
+        <div class="nav-item" onclick="switchScreen('leaderboard', this); loadLeaderboard();">
+            <svg viewBox="0 0 24 24"><path d="M16 11V3H8v8H2v10h20V11h-6zM10 5h4v14h-4V5zm-6 8h4v6H4v-6zm16 6h-4v-6h4v6z"/></svg>
+            Лидеры
+        </div>
+        <div class="nav-item" onclick="switchScreen('profile', this); updateProfileData();">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>
+            Профиль
+        </div>
+    </nav>
+
+    <main>
         
-        <header>
-            <div class="brand-logo-zone">DADTON ARENA</div>
-            <div class="balance-pill-badge">⭐ <span id="global-balance-counter">0.00</span></div>
-        </header>
-
-        <div class="main-content-viewport">
-            
-            <section id="page-games" class="layout-page-view active-view">
-                
-                <div class="game-switcher-grid">
-                    <div class="game-nav-card active-card" id="btn-nav-rocket" onclick="switchActiveGameModule('runtime-rocket', this)">
-                        <span class="card-icon">🚀</span>
-                        <span>Ракета</span>
-                    </div>
-                    <div class="game-nav-card" id="btn-nav-mines" onclick="switchActiveGameModule('runtime-mines', this)">
-                        <span class="card-icon">💣</span>
-                        <span>Мины</span>
-                    </div>
-                    <div class="game-nav-card" id="btn-nav-roulette" onclick="switchActiveGameModule('runtime-roulette', this)">
-                        <span class="card-icon">🎰</span>
-                        <span>Кейс-Рул</span>
-                    </div>
+        <div id="screen-home" class="screen active">
+            <div class="game-card" onclick="openGame('rocket')">
+                <div class="game-info">
+                    <h2>🚀 Ракета</h2>
+                    <p>Краш-игра • Успей забрать до взлета</p>
                 </div>
-
-                <div id="runtime-rocket" class="game-runtime-zone active-zone">
-                    <div class="crash-canvas-fallback" id="rocket-live-text-node">
-                        <div class="rocket-particle" id="visual-rocket-item">🚀</div>
-                        <span id="rocket-multiplier-digits">1.00x</span>
-                    </div>
-                    <div class="crash-history-tape" id="rocket-history-injector"></div>
-                    
-                    <div class="macro-ui-panel">
-                        <div class="panel-micro-header">Параметры ставки</div>
-                        <div style="display:flex; gap:4px; margin-bottom:4px;">
-                            <input type="number" id="rocket-bet-field" class="dense-input-box" value="10">
-                            <input type="number" id="rocket-auto-field" class="dense-input-box" value="2.00" step="0.1">
-                        </div>
-                        <button id="btn-rocket-action" class="arena-action-button">Разместить ставку</button>
-                    </div>
+                <div class="game-arrow">➔</div>
+            </div>
+            <div class="game-card" onclick="openGame('mines')">
+                <div class="game-info">
+                    <h2>💣 Мины</h2>
+                    <p>5x5 • Найди безопасные клетки звезд</p>
                 </div>
-
-                <div id="runtime-mines" class="game-runtime-zone">
-                    <div class="macro-ui-panel" style="display:flex; gap:4px; padding:4px; margin-bottom:2px;">
-                        <input type="number" id="mines-bet-field" class="dense-input-box" value="10" placeholder="Ставка">
-                        <select id="mines-count-field" class="dense-select-dropdown">
-                            <option value="3">3 Мины</option>
-                            <option value="5" selected>5 Мин</option>
-                            <option value="10">10 Мин</option>
-                            <option value="15">15 Мин</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mines-grid-matrix" id="mines-interactive-board"></div>
-                    
-                    <div style="display:flex; gap:4px; margin-top:2px;">
-                        <button id="btn-mines-start" class="arena-action-button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Старт</button>
-                        <button id="btn-mines-cashout" class="arena-action-button" disabled style="background: linear-gradient(135deg, #475569 0%, #334155 100%);">Забрать выигрыш</button>
-                    </div>
+                <div class="game-arrow">➔</div>
+            </div>
+            <div class="game-card" onclick="openGame('roulette')">
+                <div class="game-info">
+                    <h2>🎡 Рулетка</h2>
+                    <p>Ставь против других • Победитель забирает всё</p>
                 </div>
-
-                <div id="runtime-roulette" class="game-runtime-zone">
-                    <div class="case-scroller-viewport">
-                        <div class="case-center-marker"></div>
-                        <div class="case-scroller-track" id="case-animated-track"></div>
-                    </div>
-                    
-                    <div class="macro-ui-panel">
-                        <div id="roulette-status-timer-node" style="text-align:center; margin-bottom:4px; font-weight:700; font-family:'Orbitron', sans-serif; color:#eab308;">След. раунд: --с</div>
-                        <div style="display:flex; gap:4px; margin-bottom:4px;">
-                            <input type="number" id="roulette-bet-field" class="dense-input-box" value="20" placeholder="Размер ставки">
-                        </div>
-                        <button id="btn-roulette-action" class="arena-action-button">Открыть премиум кейс</button>
-                    </div>
-                </div>
-            </section>
-
-            <section id="page-leaderboard" class="layout-page-view">
-                
-                <div class="leaderboard-podium-zone">
-                    <div class="podium-column-wrapper" id="podium-wrapper-rank2">
-                        <div class="podium-avatar-container">
-                            <img class="podium-avatar-node" src="https://img.icons8.com/sticky/100/user-male-circle.png" id="podium-avatar-img2">
-                        </div>
-                        <div class="podium-user-title" id="podium-name-string2">Загрузка</div>
-                        <div class="podium-metric-label" id="podium-score-string2">0⭐</div>
-                        <div class="podium-solid-block block-rank-2">2</div>
-                    </div>
-                    
-                    <div class="podium-column-wrapper" id="podium-wrapper-rank1">
-                        <div class="podium-avatar-container">
-                            <div class="podium-crown-tag">👑</div>
-                            <img class="podium-avatar-node" style="border-color:#eab308;" src="https://img.icons8.com/sticky/100/user-male-circle.png" id="podium-avatar-img1">
-                        </div>
-                        <div class="podium-user-title" id="podium-name-string1">Загрузка</div>
-                        <div class="podium-metric-label" id="podium-score-string1">0⭐</div>
-                        <div class="podium-solid-block block-rank-1">1</div>
-                    </div>
-                    
-                    <div class="podium-column-wrapper" id="podium-wrapper-rank3">
-                        <div class="podium-avatar-container">
-                            <img class="podium-avatar-node" src="https://img.icons8.com/sticky/100/user-male-circle.png" id="podium-avatar-img3">
-                        </div>
-                        <div class="podium-user-title" id="podium-name-string3">Загрузка</div>
-                        <div class="podium-metric-label" id="podium-score-string3">0⭐</div>
-                        <div class="podium-solid-block block-rank-3">3</div>
-                    </div>
-                </div>
-
-                <div class="leaderboard-scroll-box" id="leaderboard-rows-container"></div>
-            </section>
-
-            <section id="page-profile" class="layout-page-view">
-                <div class="macro-ui-panel" style="text-align:center; display:flex; flex-direction:column; align-items:center; gap:5px;">
-                    <img id="profile-avatar-img-node" src="" style="width:44px; height:44px; border-radius:50%; border:2px solid var(--border-primary);">
-                    <h2 id="profile-display-name" style="font-size:13px; font-weight:700;">...</h2>
-                    <div id="profile-telegram-id" style="color:var(--text-slate); font-size:9px; font-family:'Orbitron', sans-serif;">ID: ----------</div>
-                </div>
-                
-                <div class="macro-ui-panel">
-                    <div class="panel-micro-header">Показатели активности</div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:3px; font-size:11px;">
-                        <span>Сыграно раундов:</span>
-                        <span id="stat-rounds-counter" style="font-weight:700; font-family:'Orbitron', sans-serif;">0</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:11px;">
-                        <span>Валидный оборот звезд:</span>
-                        <span id="stat-turnover-counter" style="font-weight:700; color:#eab308; font-family:'Orbitron', sans-serif;">0 ⭐</span>
-                    </div>
-                </div>
-            </section>
-
+                <div class="game-arrow">➔</div>
+            </div>
         </div>
 
-        <nav>
-            <button class="tab-menu-button active-tab" onclick="switchGlobalLayoutView('page-games', this)">
-                <span class="tab-icon">🎮</span>Арена
-            </button>
-            <button class="tab-menu-button" onclick="switchGlobalLayoutView('page-leaderboard', this); executeLeaderboardSync();">
-                <span class="tab-icon">🏆</span>Лидеры
-            </button>
-            <button class="tab-menu-button" onclick="switchGlobalLayoutView('page-profile', this); executeProfileStatsSync();">
-                <span class="tab-icon">👤</span>Профиль
-            </button>
-        </nav>
+        <div id="screen-game-rocket" class="screen">
+            <div class="card" style="padding:4px; margin-bottom:6px;">
+                <button class="btn btn-secondary" style="padding:3px 8px;" onclick="backToHome()">⇠ Назад</button>
+            </div>
+            <div class="video-container">
+                <video id="rocketVideo" loop muted playsinline>
+                    <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4">
+                </video>
+                <div class="rocket-overlay" id="rocketOverlay">
+                    <div id="rocketStatusLabel" style="font-size:11px; font-weight:800; color:var(--text-secondary);">ОЖИДАНИЕ СТАРТА</div>
+                    <div class="live-multiplier" id="rocketMultiplierDisplay">1.00x</div>
+                </div>
+            </div>
+            <div class="history-ribbon" id="rocketHistory"></div>
+            
+            <div class="card" style="padding:6px;">
+                <div class="bet-panel">
+                    <div class="input-group">
+                        <label>Ставка (⭐)</label>
+                        <input type="number" id="rocketBetAmount" value="50" min="10">
+                        <div class="presets">
+                            <button class="preset-btn" onclick="setPreset('rocket', 'min')">MIN</button>
+                            <button class="preset-btn" onclick="setPreset('rocket', '+10')">+10</button>
+                            <button class="preset-btn" onclick="setPreset('rocket', 'max')">MAX</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label style="display:flex; align-items:center; gap:3px;">
+                            <input type="checkbox" id="rocketAutoToggle"> Автовывод
+                        </label>
+                        <input type="number" id="rocketAutoValue" value="1.50" step="0.1" min="1.05" max="10">
+                    </div>
+                </div>
+                <button class="btn btn-success action-btn" id="rocketActionBtn" onclick="handleRocketAction()">💰 Сделать ставку</button>
+            </div>
+
+            <div class="card">
+                <div style="font-weight:800; font-size:11px; margin-bottom:4px; text-transform:uppercase; color:var(--text-secondary);">Участники раунда</div>
+                <div class="users-list" id="rocketUsersList"></div>
+            </div>
+        </div>
+
+        <div id="screen-game-mines" class="screen">
+            <div class="card" style="padding:4px; margin-bottom:6px;">
+                <button class="btn btn-secondary" style="padding:3px 8px;" onclick="backToHome()">⇠ Назад</button>
+            </div>
+            <div class="card" style="text-align:center; padding:6px;">
+                <span style="font-size:11px; color:var(--text-secondary);">Текущий множитель:</span>
+                <div id="minesMultDisplay" style="font-size:22px; font-weight:900; color:var(--accent);">1.00x</div>
+            </div>
+
+            <div class="mines-grid" id="minesGridBody"></div>
+
+            <div class="card" style="padding:6px;">
+                <div class="bet-panel">
+                    <div class="input-group">
+                        <label>Сумма ставки</label>
+                        <input type="number" id="minesBetAmount" value="20" min="10">
+                        <div class="presets">
+                            <button class="preset-btn" onclick="setPreset('mines', 'half')">½</button>
+                            <button class="preset-btn" onclick="setPreset('mines', 'double')">x2</button>
+                            <button class="preset-btn" onclick="setPreset('mines', 'max')">MAX</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Количество мин</label>
+                        <select id="minesCountSelect" style="background:transparent; border:none; color:#fff; font-weight:800; font-size:13px; margin-top:4px; outline:none;">
+                            <option value="5" style="background:#111;">5 мин</option>
+                            <option value="10" style="background:#111;">10 мин</option>
+                            <option value="15" style="background:#111;">15 мин</option>
+                            <option value="20" style="background:#111;">20 мин</option>
+                            <option value="24" style="background:#111;">24 мины</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn id="minesActionBtn" style="width:100%; padding:10px; font-size:14px;" onclick="handleMinesAction()">💣 Новая игра</button>
+            </div>
+        </div>
+
+        <div id="screen-game-roulette" class="screen">
+            <div class="card" style="padding:4px; margin-bottom:6px;">
+                <button class="btn btn-secondary" style="padding:3px 8px;" onclick="backToHome()">⇠ Назад</button>
+            </div>
+            <div class="card roulette-wrapper">
+                <div class="wheel-pointer"></div>
+                <div class="wheel-container" id="rouletteWheel"></div>
+                <div id="rouletteTimerLabel" style="margin-top:6px; font-weight:800; color:var(--accent); font-size:12px;">Ожидание игроков...</div>
+            </div>
+
+            <div class="card" style="padding:6px;">
+                <div class="bet-panel" style="grid-template-columns: 1fr;">
+                    <div class="input-group">
+                        <label>Ваша Ставка в общий банк</label>
+                        <input type="number" id="rouletteBetAmount" value="10" min="10">
+                        <div class="presets">
+                            <button class="preset-btn" onclick="setPreset('roulette', 'min')">MIN</button>
+                            <button class="preset-btn" onclick="setPreset('roulette', '+10')">+10</button>
+                            <button class="preset-btn" onclick="setPreset('roulette', 'max')">MAX</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px; margin-top:6px;">
+                    <button class="btn btn-success" id="rouletteBetBtn" style="flex:2; padding:10px;" onclick="handleRouletteBet()">📥 Сделать ставку</button>
+                    <button class="btn btn-danger" id="rouletteCancelBtn" style="display:none; flex:2; padding:10px;" onclick="handleRouletteCancel()">❌ Отмена</button>
+                    <button class="btn btn-secondary" id="rouletteSpinBtn" style="flex:1; padding:10px;" onclick="forceSpinRoulette()">🎲 Крутить</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:between; font-size:11px; font-weight:800; color:var(--text-secondary); margin-bottom:4px;">
+                    <span>УЧАСТНИКИ БАНКА</span>
+                    <span id="rouletteTotalBankDisplay" style="margin-left:auto; color:var(--accent);">ОБЩИЙ БАНК: 0⭐</span>
+                </div>
+                <div class="users-list" id="rouletteUsersList"></div>
+            </div>
+        </div>
+
+        <div id="screen-leaderboard" class="screen">
+            <div class="podium">
+                <div class="podium-place">
+                    <div class="p-avatar" id="lead-avatar-2" style="width:40px; height:40px; font-size:16px;">🥈</div>
+                    <span id="lead-name-2" style="font-weight:600; font-size:10px;">Загрузка</span>
+                    <span id="lead-turn-2" style="color:var(--accent); font-size:10px; font-weight:800;">0</span>
+                    <div class="podium-pedestal p-2">2</div>
+                </div>
+                <div class="podium-place">
+                    <div class="p-avatar" id="lead-avatar-1" style="width:48px; height:48px; font-size:20px;">🥇</div>
+                    <span id="lead-name-1" style="font-weight:800; font-size:11px;">Загрузка</span>
+                    <span id="lead-turn-1" style="color:var(--accent); font-size:11px; font-weight:900;">0</span>
+                    <div class="podium-pedestal p-1">1</div>
+                </div>
+                <div class="podium-place">
+                    <div class="p-avatar" id="lead-avatar-3" style="width:38px; height:38px; font-size:14px;">🥉</div>
+                    <span id="lead-name-3" style="font-weight:600; font-size:10px;">Загрузка</span>
+                    <span id="lead-turn-3" style="color:var(--accent); font-size:10px; font-weight:800;">0</span>
+                    <div class="podium-pedestal p-3">3</div>
+                </div>
+            </div>
+
+            <div class="card" style="padding:4px;">
+                <div class="users-list" id="leaderboardListBody" style="max-height:none;"></div>
+            </div>
+        </div>
+
+        <div id="screen-profile" class="screen">
+            <div class="profile-header">
+                <div class="p-avatar" id="profAvatar">👤</div>
+                <div class="p-info">
+                    <h3 id="profName">Имя Пользователя</h3>
+                    <p id="profUsername">@username</p>
+                </div>
+                <button class="btn btn-danger" id="adminPanelEntranceBtn" style="margin-left:auto; display:none; font-size:9px; padding:4px;" onclick="openModal('adminModal')">👑 АДМИН-ПАНЕЛЬ</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box"><label>🎮 Игр сыграно</label><div id="statGames">0</div></div>
+                <div class="stat-box"><label>⭐ Общий оборот</label><div id="statTurnover">0</div></div>
+                <div class="stat-box"><label>🏆 Всего побед</label><div id="statWins">0</div></div>
+                <div class="stat-box"><label>💀 Процент побед (Winrate)</label><div id="statWinrate">0%</div></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:8px;">
+                <button class="btn btn-secondary" onclick="openModal('depositModal')">💎 Пополнить</button>
+                <button class="btn btn-secondary" onclick="openModal('withdrawModal')">💸 Вывести</button>
+            </div>
+
+            <div class="card" style="padding:8px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:10px; color:var(--text-secondary); font-weight:800;">КРИПТО КОШЕЛЕК</span>
+                    <span id="walletStatusText" style="font-weight:700; font-size:11px; color:var(--danger);">❌ Не привязан</span>
+                </div>
+                <button class="btn btn-secondary" id="tonConnectCustomBtn" style="font-size:11px; padding:5px 10px;" onclick="processTonConnectAction()">💎 Подключить TON</button>
+            </div>
+
+            <div class="tabs-header">
+                <div class="tab-btn active" onclick="switchTab('my-games', this)">Мои игры</div>
+                <div class="tab-btn" onclick="switchTab('finance', this)">Финансы</div>
+                <div class="tab-btn" onclick="switchTab('refs', this)">Рефералы</div>
+            </div>
+
+            <div id="tab-my-games" class="tab-content active">
+                <div class="users-list" id="profileGamesHistory" style="max-height:160px;">
+                    <div style="text-align:center; color:var(--text-secondary); padding:10px;">🎮 Сыграйте в игры, чтобы увидеть историю</div>
+                </div>
+            </div>
+
+            <div id="tab-finance" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-box"><label style="color:var(--success);">💰 Пополнено</label><div id="finDeposited" style="color:var(--success);">0</div></div>
+                    <div class="stat-box"><label style="color:var(--danger);">💸 Выведено</label><div id="finWithdrawn" style="color:var(--danger);">0</div></div>
+                    <div class="stat-box"><label>📊 Админ-бонусы</label><div id="finAdmin">0</div></div>
+                    <div class="stat-box"><label style="color:var(--accent);">🎰 Активный Баланс</label><div id="finBalance" style="color:var(--accent);">0</div></div>
+                </div>
+            </div>
+
+            <div id="tab-refs" class="tab-content">
+                <div class="card" style="padding:6px; background:#161616; margin-bottom:6px;">
+                    <div style="font-size:10px; color:var(--text-secondary);">ВАША РЕФЕРАЛЬНАЯ ССЫЛКА (5% ОТ ПОПОЛНЕНИЙ ДРУЗЕЙ)</div>
+                    <div style="display:flex; gap:4px; margin-top:3px;">
+                        <input type="text" id="refLinkInput" readonly style="flex:1; background:#000; border:1px solid var(--border); color:#fff; font-size:11px; padding:3px; border-radius:4px;" value="">
+                        <button class="btn" style="padding:2px 6px; font-size:10px;" onclick="copyRefLink()">Копировать</button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px; padding:2px; color:var(--text-secondary);">
+                    <span>ПРИГЛАШЕННЫЕ ДРУЗЬЯ</span>
+                    <span id="refCountDisplay" style="color:var(--accent);">Всего: 0</span>
+                </div>
+                <div class="users-list" id="referralsListBody" style="max-height:120px;">
+                    <div style="text-align:center; color:var(--text-secondary); padding:10px;">👥 Пока нет приглашённых друзей</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="modal" id="depositModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('depositModal')">×</span>
+            <h3 style="font-size:14px; margin-bottom:8px; color:var(--accent);">💎 Пополнение баланса звезд</h3>
+            
+            <div class="tabs-header" style="margin-bottom:6px;">
+                <div class="tab-btn active" id="dep-tab-crypto" onclick="switchDepMethod('crypto')">💎 Крипта</div>
+                <div class="tab-btn" id="dep-tab-stars" onclick="switchDepMethod('stars')">⭐ Telegram Stars</div>
+            </div>
+
+            <div id="dep-content-crypto">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:6px;">
+                    <button class="btn btn-secondary" id="coinTonBtn" style="border-color:var(--accent);" onclick="setDepAsset('TON')">TON (1=100⭐)</button>
+                    <button class="btn btn-secondary" id="coinUsdtBtn" onclick="setDepAsset('USDT')">USDT (1=50⭐)</button>
+                </div>
+                <input type="number" id="cryptoDepAmount" class="admin-input" value="1" min="0.1" step="0.1" style="font-size:13px; padding:6px;">
+                <button class="btn btn-success" style="width:100%; padding:8px;" onclick="processCryptoDeposit()">💸 Оплатить через кошелёк</button>
+            </div>
+
+            <div id="dep-content-stars" style="display:none;">
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;" id="starsPresetsHolder">
+                    </div>
+                <input type="number" id="starsDepAmount" class="admin-input" value="50" min="1" style="font-size:13px; padding:6px;">
+                <button class="btn" style="width:100%; padding:8px;" onclick="processStarsDeposit()">⭐ Купить Stars</button>
+            </div>
+        </div>
     </div>
 
+    <div class="modal" id="withdrawModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('withdrawModal')">×</span>
+            <h3 style="font-size:14px; margin-bottom:4px; color:var(--danger);">💸 Вывод средств</h3>
+            <div style="background:#1a1a1a; padding:4px; border-radius:4px; font-size:10px; color:var(--text-secondary); text-align:center; margin-bottom:6px;">⚠️ Комиссия вывода системы: 15%</div>
+            
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
+                <button class="btn btn-secondary" id="withAssetTon" style="border-color:var(--accent);" onclick="setWithdrawAsset('TON')">TON</button>
+                <button class="btn btn-secondary" id="withAssetUsdt" onclick="setWithdrawAsset('USDT')">USDT</button>
+                <button class="btn btn-secondary" id="withAssetStars" onclick="setWithdrawAsset('STARS')">Stars</button>
+            </div>
+
+            <label style="font-size:9px; color:var(--text-secondary); font-weight:800;">СУММА В ЗВЁЗДАХ (МИН. 100)</label>
+            <input type="number" id="withdrawAmountInput" class="admin-input" value="100" min="100" style="font-size:12px; padding:5px;">
+            
+            <div id="withdrawWalletAddressBlock">
+                <label style="font-size:9px; color:var(--text-secondary); font-weight:800;">АДРЕС ВАШЕГО TON КОШЕЛЬКА</label>
+                <input type="text" id="withdrawWalletInput" class="admin-input" placeholder="Введите адрес кошелька получателя" style="font-size:11px;">
+            </div>
+
+            <button class="btn btn-danger" style="width:100%; padding:8px; margin-top:4px;" onclick="processWithdrawSubmit()">📤 Отправить заявку</button>
+        </div>
+    </div>
+
+    <div class="modal" id="adminModal">
+        <div class="modal-content" style="max-width:380px; max-height:85vh; overflow-y:auto; border-color:var(--danger);">
+            <span class="modal-close" onclick="closeModal('adminModal')">×</span>
+            <h3 style="color:var(--danger); font-size:15px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-bottom:8px;">👑 УПРАВЛЕНИЕ АДМИНИСТРАТОРА</h3>
+            
+            <div class="admin-block">
+                <h4>1. 💰 Корректировка Баланса (Звёзды)</h4>
+                <input type="text" id="admTargetId1" class="admin-input" placeholder="Telegram ID игрока">
+                <input type="number" id="admAmount1" class="admin-input" placeholder="Количество звёзд">
+                <div style="display:flex; gap:4px;">
+                    <button class="btn btn-success" style="flex:1; padding:4px; font-size:10px;" onclick="adminAdjustBalance('add')">➕ Начислить</button>
+                    <button class="btn btn-danger" style="flex:1; padding:4px; font-size:10px;" onclick="adminAdjustBalance('remove')">➖ Списать</button>
+                </div>
+            </div>
+
+            <div class="admin-block">
+                <h4>2. 🔧 Модерация Пользователя</h4>
+                <input type="text" id="admTargetId2" class="admin-input" placeholder="Telegram ID игрока">
+                <input type="text" id="admMessageText" class="admin-input" placeholder="Текст сообщения">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
+                    <button class="btn btn-secondary" style="font-size:9px; padding:3px;" onclick="adminAction('msg')">💬 Написать юзеру</button>
+                    <button class="btn btn-secondary" style="font-size:9px; padding:3px;" onclick="adminAction('clear-wallet')">🗑️ Отвязать кошель</button>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button class="btn btn-danger" style="font-size:10px; padding:4px;" onclick="adminAction('ban')">🔨 Заблокировать</button>
+                    <button class="btn btn-success" style="font-size:10px; padding:4px;" onclick="adminAction('unban')">🔓 Разблокировать</button>
+                </div>
+            </div>
+
+            <div class="admin-block">
+                <h4>3. 📢 Глобальная Рассылка</h4>
+                <textarea id="admBroadcastText" class="admin-input" rows="2" placeholder="Текст рассылки на всех пользователей..."></textarea>
+                <button class="btn" style="width:100%; padding:4px; font-size:10px;" onclick="adminBroadcast()">📢 Сделать рассылку</button>
+            </div>
+
+            <div class="admin-block">
+                <h4>4. ⏸️ Статус Платформы</h4>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button class="btn btn-danger" style="padding:4px; font-size:10px;" onclick="adminControlBot('pause')">⏸️ Приостановить</button>
+                    <button class="btn btn-success" style="padding:4px; font-size:10px;" onclick="adminControlBot('resume')">▶️ Возобновить</button>
+                </div>
+            </div>
+
+            <div class="admin-block">
+                <h4>5. 📋 Заявки на Вывод Финансов</h4>
+                <button class="btn btn-secondary" style="width:100%; padding:3px; font-size:10px; margin-bottom:4px;" onclick="adminLoadWithdraws()">Загрузить заявки</button>
+                <div id="admWithdrawsContainer" style="max-height:100px; overflow-y:auto; font-size:10px;"></div>
+            </div>
+
+            <div class="admin-block">
+                <h4>6. 👥 База Данных Системы</h4>
+                <button class="btn btn-secondary" style="width:100%; padding:3px; font-size:10px; margin-bottom:4px;" onclick="adminLoadUsersList()">Показать всех пользователей</button>
+                <div id="admUsersContainer" style="max-height:120px; overflow-y:auto; font-size:9px; background:#000; padding:2px;"></div>
+            </div>
+
+            <div class="admin-block" style="border-color:var(--danger); background:#2b0000;">
+                <h4 style="color:#fff;">7. 💀 Опасная зона (Danger Area)</h4>
+                <button class="btn btn-danger" style="width:100%; padding:4px; font-size:9px; margin-bottom:4px;" onclick="adminDangerAction('wallets')">⚠️ Очистить ВСЕ кошельки</button>
+                <button class="btn btn-danger" style="width:100%; padding:5px; font-size:10px; font-weight:900;" onclick="adminDangerAction('db')">💀 ПОЛНАЯ ОЧИСТКА БАЗЫ ДАННЫХ</button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
-        const tgEnvironment = window.Telegram.WebApp;
-        tgEnvironment.expand();
+        // Инициализация Telegram WebApp SDK
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
 
-        // Безопасное определение параметров сессии из Telegram WebApp
-        let activeUserTgId = tgEnvironment.initDataUnsafe?.user?.id ? String(tgEnvironment.initDataUnsafe.user.id) : "1631627984";
-        let activeUserUsername = tgEnvironment.initDataUnsafe?.user?.username || "Gamer_Arena";
-        let activeUserAvatar = tgEnvironment.initDataUnsafe?.user?.photo_url || "https://img.icons8.com/sticky/100/user-male-circle.png";
+        const API_URL = window.location.origin;
+        const WS_URL = window.location.origin.replace(/^http/, 'ws');
         
-        let clientInternalBalance = 0;
-        const mainSocketInstance = io();
+        // Данные текущего пользователя
+        let userProfile = {
+            telegram_id: "1631627984", // Фоллбэк для локальных тестов
+            name: "Геймер DadTon",
+            avatar: "🎰",
+            username: "@test_user",
+            stars: 0,
+            wallet_address: null
+        };
 
-        // Первичная авторизация и создание игровой сессии пользователя
-        fetch('/api/user/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegram_id: activeUserTgId, username: activeUserUsername, avatar_url: activeUserAvatar })
-        })
-        .then(response => response.json())
-        .then(syncedData => {
-            clientInternalBalance = syncedData.balance;
-            renderBalanceIndicator(clientInternalBalance);
-            
-            // Заполнение неизменяемых узлов профиля
-            document.getElementById('profile-display-name').innerText = syncedData.username;
-            document.getElementById('profile-telegram-id').innerText = "TG-ID: " + syncedData.telegram_id;
-            document.getElementById('profile-avatar-img-node').src = syncedData.avatar_url;
-            
-            // Уничтожение загрузочного экрана
-            document.getElementById('core-splash-screen').style.display = 'none';
-            mainSocketInstance.emit('join_server', { telegram_id: activeUserTgId });
-        })
-        .catch(err => console.error("Critical authentication error:", err));
-
-        function renderBalanceIndicator(amount) {
-            document.getElementById('global-balance-counter').innerText = parseFloat(amount).toFixed(2);
+        // Загрузка реальных данных из Telegram (если доступны)
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const u = tg.initDataUnsafe.user;
+            userProfile.telegram_id = u.id.toString();
+            userProfile.name = [u.first_name, u.last_name].filter(Boolean).join(' ');
+            userProfile.username = u.username ? '@' + u.username : '';
+            if (u.photo_url) userProfile.avatar = u.photo_url;
         }
 
-        // Переключение глобальных разделов SPA (3 Кнопки навигации)
-        function switchGlobalLayoutView(targetPageId, menuButtonElement) {
-            document.querySelectorAll('.layout-page-view').forEach(view => view.classList.remove('active-view'));
-            document.querySelectorAll('.tab-menu-button').forEach(btn => btn.classList.remove('active-tab'));
+        let socket;
+        let tonConnectUI;
+        let currentDepositAsset = 'TON';
+        let currentWithdrawAsset = 'TON';
+        let currentMinesGameActive = false;
+
+        // Точка входа при загрузке документа
+        window.addEventListener('DOMContentLoaded', async () => {
+            await registerUser();
+            initWebSocket();
+            initTonConnect();
+            buildStarsPresets();
             
-            document.getElementById(targetPageId).classList.add('active-view');
-            menuButtonElement.classList.add('active-tab');
-        }
-
-        // Переключение игровых зон внутри вкладки "Арена"
-        function switchActiveGameModule(targetZoneId, cardElement) {
-            document.querySelectorAll('.game-runtime-zone').forEach(zone => zone.classList.remove('active-zone'));
-            document.querySelectorAll('.game-nav-card').forEach(card => card.classList.remove('active-card'));
-            
-            document.getElementById(targetZoneId).classList.add('active-zone');
-            cardElement.classList.add('active-card');
-        }
-
-        // --- ИГРОВОЙ ЯДЕРНЫЙ МОДУЛЬ: РАКЕТА (CRASH) ---
-        let internalRocketPhase = 'waiting';
-        
-        mainSocketInstance.on('rocket_state', (rocketPayload) => {
-            internalRocketPhase = rocketPayload.status;
-            const textDigits = document.getElementById('rocket-multiplier-digits');
-            const actionBtn = document.getElementById('btn-rocket-action');
-            const rocketImg = document.getElementById('visual-rocket-item');
-
-            if (rocketPayload.status === 'waiting') {
-                textDigits.innerText = `СТАРТ: ${parseFloat(rocketPayload.timer).toFixed(1)}s`;
-                textDigits.style.color = '#3b82f6';
-                actionBtn.innerText = "Вступить в полет";
-                actionBtn.disabled = false;
-                actionBtn.style.background = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
-                
-                // Сброс анимации положения ракеты
-                rocketImg.style.bottom = '10px';
-                rocketImg.style.left = '10px';
-                rocketImg.style.transform = 'scale(1)';
-            } 
-            else if (rocketPayload.status === 'live') {
-                textDigits.innerText = `${parseFloat(rocketPayload.multiplier).toFixed(2)}x`;
-                textDigits.style.color = '#10b981';
-                
-                // Плавное визуальное смещение ракеты по кривой
-                let factor = Math.min((rocketPayload.multiplier - 1) / 5, 1);
-                rocketImg.style.bottom = (10 + factor * 50) + 'px';
-                rocketImg.style.left = (10 + factor * 180) + 'px';
-
-                let userActiveBet = rocketPayload.bets.find(b => b.telegram_id === activeUserTgId);
-                if (userActiveBet && !userActiveBet.cashedOut) {
-                    actionBtn.innerText = `ЗАБРАТЬ ${(userActiveBet.bet * rocketPayload.multiplier).toFixed(1)} ⭐`;
-                    actionBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
-                } else {
-                    actionBtn.innerText = "Полет продолжается...";
-                    actionBtn.disabled = true;
-                    actionBtn.style.background = "#131b31";
-                }
-            } 
-            else if (rocketPayload.status === 'crashed') {
-                textDigits.innerText = `💥 БУМ! ${rocketPayload.crashPoint}x`;
-                textDigits.style.color = '#ef4444';
-                actionBtn.innerText = "Ракета взорвалась";
-                actionBtn.disabled = true;
-                actionBtn.style.background = "#1e2942";
-                rocketImg.style.transform = 'scale(0)';
-            }
-
-            // Отрисовка ленты истории
-            const historyTapeContainer = document.getElementById('rocket-history-injector');
-            historyTapeContainer.innerHTML = "";
-            rocketPayload.history.forEach(historyMult => {
-                historyTapeContainer.innerHTML += `<span class="crash-tape-badge">${historyMult}x</span>`;
-            });
+            // Скрытие лоадера через 600мс
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+            }, 600);
         });
 
-        document.getElementById('btn-rocket-action').onclick = () => {
-            if (internalRocketPhase === 'waiting') {
-                const calculatedBetValue = parseFloat(document.getElementById('rocket-bet-field').value);
-                const calculatedAutoValue = parseFloat(document.getElementById('rocket-auto-field').value);
-                
-                mainSocketInstance.emit('rocket_place_bet', {
-                    telegram_id: activeUserTgId,
-                    username: activeUserUsername,
-                    bet: calculatedBetValue,
-                    autoWithdraw: calculatedAutoValue
-                });
-                document.getElementById('btn-rocket-action').innerText = "Ожидание взлета...";
-                document.getElementById('btn-rocket-action').disabled = true;
-            } else if (internalRocketPhase === 'live') {
-                mainSocketInstance.emit('rocket_manual_cashout', { telegram_id: activeUserTgId });
+        async function registerUser() {
+            // Извлечение реферального ID из ссылки старта телеграм-бота
+            let referrer_id = null;
+            if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+                let sp = tg.initDataUnsafe.start_param;
+                if (sp.startsWith('ref_')) referrer_id = sp.replace('ref_', '');
             }
-        };
 
-        // --- ИГРОВОЙ ЯДЕРНЫЙ МОДУЛЬ: МИНЫ (MINES) ---
-        let currentSessionSelectedCells = [];
-        let isMinesInteractionAllowed = false;
+            try {
+                let res = await fetch(`${API_URL}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userProfile.telegram_id,
+                        name: userProfile.name,
+                        avatar: userProfile.avatar,
+                        username: userProfile.username,
+                        referrer_id: referrer_id
+                    })
+                });
+                let data = await res.json();
+                if (data.banned) {
+                    alert('Вы заблокированы администратором платформы.');
+                    tg.close();
+                    return;
+                }
+                if (data.success) {
+                    userProfile.stars = data.user.stars;
+                    userProfile.wallet_address = data.user.wallet_address;
+                    document.getElementById('headerBalance').innerText = userProfile.stars;
+                    if (userProfile.telegram_id === "1631627984") {
+                        document.getElementById('adminPanelEntranceBtn').style.display = 'block';
+                    }
+                }
+            } catch (e) { console.error('Ошибка регистрации:', e); }
+        }
 
-        function initializeMinesMatrixLayout() {
-            const matrixRoot = document.getElementById('mines-interactive-board');
-            matrixRoot.innerHTML = "";
-            for (let i = 0; i < 25; i++) {
-                let cellDivNode = document.createElement('div');
-                cellDivNode.className = "mines-grid-cell";
-                cellDivNode.innerText = "❓";
-                cellDivNode.onclick = () => {
-                    if (!isMinesInteractionAllowed || currentSessionSelectedCells.includes(i)) return;
+        async function updateProfileData() {
+            try {
+                let res = await fetch(`${API_URL}/api/get-balance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+                });
+                let data = await res.json();
+                if (data.success) {
+                    const u = data.user;
+                    userProfile.stars = u.stars;
+                    userProfile.wallet_address = u.wallet_address;
                     
-                    currentSessionSelectedCells.push(i);
-                    cellDivNode.className = "mines-grid-cell cell-selected-safe";
-                    cellDivNode.innerText = "💎";
-                    document.getElementById('btn-mines-cashout').disabled = false;
-                    tgEnvironment.HapticFeedback.impactOccurred('light');
-                };
-                matrixRoot.appendChild(cellDivNode);
+                    document.getElementById('headerBalance').innerText = u.stars;
+                    document.getElementById('profName').innerText = u.name;
+                    document.getElementById('profUsername').innerText = u.username || `@id${u.telegram_id}`;
+                    
+                    document.getElementById('statGames').innerText = u.games_played;
+                    document.getElementById('statTurnover').innerText = u.turnover;
+                    document.getElementById('statWins').innerText = u.wins;
+                    
+                    let wr = u.games_played > 0 ? Math.round((u.wins / u.games_played) * 100) : 0;
+                    document.getElementById('statWinrate').innerText = wr + '%';
+
+                    // Вкладка финансы
+                    document.getElementById('finDeposited').innerText = data.finance.deposited;
+                    document.getElementById('finWithdrawn').innerText = data.finance.withdrawn;
+                    document.getElementById('finAdmin').innerText = data.finance.admin_added;
+                    document.getElementById('finBalance').innerText = u.stars;
+
+                    // Вкладка рефы
+                    document.getElementById('refLinkInput').value = `https://t.me/dadtonbot?start=ref_${userProfile.telegram_id}`;
+                    document.getElementById('refCountDisplay').innerText = `Всего: ${data.referrals.length}`;
+                    
+                    // Отрисовка списка рефералов
+                    let refHtml = '';
+                    if (data.referrals.length > 0) {
+                        data.referrals.forEach(r => {
+                            refHtml += `<div class="user-row"><span>${r.name} (${r.username || 'скрыт'})</span><span style="color:var(--accent);">${r.turnover}⭐</span></div>`;
+                        });
+                    } else {
+                        refHtml = `<div style="text-align:center; color:var(--text-secondary); padding:10px;">👥 Пока нет приглашённых друзей</div>`;
+                    }
+                    document.getElementById('referralsListBody').innerHTML = refHtml;
+
+                    // Синхронизация статуса кошелька в UI
+                    updateWalletUIState();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ИЗОЛИРОВАННОГО TON CONNECT ---
+        function initTonConnect() {
+            tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+                manifestUrl: `${API_URL}/tonconnect-manifest.json`,
+                buttonRootId: null // Кастомная обработка кнопки
+            });
+
+            // Слушатель изменения состояния подключения кошелька
+            tonConnectUI.onStatusChange(async (wallet) => {
+                if (wallet) {
+                    let rawAddress = wallet.account.address;
+                    // Отправка адреса для привязки к конкретной сессии юзера
+                    let res = await fetch(`${API_URL}/api/verify-proof`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ telegram_id: userProfile.telegram_id, address: rawAddress })
+                    });
+                    let d = await res.json();
+                    if (d.success) {
+                        userProfile.wallet_address = rawAddress;
+                        updateWalletUIState();
+                    }
+                } else {
+                    userProfile.wallet_address = null;
+                    updateWalletUIState();
+                }
+            });
+        }
+
+        function updateWalletUIState() {
+            const txt = document.getElementById('walletStatusText');
+            const btn = document.getElementById('tonConnectCustomBtn');
+            
+            if (userProfile.wallet_address) {
+                let short = userProfile.wallet_address.substring(0, 4) + '...' + userProfile.wallet_address.substring(userProfile.wallet_address.length - 4);
+                txt.innerText = `✅ Подключен: ${short}`;
+                txt.style.color = 'var(--success)';
+                btn.innerText = '🔓 Отвязать';
+                btn.classList.add('btn-danger');
+            } else {
+                txt.innerText = '❌ Не привязан';
+                txt.style.color = 'var(--danger)';
+                btn.innerText = '💎 Подключить TON';
+                btn.classList.remove('btn-danger');
             }
         }
-        initializeMinesMatrixLayout();
 
-        document.getElementById('btn-mines-start').onclick = () => {
-            currentSessionSelectedCells = [];
-            isMinesInteractionAllowed = true;
-            initializeMinesMatrixLayout();
-            document.getElementById('btn-mines-start').disabled = true;
-            document.getElementById('btn-mines-cashout').disabled = true;
-        };
+        async function processTonConnectAction() {
+            triggerHaptic('medium');
+            if (userProfile.wallet_address) {
+                // Вызываем серверную отвязку кошелька
+                await fetch(`${API_URL}/api/disconnect-wallet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+                });
+                await tonConnectUI.disconnect();
+                userProfile.wallet_address = null;
+                updateWalletUIState();
+            } else {
+                // Подключение кошелька
+                tonConnectUI.openModal();
+            }
+        }
 
-        document.getElementById('btn-mines-cashout').onclick = () => {
-            const rawBet = parseFloat(document.getElementById('mines-bet-field').value);
-            const rawMinesCount = parseInt(document.getElementById('mines-count-field').value);
+        // --- WEBSOCKET И СИНХРОНИЗАЦИЯ РЕАЛЬНОГО ВРЕМЕНИ ИГР ---
+        function initWebSocket() {
+            socket = new WebSocket(WS_URL);
+            
+            socket.onmessage = (event) => {
+                let msg = JSON.parse(event.data);
+                
+                if (msg.type === 'ROCKET_TICK') {
+                    updateRocketUI(msg.data);
+                } else if (msg.type === 'ROULETTE_TICK') {
+                    updateRouletteUI(msg.data);
+                } else if (msg.type === 'ROULETTE_RESULT') {
+                    animateRouletteWheel(msg.data);
+                }
+            };
 
-            fetch('/api/games/mines/play', {
+            socket.onclose = () => { setTimeout(initWebSocket, 2000); };
+        }
+
+        // --- ЛОГИКА ИГРЫ: РАКЕТА ---
+        let lastRocketStatus = '';
+        function updateRocketUI(state) {
+            const display = document.getElementById('rocketMultiplierDisplay');
+            const label = document.getElementById('rocketStatusLabel');
+            const btn = document.getElementById('rocketActionBtn');
+            const video = document.getElementById('rocketVideo');
+
+            // Управление воспроизведением цикличного видео
+            if (state.status === 'flying' && lastRocketStatus !== 'flying') {
+                video.play().catch(e => {});
+                document.getElementById('rocketOverlay').style.background = 'transparent';
+            } else if (state.status !== 'flying' && lastRocketStatus === 'flying') {
+                video.pause();
+                video.currentTime = 0;
+                document.getElementById('rocketOverlay').style.background = 'rgba(0,0,0,0.6)';
+            }
+            lastRocketStatus = state.status;
+
+            // Рендеринг интерфейса по состояниям
+            if (state.status === 'waiting') {
+                label.innerText = `ОЖИДАНИЕ СТАРТА РАУНДА`;
+                display.innerText = `${state.countdown}с`;
+                display.style.color = 'var(--accent)';
+                
+                // Проверяем ставку юзера
+                let myBet = state.bets.find(b => b.telegram_id === userProfile.telegram_id);
+                if (myBet) {
+                    btn.innerText = '❌ Отменить ставку';
+                    btn.className = 'btn btn-danger action-btn';
+                } else {
+                    btn.innerText = '💰 Сделать ставку';
+                    btn.className = 'btn btn-success action-btn';
+                }
+            } else if (state.status === 'flying') {
+                label.innerText = `РАКЕТА В ПОЛЕТЕ`;
+                display.innerText = `${state.currentMultiplier.toFixed(2)}x`;
+                display.style.color = 'var(--accent)';
+
+                let myBet = state.bets.find(b => b.telegram_id === userProfile.telegram_id && b.status === 'pending');
+                if (myBet) {
+                    btn.innerText = `💸 Забрать выигрыш`;
+                    btn.className = 'btn btn-success action-btn pulse';
+                } else {
+                    btn.innerText = '⏳ Ожидайте...';
+                    btn.className = 'btn btn-secondary action-btn';
+                }
+            } else if (state.status === 'crashed') {
+                label.innerText = `РАКЕТА КРАШНУЛАСЬ`;
+                display.innerText = `💥 ВЗРЫВ! @ ${state.currentMultiplier.toFixed(2)}x`;
+                display.style.color = 'var(--danger)';
+                btn.innerText = '⏳ Раунд завершен';
+                btn.className = 'btn btn-secondary action-btn';
+            }
+
+            // Отрисовка списка участников
+            let html = '';
+            state.bets.forEach(b => {
+                let statusMark = '⏳';
+                if (b.status === 'won') statusMark = `<span style="color:var(--success); font-weight:800;">✅ ${b.winMultiplier}x</span>`;
+                if (b.status === 'lost') statusMark = `<span style="color:var(--danger);">💀 КРАШ</span>`;
+                html += `<div class="user-row"><span>${b.avatar} ${b.name}</span><b>${b.amount}⭐ → ${statusMark}</b></div>`;
+            });
+            document.getElementById('rocketUsersList').innerHTML = html || '<div style="text-align:center; color:#555;">Ставок нет</div>';
+        }
+
+        async function handleRocketAction() {
+            triggerHaptic('medium');
+            const btn = document.getElementById('rocketActionBtn');
+            const amount = parseInt(document.getElementById('rocketBetAmount').value);
+            
+            if (btn.innerText.includes('Сделать ставку')) {
+                let auto = document.getElementById('rocketAutoToggle').checked;
+                let autoVal = document.getElementById('rocketAutoValue').value;
+                
+                let res = await fetch(`${API_URL}/api/rocket/bet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id, amount, autoCashout: auto, autoCashoutValue: autoVal })
+                });
+                let d = await res.json();
+                if (d.error) alert(d.error);
+                else updateProfileData();
+            } else if (btn.innerText.includes('Отменить ставку')) {
+                let res = await fetch(`${API_URL}/api/rocket/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+                });
+                updateProfileData();
+            } else if (btn.innerText.includes('Забрать выигрыш')) {
+                let res = await fetch(`${API_URL}/api/rocket/cashout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+                });
+                let d = await res.json();
+                if (d.success) {
+                    triggerHaptic('light');
+                    alert(`🎉 Выигрыш зафиксирован: +${d.winAmount} звезд!`);
+                    updateProfileData();
+                }
+            }
+        }
+
+
+        // --- ЛОГИКА ИГРЫ: МИНЫ (5х5) ---
+        function renderMinesGrid() {
+            const body = document.getElementById('minesGridBody');
+            body.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'mine-cell';
+                cell.innerText = '?';
+                cell.setAttribute('data-index', i);
+                cell.onclick = () => clickMineCell(i, cell);
+                body.appendChild(cell);
+            }
+        }
+
+        async function handleMinesAction() {
+            triggerHaptic('medium');
+            const btn = document.getElementById('minesActionBtn');
+            const amount = parseInt(document.getElementById('minesBetAmount').value);
+            const count = document.getElementById('minesCountSelect').value;
+
+            if (!currentMinesGameActive) {
+                let res = await fetch(`${API_URL}/api/mines/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id, amount, count })
+                });
+                let d = await res.json();
+                if (d.error) alert(d.error);
+                else {
+                    currentMinesGameActive = true;
+                    renderMinesGrid();
+                    document.getElementById('minesMultDisplay').innerText = '1.00x';
+                    btn.innerText = '💰 Забрать выигрыш';
+                    btn.className = 'btn btn-success';
+                }
+            } else {
+                // Забрать деньги
+                let res = await fetch(`${API_URL}/api/mines/cashout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+                });
+                let d = await res.json();
+                if (d.success) {
+                    triggerHaptic('light');
+                    alert(`🎉 Игра успешно завершена! Вы забрали ${d.winAmount} звезд!`);
+                    revealMinesField(d.mines);
+                    resetMinesUI();
+                    updateProfileData();
+                }
+            }
+        }
+
+        async function clickMineCell(idx, element) {
+            if (!currentMinesGameActive || element.classList.contains('opened-safe')) return;
+            triggerHaptic('medium');
+
+            let res = await fetch(`${API_URL}/api/mines/step`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    telegram_id: activeUserTgId,
-                    bet: rawBet,
-                    minesCount: rawMinesCount,
-                    selectedCells: currentSessionSelectedCells
-                })
-            })
-            .then(res => res.json())
-            .then(minesOutcome => {
-                isMinesInteractionAllowed = false;
-                document.getElementById('btn-mines-start').disabled = false;
-                document.getElementById('btn-mines-cashout').disabled = true;
-                
-                clientInternalBalance = minesOutcome.balance;
-                renderBalanceIndicator(clientInternalBalance);
+                body: JSON.stringify({ telegram_id: userProfile.telegram_id, index: idx })
+            });
+            let d = await res.json();
 
-                // Раскрытие всего минного поля по результатам сервера
-                const totalGridCells = document.getElementById('mines-interactive-board').children;
-                for (let k = 0; k < 25; k++) {
-                    if (minesOutcome.grid[k] === 1) {
-                        totalGridCells[k].className = "mines-grid-cell cell-selected-mine";
-                        totalGridCells[k].innerText = "💣";
+            if (d.status === 'safe') {
+                element.className = 'mine-cell opened-safe';
+                element.innerText = '⭐';
+                document.getElementById('minesMultDisplay').innerText = d.multiplier + 'x';
+            } else if (d.status === 'boom') {
+                triggerHaptic('medium'); // Вибрация проигрыша
+                element.className = 'mine-cell opened-bomb';
+                element.innerText = '💣';
+                alert('💣 БУМ! Вы подорвались на мине. Ставка сгорела.');
+                revealMinesField(d.mines);
+                resetMinesUI();
+                updateProfileData();
+            } else if (d.status === 'win') {
+                triggerHaptic('light');
+                alert(`🎉 НЕВЕРОЯТНО! Вы открыли все безопасные ячейки! Выигрыш: ${d.winAmount}⭐`);
+                revealMinesField(d.mines);
+                resetMinesUI();
+                updateProfileData();
+            }
+        }
+
+        function revealMinesField(mines) {
+            const cells = document.querySelectorAll('.mine-cell');
+            cells.forEach((c, idx) => {
+                if (mines.includes(idx)) {
+                    c.className = 'mine-cell opened-bomb';
+                    c.innerText = '💣';
+                } else if (!c.classList.contains('opened-safe')) {
+                    c.innerText = '';
+                }
+            });
+        }
+
+        function resetMinesUI() {
+            currentMinesGameActive = false;
+            const btn = document.getElementById('minesActionBtn');
+            btn.innerText = '💣 Новая игра';
+            btn.className = 'btn';
+        }
+
+
+        // --- ЛОГИКА ИГРЫ: МУЛЬТИПЛЕЕРНАЯ РУЛЕТКА ---
+        function updateRouletteUI(state) {
+            const label = document.getElementById('rouletteTimerLabel');
+            const betBtn = document.getElementById('rouletteBetBtn');
+            const cancelBtn = document.getElementById('rouletteCancelBtn');
+            
+            if (state.status === 'waiting') {
+                label.innerText = state.bets.length >= 2 ? `СТАРТ ЧЕРЕЗ ${state.countdown} СЕКУНД` : `ОЖИДАНИЕ ИГРОКОВ (МИН. 2)...`;
+                
+                let myBet = state.bets.find(b => b.telegram_id === userProfile.telegram_id);
+                if (myBet) {
+                    betBtn.style.display = 'none';
+                    cancelBtn.style.display = 'block';
+                } else {
+                    betBtn.style.display = 'block';
+                    cancelBtn.style.display = 'none';
+                }
+            } else {
+                label.innerText = `КОЛЕСО ВРАЩАЕТСЯ!`;
+                betBtn.style.display = 'block';
+                cancelBtn.style.display = 'none';
+            }
+
+            let totalBank = state.bets.reduce((s, b) => s + b.amount, 0);
+            document.getElementById('rouletteTotalBankDisplay').innerText = `ОБЩИЙ БАНК: ${totalBank}⭐`;
+
+            // Построение списка игроков рулетки с шансами
+            let html = '';
+            state.bets.forEach(b => {
+                let chance = totalBank > 0 ? ((b.amount / totalBank) * 100).toFixed(0) : 0;
+                html += `<div class="user-row"><span>🎨 ${b.name}</span><b>${b.amount}⭐ (${chance}%)</b></div>`;
+            });
+            document.getElementById('rouletteUsersList').innerHTML = html || '<div style="text-align:center; color:#555;">Ставок нет</div>';
+            
+            // Статичное отображение секторов на колесе
+            renderRouletteWheelSectors(state.bets, totalBank);
+        }
+
+        function renderRouletteWheelSectors(bets, totalBank) {
+            const wheel = document.getElementById('rouletteWheel');
+            wheel.innerHTML = '';
+            if (bets.length === 0) return;
+
+            let accumulatedDegree = 0;
+            bets.forEach((b, i) => {
+                let percentage = b.amount / totalBank;
+                let degree = percentage * 360;
+                
+                let sector = document.createElement('div');
+                sector.style.position = 'absolute';
+                sector.style.width = '100%';
+                sector.style.height = '100%';
+                sector.style.transform = `rotate(${accumulatedDegree}deg)`;
+                // Генерация разных цветов секторов
+                sector.style.background = `conic-gradient(from 0deg at 50% 50%, hsl(${i * 65}, 70%, 40%) 0deg ${degree}deg, transparent ${degree}deg)`;
+                wheel.appendChild(sector);
+                
+                accumulatedDegree += degree;
+            });
+        }
+
+        async function handleRouletteBet() {
+            triggerHaptic('medium');
+            let amount = parseInt(document.getElementById('rouletteBetAmount').value);
+            let res = await fetch(`${API_URL}/api/roulette/bet`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: userProfile.telegram_id, amount })
+            });
+            updateProfileData();
+        }
+
+        async function handleRouletteCancel() {
+            triggerHaptic('medium');
+            await fetch(`${API_URL}/api/roulette/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+            });
+            updateProfileData();
+        }
+
+        async function forceSpinRoulette() {
+            triggerHaptic('medium');
+            await fetch(`${API_URL}/api/roulette/force-spin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: userProfile.telegram_id })
+            });
+        }
+
+        function animateRouletteWheel(resultData) {
+            const wheel = document.getElementById('rouletteWheel');
+            let randomSpinTarget = 1440 + Math.floor(Math.random() * 360); // 4 полных оборота + случайный угол
+            wheel.style.transform = `rotate(${randomSpinTarget}deg)`;
+            
+            setTimeout(() => {
+                triggerHaptic('light');
+                alert(`🎉 ПОБЕДИТЕЛЬ РАУНДА: ${resultData.winner.name}!\nВыигрыш банка составил: ${resultData.totalBank} звезд!`);
+                wheel.style.transition = 'none';
+                wheel.style.transform = 'rotate(0deg)';
+                setTimeout(() => { wheel.style.transition = 'transform 3s cubic-bezier(0.1, 0.8, 0.1, 1)'; }, 50);
+                updateProfileData();
+            }, 3200);
+        }
+
+
+        // --- ЭКРАН: ЛИДЕРБОРД ПО ОБОРОТУ ---
+        async function loadLeaderboard() {
+            let res = await fetch(`${API_URL}/api/leaderboard`);
+            let d = await res.json();
+            if (d.success && d.leaders.length > 0) {
+                let leaders = d.leaders;
+                
+                // Рендеринг Подиума (Топ-3)
+                for (let i = 1; i <= 3; i++) {
+                    if (leaders[i - 1]) {
+                        document.getElementById(`lead-name-${i}`).innerText = leaders[i - 1].name.substring(0, 10);
+                        document.getElementById(`lead-turn-${i}`).innerText = leaders[i - 1].turnover;
                     }
                 }
 
-                if (minesOutcome.hitMine) {
-                    tgEnvironment.HapticFeedback.notificationOccurred('error');
-                } else {
-                    tgEnvironment.HapticFeedback.notificationOccurred('success');
+                // Рендеринг остального списка
+                let html = '';
+                for (let i = 3; i < leaders.length; i++) {
+                    html += `<div class="user-row" style="padding:6px 0;">
+                        <span><b>#${i+1}</b> | ${leaders[i].avatar || '👤'} ${leaders[i].name}</span>
+                        <span style="color:var(--accent); font-weight:800;">${leaders[i].turnover}⭐</span>
+                    </div>`;
                 }
-            })
-            .catch(err => console.error("Mines transaction error:", err));
-        };
-
-        // --- ИГРОВОЙ ЯДЕРНЫЙ МОДУЛЬ: РУЛЕТКА КЕЙСОВ (TICKER SYSTEM) ---
-        mainSocketInstance.on('roulette_state', (roulettePayload) => {
-            const timerTextNode = document.getElementById('roulette-status-timer-node');
-            
-            if (roulettePayload.status === 'waiting') {
-                timerTextNode.innerText = `ОТКРЫТИЕ КЕЙСА: ${roulettePayload.timer}s`;
-                timerTextNode.style.color = '#eab308';
-            } else if (roulettePayload.status === 'rolling') {
-                timerTextNode.innerText = `⚙️ ВРАЩЕНИЕ БАРАБАНА...`;
-                timerTextNode.style.color = '#38bdf8';
-                executeVisualReelRollAnimation(roulettePayload.winningItem);
-            } else if (roulettePayload.status === 'ended') {
-                timerTextNode.innerText = `ВЫПАЛО: ${roulettePayload.winningItem?.name || 'Ничего'}`;
-                timerTextNode.style.color = '#10b981';
+                document.getElementById('leaderboardListBody').innerHTML = html;
             }
-        });
+        }
 
-        document.getElementById('btn-roulette-action').onclick = () => {
-            const chosenBet = parseFloat(document.getElementById('roulette-bet-field').value);
-            mainSocketInstance.emit('roulette_place_bet', {
-                telegram_id: activeUserTgId,
-                username: activeUserUsername,
-                bet: chosenBet
+
+        // --- ФИНАНСЫ: ИНВОЙСЫ И ТРАНЗАКЦИИ ПОПОЛНЕНИЯ/ВЫВОДА ---
+        function buildStarsPresets() {
+            const container = document.getElementById('starsPresetsHolder');
+            const amounts = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+            container.innerHTML = '';
+            amounts.forEach(amt => {
+                let b = document.createElement('button');
+                b.className = 'preset-btn';
+                b.style.padding = '5px';
+                b.innerText = amt + '⭐';
+                b.onclick = () => { document.getElementById('starsDepAmount').value = amt; };
+                container.appendChild(b);
             });
-            tgEnvironment.HapticFeedback.impactOccurred('medium');
-        };
+        }
 
-        function executeVisualReelRollAnimation(winningItemObj) {
-            const scrollerTrack = document.getElementById('case-animated-track');
-            scrollerTrack.innerHTML = "";
-            scrollerTrack.style.transition = "none";
-            scrollerTrack.style.transform = "translateX(0px)";
+        async function processCryptoDeposit() {
+            triggerHaptic('medium');
+            let amount = document.getElementById('cryptoDepAmount').value;
+            let res = await fetch(`${API_URL}/api/create-crypto-invoice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: userProfile.telegram_id, amount, asset: currentDepositAsset })
+            });
+            let d = await res.json();
+            if (d.credited) {
+                alert(`✅ Оплата успешно симулирована! Зачислено: +${d.credited} звезд на ваш баланс.`);
+                closeModal('depositModal');
+                updateProfileData();
+            }
+        }
 
-            const mockColors = ['#3b82f6', '#a855f7', '#ec4899', '#10b981', '#64748b'];
+        function processStarsDeposit() {
+            triggerHaptic('medium');
+            let amt = document.getElementById('starsDepAmount').value;
+            alert(`⭐ Запрос на нативную покупку Telegram Stars (${amt} шт.) отправлен через tg.openInvoice!`);
+            closeModal('depositModal');
+        }
 
-            // Генерация ленты из 40 элементов под смещение
-            for (let i = 0; i < 45; i++) {
-                let cardNode = document.createElement('div');
-                cardNode.className = "case-drop-card";
-                
-                if (i === 38 && winningItemObj) {
-                    cardNode.style.background = winningItemObj.color || '#eab308';
-                    cardNode.innerText = winningItemObj.name;
-                } else {
-                    let randomColor = mockColors[Math.floor(Math.random() * mockColors.length)];
-                    cardNode.style.background = randomColor;
-                    cardNode.innerText = "КЕЙС";
-                }
-                scrollerTrack.appendChild(cardNode);
+        async function processWithdrawSubmit() {
+            triggerHaptic('medium');
+            let amount = document.getElementById('withdrawAmountInput').value;
+            let wallet = document.getElementById('withdrawWalletInput').value;
+
+            if (currentWithdrawAsset !== 'STARS' && wallet.length < 10) {
+                alert('Некорректный адрес кошелька криптосети!');
+                return;
             }
 
-            // Запуск аппаратного сдвига через requestAnimationFrame / setTimeout
-            setTimeout(() => {
-                scrollerTrack.style.transition = "transform 4.5s cubic-bezier(0.1, 0.85, 0.15, 1)";
-                // Рассчитанный точный сдвиг к центру 38-го элемента
-                scrollerTrack.style.transform = "translateX(-2130px)";
-            }, 40);
+            let res = await fetch(`${API_URL}/api/withdraw-request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: userProfile.telegram_id, amount, asset: currentWithdrawAsset, wallet })
+            });
+            let d = await res.json();
+            if (d.error) alert(d.error);
+            else {
+                alert(`✅ Заявка на вывод ${d.amount}⭐ успешно зарегистрирована. Комиссия: ${d.fee}⭐`);
+                closeModal('withdrawModal');
+                updateProfileData();
+            }
         }
 
-        // --- МОДУЛЬ СИНХРОНИЗАЦИИ ТАБЛИЦЫ ЛИДЕРОВ (ОБОРОТ ЗВЕЗД) ---
-        function executeLeaderboardSync() {
-            fetch('/api/leaderboard')
-            .then(res => res.json())
-            .then(leadersArray => {
-                // Сброс и зачистка блоков пьедестала
-                document.getElementById('podium-name-string1').innerText = "---";
-                document.getElementById('podium-score-string1').innerText = "0⭐";
-                document.getElementById('podium-name-string2').innerText = "---";
-                document.getElementById('podium-score-string2').innerText = "0⭐";
-                document.getElementById('podium-name-string3').innerText = "---";
-                document.getElementById('podium-score-string3').innerText = "0⭐";
 
-                // Динамическое распределение по 3D-блокам
-                if (leadersArray[0]) {
-                    document.getElementById('podium-name-string1').innerText = leadersArray[0].username;
-                    document.getElementById('podium-score-string1').innerText = leadersArray[0].turnover.toFixed(0) + "⭐";
-                    document.getElementById('podium-avatar-img1').src = leadersArray[0].avatar_url;
-                }
-                if (leadersArray[1]) {
-                    document.getElementById('podium-name-string2').innerText = leadersArray[1].username;
-                    document.getElementById('podium-score-string2').innerText = leadersArray[1].turnover.toFixed(0) + "⭐";
-                    document.getElementById('podium-avatar-img2').src = leadersArray[1].avatar_url;
-                }
-                if (leadersArray[2]) {
-                    document.getElementById('podium-name-string3').innerText = leadersArray[2].username;
-                    document.getElementById('podium-score-string3').innerText = leadersArray[2].turnover.toFixed(0) + "⭐";
-                    document.getElementById('podium-avatar-img3').src = leadersArray[2].avatar_url;
-                }
-
-                // Инжекция строк для позиций с 4 по 100
-                const rowsWrapper = document.getElementById('leaderboard-rows-container');
-                rowsWrapper.innerHTML = "";
-                for (let i = 3; i < leadersArray.length; i++) {
-                    let leaderItem = leadersArray[i];
-                    rowsWrapper.innerHTML += `
-                        <div class="leaderboard-table-row">
-                            <div class="row-player-meta">
-                                <span class="row-player-index">${i + 1}</span>
-                                <img class="row-player-avatar" src="${leaderItem.avatar_url}">
-                                <span class="row-player-name">${leaderItem.username}</span>
-                            </div>
-                            <span class="row-player-score">${leaderItem.turnover.toFixed(0)} ⭐</span>
-                        </div>
-                    `;
-                }
-            })
-            .catch(err => console.error("Leaderboard loading failed:", err));
+        // --- ВСПУТЫВАЮЩИЕ И СЛУЖЕБНЫЕ УТИЛИТЫ ИНТЕРФЕЙСА ---
+        function switchScreen(screenId, navElement) {
+            triggerHaptic('light');
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`screen-${screenId}`).classList.add('active');
+            
+            if (navElement) {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                navElement.classList.add('active');
+            }
         }
 
-        // --- МОДУЛЬ СИНХРОНИЗАЦИИ СТАТИСТИКИ ПРОФИЛЯ ---
-        function executeProfileStatsSync() {
-            fetch('/api/user/' + activeUserTgId)
-            .then(res => res.json())
-            .then(freshUserData => {
-                document.getElementById('stat-rounds-counter').innerText = freshUserData.games_count;
-                document.getElementById('stat-turnover-counter').innerText = freshUserData.turnover.toFixed(1) + " ⭐";
-                
-                clientInternalBalance = freshUserData.balance;
-                renderBalanceIndicator(clientInternalBalance);
-            })
-            .catch(err => console.error("Profile stat sync failure:", err));
+        function openGame(gameKey) {
+            triggerHaptic('medium');
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`screen-game-${gameKey}`).classList.add('active');
+            if (gameKey === 'mines') renderMinesGrid();
+        }
+
+        function backToHome() {
+            triggerHaptic('light');
+            switchScreen('home', document.querySelectorAll('.nav-item')[0]);
+        }
+
+        function switchTab(tabId, btn) {
+            triggerHaptic('light');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function switchDepMethod(m) {
+            if (m === 'crypto') {
+                document.getElementById('dep-content-crypto').style.display = 'block';
+                document.getElementById('dep-content-stars').style.display = 'none';
+                document.getElementById('dep-tab-crypto').classList.add('active');
+                document.getElementById('dep-tab-stars').classList.remove('active');
+            } else {
+                document.getElementById('dep-content-crypto').style.display = 'none';
+                document.getElementById('dep-content-stars').style.display = 'block';
+                document.getElementById('dep-tab-crypto').classList.remove('active');
+                document.getElementById('dep-tab-stars').classList.add('active');
+            }
+        }
+
+        function setDepAsset(asset) {
+            currentDepositAsset = asset;
+            document.getElementById('coinTonBtn').style.borderColor = asset === 'TON' ? 'var(--accent)' : 'var(--border)';
+            document.getElementById('coinUsdtBtn').style.borderColor = asset === 'USDT' ? 'var(--accent)' : 'var(--border)';
+        }
+
+        function setWithdrawAsset(asset) {
+            currentWithdrawAsset = asset;
+            document.getElementById('withAssetTon').style.borderColor = asset === 'TON' ? 'var(--accent)' : 'var(--border)';
+            document.getElementById('withAssetUsdt').style.borderColor = asset === 'USDT' ? 'var(--accent)' : 'var(--border)';
+            document.getElementById('withAssetStars').style.borderColor = asset === 'STARS' ? 'var(--accent)' : 'var(--border)';
+            document.getElementById('withdrawWalletAddressBlock').style.display = asset === 'STARS' ? 'none' : 'block';
+        }
+
+        function setPreset(game, action) {
+            let inputId = `${game}BetAmount`;
+            let inp = document.getElementById(inputId);
+            let currentVal = parseInt(inp.value) || 0;
+            if (action === 'min') inp.value = 10;
+            else if (action === '+10') inp.value = currentVal + 10;
+            else if (action === 'half') inp.value = Math.max(10, Math.floor(currentVal / 2));
+            else if (action === 'double') inp.value = currentVal * 2;
+            else if (action === 'max') inp.value = userProfile.stars;
+        }
+
+        function openModal(id) { triggerHaptic('light'); document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function copyRefLink() {
+            triggerHaptic('light');
+            let inp = document.getElementById('refLinkInput');
+            inp.select();
+            document.execCommand('copy');
+            alert('Реферальная ссылка скопирована в буфер обмена!');
+        }
+
+        function triggerHaptic(type) {
+            if (tg.HapticFeedback) {
+                if (type === 'light') tg.HapticFeedback.impactOccurred('light');
+                else if (type === 'medium') tg.HapticFeedback.impactOccurred('medium');
+            }
+        }
+
+
+        // --- ФУНКЦИИ ИСПОЛНЕНИЯ АДМИН ПАНЕЛИ (ID: 1631627984) ---
+        async function adminAdjustBalance(action) {
+            let target_id = document.getElementById('admTargetId1').value;
+            let amount = parseInt(document.getElementById('admAmount1').value);
+            let route = action === 'add' ? 'add-stars' : 'remove-stars';
+            
+            let res = await fetch(`${API_URL}/api/admin/${route}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id, target_id, amount })
+            });
+            let d = await res.json();
+            if (d.success) alert('Баланс успешно обновлен админом.');
+            updateProfileData();
+        }
+
+        async function adminAction(routeKey) {
+            let target_id = document.getElementById('admTargetId2').value;
+            let msg = document.getElementById('admMessageText').value;
+            let route = '';
+            if (routeKey === 'ban') route = 'ban-user';
+            if (routeKey === 'unban') route = 'unban-user';
+            if (routeKey === 'clear-wallet') route = 'clear-wallet';
+            
+            if (routeKey === 'msg') {
+                alert(`Пользователю ${target_id} направлено уведомление: ${msg}`);
+                return;
+            }
+
+            let res = await fetch(`${API_URL}/api/admin/${route}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id, target_id })
+            });
+            let d = await res.json();
+            if (d.success) alert(`Действие ${routeKey} успешно выполнено.`);
+        }
+
+        async function adminBroadcast() {
+            let txt = document.getElementById('admBroadcastText').value;
+            alert(`Рассылка запущена для всех пользователей:\n"${txt}"`);
+        }
+
+        async function adminControlBot(state) {
+            let route = state === 'pause' ? 'pause-bot' : 'resume-bot';
+            let res = await fetch(`${API_URL}/api/admin/${route}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id })
+            });
+            let d = await res.json();
+            alert(`Статус платформы изменен. Приостановка: ${d.isBotPaused}`);
+        }
+
+        async function adminLoadWithdraws() {
+            let res = await fetch(`${API_URL}/api/admin/get-withdraw-requests`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id })
+            });
+            let d = await res.json();
+            let html = '';
+            if (d.requests && d.requests.length > 0) {
+                d.requests.forEach(r => {
+                    html += `<div style="border:1px solid #333; padding:4px; margin-bottom:2px;">
+                        ID: ${r.telegram_id} | ⭐ ${r.amount} | ${r.asset}<br>Кошель: ${r.wallet}<br>
+                        <button class="btn btn-success" style="font-size:9px; padding:2px 4px;" onclick="approveWithdrawRequest(${r.id})">Подтвердить</button>
+                    </div>`;
+                });
+            } else { html = 'Заявок на вывод нет.'; }
+            document.getElementById('admWithdrawsContainer').innerHTML = html;
+        }
+
+        async function approveWithdrawRequest(id) {
+            let res = await fetch(`${API_URL}/api/admin/approve-withdraw`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id, request_id: id })
+            });
+            let d = await res.json();
+            if (d.success) { alert('Вывод подтвержден!'); adminLoadWithdraws(); }
+        }
+
+        async function adminLoadUsersList() {
+            let res = await fetch(`${API_URL}/api/admin/get-users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id })
+            });
+            let d = await res.json();
+            let html = '';
+            d.users.forEach(u => {
+                html += `<div style="margin-bottom:4px; border-bottom:1px solid #222;">
+                    <b>${u.name}</b> (${u.username || 'н/д'})<br>ID: ${u.telegram_id} | Звезды: ${u.stars}<br>
+                    Кошелек: ${u.wallet_address || 'отсутствует'}<br>Статус: ${u.banned === 1 ? '🔴 БЛОК' : '🟢 АКТИВЕН'}
+                </div>`;
+            });
+            document.getElementById('admUsersContainer').innerHTML = html;
+        }
+
+        async function adminDangerAction(type) {
+            let confirmCheck = confirm(`ВНИМАНИЕ! Вы точно хотите произвести опасное действие: ${type}?`);
+            if (!confirmCheck) return;
+            
+            let route = type === 'wallets' ? 'clear-wallets' : 'clear-database';
+            let res = await fetch(`${API_URL}/api/admin/${route}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_id: userProfile.telegram_id })
+            });
+            let d = await res.json();
+            if (d.success) alert('Очистка произведена успешно.');
+            updateProfileData();
         }
     </script>
 </body>
