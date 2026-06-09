@@ -12,7 +12,7 @@
         body { background-color: #0a0a0a; color: #ffffff; overflow-x: hidden; padding-bottom: 75px; }
         
         header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #111; border-bottom: 1px solid #2a2a2a; position: sticky; top: 0; z-index: 100; gap: 8px; flex-wrap: wrap; }
-        .logo-area { font-weight: 900; font-size: 18px; color: #FFD700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.4); display: flex; align-items: center; gap: 8px; }
+        .logo-area { font-weight: 900; font-size: 18px; color: #FFD700; display: flex; align-items: center; gap: 8px; }
         .header-right { display: flex; align-items: center; gap: 8px; }
         .balance-plate { background: #1a1a1a; padding: 6px 12px; border-radius: 8px; border: 1px solid #FFD700; color: #FFD700; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .wallet-btn { background: #1a1a1a; padding: 6px 12px; border-radius: 8px; border: 1px solid #2a2a2a; color: #00cc66; font-weight: 600; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
@@ -73,8 +73,6 @@
         .history-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
         .history-win { color: #00cc66; }
         .history-loss { color: #ff4444; }
-        
-        .referral-item { background: #1a1a1a; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
         
         .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin: 30px 0 40px; flex-wrap: wrap; }
         .podium-item { text-align: center; display: flex; flex-direction: column; align-items: center; width: 100px; }
@@ -329,81 +327,59 @@
         </div>
     </div>
 
-    <!-- Админ-панель модалка -->
+    <!-- Админ-панель -->
     <div id="admin-modal" class="modal">
         <div class="modal-content" style="max-width:500px; max-height:80vh; overflow-y:auto;">
             <div style="font-weight:800; color:#FFD700; margin-bottom:12px;">👑 Админ-панель</div>
-            
             <div style="margin-bottom:12px;">
                 <div style="font-weight:800; margin-bottom:6px;">➕ Начислить звёзды</div>
                 <input type="text" id="admin-target-id" placeholder="Telegram ID" style="width:100%; margin-bottom:6px;">
                 <input type="number" id="admin-add-amount" placeholder="Сумма" style="width:100%; margin-bottom:6px;">
                 <button class="btn-gold btn-main" style="padding:8px;" onclick="adminAddStars()">Начислить</button>
             </div>
-
             <div style="margin-bottom:12px;">
                 <div style="font-weight:800; margin-bottom:6px;">🚫 Бан/Разбан</div>
                 <input type="text" id="admin-ban-id" placeholder="Telegram ID" style="width:100%; margin-bottom:6px;">
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-red btn-main" style="padding:8px;" onclick="adminBanUser()">Забанить</button>
-                    <button class="btn-green btn-main" style="padding:8px;" onclick="adminUnbanUser()">Разбанить</button>
-                </div>
+                <div style="display:flex; gap:8px;"><button class="btn-red btn-main" style="padding:8px;" onclick="adminBanUser()">Забанить</button><button class="btn-green btn-main" style="padding:8px;" onclick="adminUnbanUser()">Разбанить</button></div>
             </div>
-
             <div style="margin-bottom:12px;">
                 <div style="font-weight:800; margin-bottom:6px;">⏸️ Управление ботом</div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-red btn-main" style="padding:8px;" onclick="adminPauseBot()">⏸️ Пауза</button>
-                    <button class="btn-green btn-main" style="padding:8px;" onclick="adminResumeBot()">▶️ Запуск</button>
-                </div>
+                <div style="display:flex; gap:8px;"><button class="btn-red btn-main" style="padding:8px;" onclick="adminPauseBot()">⏸️ Пауза</button><button class="btn-green btn-main" style="padding:8px;" onclick="adminResumeBot()">▶️ Запуск</button></div>
             </div>
-
             <div style="margin-bottom:12px;">
                 <div style="font-weight:800; margin-bottom:6px;">📋 Заявки на вывод</div>
                 <button class="btn-gold btn-main" style="padding:8px;" onclick="adminLoadWithdraws()">Загрузить заявки</button>
                 <div id="admin-withdraws-list" style="margin-top:8px;"></div>
             </div>
-
             <div style="margin-bottom:12px;">
                 <div style="font-weight:800; margin-bottom:6px;">👥 Пользователи</div>
                 <button class="btn-gold btn-main" style="padding:8px;" onclick="adminLoadUsers()">Загрузить пользователей</button>
                 <div id="admin-users-list" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
             </div>
-
             <button class="btn-main" style="background:#2a2a2a; padding:8px; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
         </div>
     </div>
 
     <div id="deposit-modal" class="modal">
         <div class="modal-content">
-            <div class="modal-tabs">
-                <button class="tab-btn active" onclick="switchDepTab('crypto', event)">💎 Крипта</button>
-                <button class="tab-btn" onclick="switchDepTab('stars', event)">⭐ Stars</button>
-            </div>
-            
+            <div class="modal-tabs"><button class="tab-btn active" onclick="switchDepTab('crypto', event)">💎 Крипта</button><button class="tab-btn" onclick="switchDepTab('stars', event)">⭐ Stars</button></div>
             <div id="dep-tab-crypto">
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">1 TON = 100⭐. Требуется подключение кошелька.</p>
                 <input type="number" id="dep-crypto-amount" value="1" min="0.5" step="0.1">
                 <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processCryptoDeposit()">💸 Оплатить через кошелёк</button>
             </div>
-
             <div id="dep-tab-stars" style="display:none;">
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">Пополнение через нативные Telegram Stars</p>
                 <div class="stars-presets">
-                    <button class="stars-preset" onclick="setStarsAmount(10)">10⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(25)">25⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(50)">50⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(100)">100⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(250)">250⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(500)">500⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(1000)">1000⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(2500)">2500⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(10)">10⭐</button><button class="stars-preset" onclick="setStarsAmount(25)">25⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(50)">50⭐</button><button class="stars-preset" onclick="setStarsAmount(100)">100⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(250)">250⭐</button><button class="stars-preset" onclick="setStarsAmount(500)">500⭐</button>
+                    <button class="stars-preset" onclick="setStarsAmount(1000)">1000⭐</button><button class="stars-preset" onclick="setStarsAmount(2500)">2500⭐</button>
                     <button class="stars-preset" onclick="setStarsAmount(5000)">5000⭐</button>
                 </div>
                 <input type="number" id="dep-stars-amount" value="50" min="1" placeholder="Своя сумма" style="margin-top:8px; width:100%;">
                 <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processStarsDeposit()">⭐ Оплатить</button>
             </div>
-
             <button class="btn-main" style="background:none; color:#888; margin-top:8px; font-size:13px;" onclick="closeModal('deposit-modal')">Отмена</button>
         </div>
     </div>
@@ -411,23 +387,11 @@
     <div id="withdraw-modal" class="modal">
         <div class="modal-content">
             <div style="font-weight:800; font-size:16px; margin-bottom:4px; color:#FFD700;">Вывод средств</div>
-            <div class="withdraw-rate">
-                💱 Курсы вывода (после комиссии 15%):<br>
-                • 85⭐ = 1 TON<br>
-                • 43⭐ = 1 USDT<br>
-                • 1⭐ = 1 Star (но комиссия 15%)
-            </div>
-            
-            <select id="withdraw-asset" onchange="toggleWithdrawFields()">
-                <option value="TON">💎 TON</option>
-                <option value="USDT">💵 USDT</option>
-                <option value="Stars">⭐ Stars (В Telegram)</option>
-            </select>
-
+            <div class="withdraw-rate">💱 Курсы вывода (после комиссии 15%):<br>• 85⭐ = 1 TON<br>• 43⭐ = 1 USDT<br>• 1⭐ = 1 Star (но комиссия 15%)</div>
+            <select id="withdraw-asset" onchange="toggleWithdrawFields()"><option value="TON">💎 TON</option><option value="USDT">💵 USDT</option><option value="Stars">⭐ Stars (В Telegram)</option></select>
             <input type="number" id="withdraw-amount" placeholder="Сумма в звездах (мин. 100)" min="100" style="margin-top:8px; width:100%;">
             <input type="text" id="withdraw-wallet" placeholder="Адрес кошелька" style="margin-top:8px; width:100%;">
             <input type="text" id="withdraw-tg-username" placeholder="@юзернейм получателя" style="margin-top:8px; width:100%; display:none;">
-
             <button class="btn-main btn-gold" style="margin-top:12px;" onclick="submitWithdraw()">📤 Отправить заявку</button>
             <button class="btn-main" style="background:none; color:#888; margin-top:6px; font-size:13px;" onclick="closeModal('withdraw-modal')">Отмена</button>
         </div>
@@ -461,1028 +425,205 @@
         let rocketHasBet = false;
         let reconnectAttempts = 0;
 
-        // ========== TON CONNECT ИНИЦИАЛИЗАЦИЯ ==========
+        // ========== TON CONNECT ==========
         let tonConnectUI = null;
         let isWalletConnected = false;
         let walletAddress = '';
 
         function initTonConnect() {
-            if (typeof TON_CONNECT_UI === 'undefined') {
-                console.log('Ждём загрузку TON Connect...');
-                setTimeout(initTonConnect, 500);
-                return;
-            }
-            
+            if (typeof TON_CONNECT_UI === 'undefined') { setTimeout(initTonConnect, 500); return; }
             try {
                 tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
                     manifestUrl: 'https://dadton-full.onrender.com/tonconnect-manifest.json',
                     buttonRootId: 'ton-connect-btn-container'
                 });
-                
                 tonConnectUI.onStatusChange((wallet) => {
-                    console.log('Wallet status changed:', wallet);
                     if (wallet) {
                         isWalletConnected = true;
                         walletAddress = wallet.account.address;
                         const shortAddress = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
                         const walletBtn = document.getElementById('wallet-status');
-                        if (walletBtn) {
-                            walletBtn.innerHTML = `💎 ${shortAddress}`;
-                            walletBtn.classList.add('connected');
-                        }
-                        
+                        if (walletBtn) { walletBtn.innerHTML = `💎 ${shortAddress}`; walletBtn.classList.add('connected'); }
                         fetch(`${BACKEND_URL}/api/save-wallet`, {
-                            method: 'POST',
-                            headers: { 'content-type': 'application/json' },
+                            method: 'POST', headers: { 'content-type': 'application/json' },
                             body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress })
                         });
-                        
                         showToast('✅ Кошелёк подключён!');
                     } else {
                         isWalletConnected = false;
                         walletAddress = '';
                         const walletBtn = document.getElementById('wallet-status');
-                        if (walletBtn) {
-                            walletBtn.innerHTML = '💎 Подключить кошелёк';
-                            walletBtn.classList.remove('connected');
-                        }
+                        if (walletBtn) { walletBtn.innerHTML = '💎 Подключить кошелёк'; walletBtn.classList.remove('connected'); }
                     }
                 });
-                
-                console.log('TON Connect инициализирован');
-            } catch(e) {
-                console.error('TON Connect init error:', e);
-            }
+            } catch(e) { console.error('TON Connect init error:', e); }
         }
-
         setTimeout(initTonConnect, 1000);
 
         async function connectWallet() {
-            if (!tonConnectUI) {
-                tg.showAlert('⏳ Подождите, инициализация...');
-                return;
-            }
-            try {
-                await tonConnectUI.connectWallet();
-            } catch(e) {
-                console.error('Connect error:', e);
-                tg.showAlert('❌ Ошибка подключения кошелька');
-            }
+            if (!tonConnectUI) { tg.showAlert('⏳ Подождите, инициализация...'); return; }
+            try { await tonConnectUI.connectWallet(); } catch(e) { tg.showAlert('❌ Ошибка подключения кошелька'); }
         }
 
-        function showToast(msg) {
-            let toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
-        }
+        function showToast(msg) { let toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000); }
 
-        // Регистрация пользователя
+        // Регистрация
         fetch(`${BACKEND_URL}/api/register`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify(user)
-        })
-        .then(res => res.json())
-        .then(data => {
+        }).then(res => res.json()).then(data => {
             if (data.success) {
-                user = data.user;
-                updateUI();
-                initWebSocket();
-                loadRocketHistory();
-                if (user.telegram_id === "1631627984") {
-                    document.getElementById('admin-panel-btn').style.display = 'block';
-                }
+                user = data.user; updateUI(); initWebSocket(); loadRocketHistory();
+                if (user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display = 'block';
                 loadUserStats();
             }
             document.getElementById('loading-screen').style.display = 'none';
-        }).catch((err) => {
-            console.error('Registration error:', err);
-            document.getElementById('loading-screen').style.display = 'none';
-            showToast('Ошибка подключения к серверу');
-        });
+        }).catch(() => { document.getElementById('loading-screen').style.display = 'none'; showToast('Ошибка подключения'); });
 
         function loadRocketHistory() {
-            fetch(`${BACKEND_URL}/api/rocket-history`)
-                .then(r => r.json())
-                .then(data => {
-                    const container = document.getElementById('rocket-history-list');
-                    if (container) {
-                        if (data.length > 0) {
-                            container.innerHTML = data.map(m => `<span class="crash-badge">${m}x</span>`).join('');
-                        } else {
-                            container.innerHTML = '<span style="color:#888;">Нет данных</span>';
-                        }
-                    }
-                })
-                .catch(() => {
-                    const container = document.getElementById('rocket-history-list');
-                    if (container) container.innerHTML = '<span style="color:#888;">Нет данных</span>';
-                });
+            fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(data => {
+                const container = document.getElementById('rocket-history-list');
+                if (container) container.innerHTML = data.length ? data.map(m => `<span class="crash-badge">${m}x</span>`).join('') : '<span style="color:#888;">Нет данных</span>';
+            }).catch(() => { const c = document.getElementById('rocket-history-list'); if(c) c.innerHTML = '<span style="color:#888;">Нет данных</span>'; });
         }
 
         function loadLeaderboard() {
-            fetch(`${BACKEND_URL}/api/leaderboard`)
-                .then(r => r.json())
-                .then(data => {
-                    const podium = document.getElementById('leaderboard-podium');
-                    const list = document.getElementById('leaderboard-list');
-                    if (!podium || !list) return;
-                    
-                    const top3 = data.slice(0,3);
-                    while (top3.length < 3) top3.push({ name: '?', avatar: null, turnover: 0 });
-                    
-                    podium.innerHTML = `
-                        <div class="podium-item podium-2">
-                            <div class="podium-avatar">${top3[1] && top3[1].avatar ? `<img src="${top3[1].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[1].name || '?').charAt(0)}'">` : (top3[1] ? (top3[1].name || '?').charAt(0) : '?')}</div>
-                            <div class="podium-name">${top3[1] ? (top3[1].name || '?').substring(0,12) : '-'}</div>
-                            <div class="podium-stars">${top3[1] ? (top3[1].turnover || 0) : 0}⭐</div>
-                            <div class="podium-base"></div>
-                        </div>
-                        <div class="podium-item podium-1">
-                            <div class="podium-avatar">${top3[0] && top3[0].avatar ? `<img src="${top3[0].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[0].name || '?').charAt(0)}'">` : (top3[0] ? (top3[0].name || '?').charAt(0) : '?')}</div>
-                            <div class="podium-name">${top3[0] ? (top3[0].name || '?').substring(0,12) : '-'}</div>
-                            <div class="podium-stars">${top3[0] ? (top3[0].turnover || 0) : 0}⭐</div>
-                            <div class="podium-base"></div>
-                        </div>
-                        <div class="podium-item podium-3">
-                            <div class="podium-avatar">${top3[2] && top3[2].avatar ? `<img src="${top3[2].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[2].name || '?').charAt(0)}'">` : (top3[2] ? (top3[2].name || '?').charAt(0) : '?')}</div>
-                            <div class="podium-name">${top3[2] ? (top3[2].name || '?').substring(0,12) : '-'}</div>
-                            <div class="podium-stars">${top3[2] ? (top3[2].turnover || 0) : 0}⭐</div>
-                            <div class="podium-base"></div>
-                        </div>
-                    `;
-                    
-                    list.innerHTML = data.slice(3).map((u, idx) => `
-                        <div class="leaderboard-row">
-                            <div class="leaderboard-rank">#${idx+4}</div>
-                            <div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(u.name || '?').charAt(0)}'">` : (u.name || '?').charAt(0)}</div>
-                            <div class="leaderboard-name">${(u.name || 'Игрок').substring(0,20)}</div>
-                            <div class="leaderboard-stars">${u.turnover || 0}⭐</div>
-                        </div>
-                    `).join('');
-                    if (data.length <= 3) list.innerHTML = '<div style="text-align:center; color:#888;">Нет других игроков</div>';
-                })
-                .catch(() => {
-                    const podium = document.getElementById('leaderboard-podium');
-                    const list = document.getElementById('leaderboard-list');
-                    if (podium) podium.innerHTML = '<div style="color:#888;">Ошибка загрузки</div>';
-                    if (list) list.innerHTML = '<div style="color:#888;">Ошибка загрузки</div>';
-                });
+            fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(data => {
+                const podium = document.getElementById('leaderboard-podium');
+                const list = document.getElementById('leaderboard-list');
+                if (!podium || !list) return;
+                const top3 = data.slice(0,3);
+                while (top3.length < 3) top3.push({ name: '?', avatar: null, turnover: 0 });
+                podium.innerHTML = `
+                    <div class="podium-item podium-2"><div class="podium-avatar">${top3[1] && top3[1].avatar ? `<img src="${top3[1].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[1].name || '?').charAt(0)}'">` : (top3[1] ? (top3[1].name || '?').charAt(0) : '?')}</div><div class="podium-name">${top3[1] ? (top3[1].name || '?').substring(0,12) : '-'}</div><div class="podium-stars">${top3[1] ? (top3[1].turnover || 0) : 0}⭐</div><div class="podium-base"></div></div>
+                    <div class="podium-item podium-1"><div class="podium-avatar">${top3[0] && top3[0].avatar ? `<img src="${top3[0].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[0].name || '?').charAt(0)}'">` : (top3[0] ? (top3[0].name || '?').charAt(0) : '?')}</div><div class="podium-name">${top3[0] ? (top3[0].name || '?').substring(0,12) : '-'}</div><div class="podium-stars">${top3[0] ? (top3[0].turnover || 0) : 0}⭐</div><div class="podium-base"></div></div>
+                    <div class="podium-item podium-3"><div class="podium-avatar">${top3[2] && top3[2].avatar ? `<img src="${top3[2].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[2].name || '?').charAt(0)}'">` : (top3[2] ? (top3[2].name || '?').charAt(0) : '?')}</div><div class="podium-name">${top3[2] ? (top3[2].name || '?').substring(0,12) : '-'}</div><div class="podium-stars">${top3[2] ? (top3[2].turnover || 0) : 0}⭐</div><div class="podium-base"></div></div>`;
+                list.innerHTML = data.slice(3).map((u, idx) => `<div class="leaderboard-row"><div class="leaderboard-rank">#${idx+4}</div><div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(u.name || '?').charAt(0)}'">` : (u.name || '?').charAt(0)}</div><div class="leaderboard-name">${(u.name || 'Игрок').substring(0,20)}</div><div class="leaderboard-stars">${u.turnover || 0}⭐</div></div>`).join('');
+                if (data.length <= 3) list.innerHTML = '<div style="text-align:center; color:#888;">Нет других игроков</div>';
+            }).catch(() => {});
         }
 
         function loadUserGamesHistory() {
-            fetch(`${BACKEND_URL}/api/user-games-history`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(data => {
-                const container = document.getElementById('games-history-list');
-                if (container) {
-                    if (data.length > 0) {
-                        container.innerHTML = data.map(g => `
-                            <div class="history-item">
-                                <span>${g.game_type === 'rocket' ? '🚀' : g.game_type === 'mines' ? '💣' : '🎡'} ${g.game_name || g.game_type}</span>
-                                <span class="${(g.profit || 0) >= 0 ? 'history-win' : 'history-loss'}">${(g.profit || 0) >= 0 ? '+' : ''}${g.profit || 0}⭐</span>
-                            </div>
-                        `).join('');
-                    } else {
-                        container.innerHTML = '<div style="text-align:center; color:#888;">🎮 Сыграйте в игры, чтобы увидеть историю</div>';
-                    }
-                }
-            });
+            fetch(`${BACKEND_URL}/api/user-games-history`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
+            .then(r => r.json()).then(data => { const c = document.getElementById('games-history-list'); if(c) c.innerHTML = data.length ? data.map(g => `<div class="history-item"><span>${g.game_type === 'rocket' ? '🚀' : g.game_type === 'mines' ? '💣' : '🎡'} ${g.game_name || g.game_type}</span><span class="${(g.profit || 0) >= 0 ? 'history-win' : 'history-loss'}">${(g.profit || 0) >= 0 ? '+' : ''}${g.profit || 0}⭐</span></div>`).join('') : '<div style="text-align:center; color:#888;">🎮 Сыграйте в игры, чтобы увидеть историю</div>'; });
         }
 
         function loadUserFinance() {
-            fetch(`${BACKEND_URL}/api/user-finance`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(data => {
-                document.getElementById('fin-deposited').innerText = data.deposited || 0;
-                document.getElementById('fin-withdrawn').innerText = data.withdrawn || 0;
-                const diff = (data.deposited || 0) - (data.withdrawn || 0);
-                document.getElementById('fin-diff').innerText = diff;
-                document.getElementById('fin-balance').innerText = user.stars || 0;
-            });
+            fetch(`${BACKEND_URL}/api/user-finance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
+            .then(r => r.json()).then(data => { document.getElementById('fin-deposited').innerText = data.deposited || 0; document.getElementById('fin-withdrawn').innerText = data.withdrawn || 0; document.getElementById('fin-diff').innerText = (data.deposited || 0) - (data.withdrawn || 0); document.getElementById('fin-balance').innerText = user.stars || 0; });
         }
 
         function loadUserReferrals() {
-            fetch(`${BACKEND_URL}/api/user-referrals`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(data => {
-                document.getElementById('ref-count').innerText = data.count || 0;
-                document.getElementById('ref-earned').innerText = data.earned || 0;
-                document.getElementById('ref-link').value = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`;
-                const container = document.getElementById('referrals-list');
-                if (container) {
-                    if (data.referrals && data.referrals.length > 0) {
-                        container.innerHTML = data.referrals.map(r => `
-                            <div class="referral-item">
-                                <span>${r.name || 'Игрок'}</span>
-                                <span style="color:#00cc66;">+${r.earned || 0}⭐</span>
-                            </div>
-                        `).join('');
-                    } else {
-                        container.innerHTML = '<div style="text-align:center; color:#888;">👥 Пока нет приглашённых друзей</div>';
-                    }
-                }
-            });
+            fetch(`${BACKEND_URL}/api/user-referrals`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
+            .then(r => r.json()).then(data => { document.getElementById('ref-count').innerText = data.count || 0; document.getElementById('ref-earned').innerText = data.earned || 0; document.getElementById('ref-link').value = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`; const c = document.getElementById('referrals-list'); if(c) c.innerHTML = (data.referrals && data.referrals.length) ? data.referrals.map(r => `<div class="referral-item"><span>${r.name || 'Игрок'}</span><span style="color:#00cc66;">+${r.earned || 0}⭐</span></div>`).join('') : '<div style="text-align:center; color:#888;">👥 Пока нет приглашённых друзей</div>'; });
         }
 
         function initWebSocket() {
             if (ws && ws.readyState === WebSocket.OPEN) return;
             ws = new WebSocket(WS_URL);
-            ws.onopen = () => {
-                reconnectAttempts = 0;
-                ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id }));
-            };
+            ws.onopen = () => { reconnectAttempts = 0; ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id })); };
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'balance_update') {
-                        document.getElementById('global-balance').innerText = data.stars;
-                        user.stars = data.stars;
-                    }
+                    if (data.type === 'balance_update') { document.getElementById('global-balance').innerText = data.stars; user.stars = data.stars; }
                     if (data.type === 'rocket_tick') {
-                        document.getElementById('rocket-overlay').style.display = 'flex';
-                        document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`;
-                        document.getElementById('rocket-mult').style.display = 'none';
+                        document.getElementById('rocket-overlay').style.display = 'flex'; document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`; document.getElementById('rocket-mult').style.display = 'none';
                         updateRocketPlayers(data.bets);
-                        
                         const hasBet = data.bets.some(b => b.telegram_id === user.telegram_id && !b.cashedOut);
                         rocketHasBet = hasBet;
-                        
-                        if (hasBet) {
-                            document.getElementById('rocket-cancel-btn').style.display = 'block';
-                            setRocketButtonState('waiting_with_bet');
-                        } else {
-                            document.getElementById('rocket-cancel-btn').style.display = 'none';
-                            setRocketButtonState('bet');
-                        }
+                        if (hasBet) { document.getElementById('rocket-cancel-btn').style.display = 'block'; setRocketButtonState('waiting_with_bet'); } 
+                        else { document.getElementById('rocket-cancel-btn').style.display = 'none'; setRocketButtonState('bet'); }
                     }
-                    if (data.type === 'rocket_start') {
-                        document.getElementById('rocket-overlay').style.display = 'none';
-                        const mEl = document.getElementById('rocket-mult');
-                        mEl.style.display = 'block';
-                        mEl.style.color = '#FFD700';
-                        mEl.innerText = `1.00x`;
-                        document.getElementById('rocket-video').play();
-                        if (rocketHasBet) {
-                            setRocketButtonState('flying');
-                        } else {
-                            setRocketButtonState('waiting');
-                        }
-                    }
-                    if (data.type === 'rocket_fly') {
-                        const mEl = document.getElementById('rocket-mult');
-                        mEl.innerText = `${data.multiplier}x`;
-                    }
-                    if (data.type === 'rocket_crash') {
-                        const mEl = document.getElementById('rocket-mult');
-                        mEl.style.color = '#ff4444';
-                        mEl.innerText = `💥 ВЗРЫВ! ${data.multiplier}x`;
-                        document.getElementById('rocket-video').pause();
-                        setRocketButtonState('waiting');
-                        document.getElementById('rocket-cancel-btn').style.display = 'none';
-                        rocketHasBet = false;
-                        updateBalance();
-                        loadRocketHistory();
-                        loadUserStats();
-                    }
-                    if (data.type === 'rocket_bets_update') {
-                        updateRocketPlayers(data.bets);
-                        let myBet = data.bets.find(b => b.telegram_id === user.telegram_id);
-                        if (myBet && !myBet.cashedOut) {
-                            rocketHasBet = true;
-                            document.getElementById('rocket-cancel-btn').style.display = 'block';
-                            setRocketButtonState('flying');
-                        } else {
-                            rocketHasBet = false;
-                            document.getElementById('rocket-cancel-btn').style.display = 'none';
-                            setRocketButtonState('bet');
-                        }
-                    }
-                    if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) {
-                        tg.HapticFeedback.notificationOccurred('success');
-                        showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`);
-                        setRocketButtonState('waiting');
-                        rocketHasBet = false;
-                        document.getElementById('rocket-cancel-btn').style.display = 'none';
-                        updateBalance();
-                        loadUserStats();
-                        loadUserGamesHistory();
-                    }
-                    if (data.type === 'rocket_bet_cancelled') {
-                        showToast('❌ Ставка отменена');
-                        setRocketButtonState('bet');
-                        rocketHasBet = false;
-                        document.getElementById('rocket-cancel-btn').style.display = 'none';
-                        updateBalance();
-                    }
-                    if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') {
-                        if (data.timer) document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`;
-                        document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`;
-                        updateRoulettePlayers(data.bets || []);
-                        drawRoulette(data.bets || [], 0);
-                        let myBet = (data.bets || []).find(b => b.telegram_id === user.telegram_id);
-                        if (myBet) {
-                            document.getElementById('roulette-cancel-btn').style.display = 'block';
-                        } else {
-                            document.getElementById('roulette-cancel-btn').style.display = 'none';
-                        }
-                    }
-                    if (data.type === 'roulette_roll') {
-                        animateRoulette(data.bets || [], data.winner);
-                    }
-                    if (data.type === 'roulette_wait_players') {
-                        document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`;
-                    }
-                    if (data.type === 'roulette_bet_cancelled') {
-                        showToast('❌ Ставка отменена');
-                        document.getElementById('roulette-cancel-btn').style.display = 'none';
-                        updateBalance();
-                    }
-                } catch(e) { console.error('WebSocket message error:', e); }
+                    if (data.type === 'rocket_start') { document.getElementById('rocket-overlay').style.display = 'none'; const mEl = document.getElementById('rocket-mult'); mEl.style.display = 'block'; mEl.style.color = '#FFD700'; mEl.innerText = `1.00x`; document.getElementById('rocket-video').play(); if (rocketHasBet) setRocketButtonState('flying'); else setRocketButtonState('waiting'); }
+                    if (data.type === 'rocket_fly') { const mEl = document.getElementById('rocket-mult'); mEl.innerText = `${data.multiplier}x`; }
+                    if (data.type === 'rocket_crash') { const mEl = document.getElementById('rocket-mult'); mEl.style.color = '#ff4444'; mEl.innerText = `💥 ВЗРЫВ! ${data.multiplier}x`; document.getElementById('rocket-video').pause(); setRocketButtonState('waiting'); document.getElementById('rocket-cancel-btn').style.display = 'none'; rocketHasBet = false; updateBalance(); loadRocketHistory(); loadUserStats(); }
+                    if (data.type === 'rocket_bets_update') { updateRocketPlayers(data.bets); let myBet = data.bets.find(b => b.telegram_id === user.telegram_id); if (myBet && !myBet.cashedOut) { rocketHasBet = true; document.getElementById('rocket-cancel-btn').style.display = 'block'; setRocketButtonState('flying'); } else { rocketHasBet = false; document.getElementById('rocket-cancel-btn').style.display = 'none'; setRocketButtonState('bet'); } }
+                    if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) { tg.HapticFeedback.notificationOccurred('success'); showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`); setRocketButtonState('waiting'); rocketHasBet = false; document.getElementById('rocket-cancel-btn').style.display = 'none'; updateBalance(); loadUserStats(); loadUserGamesHistory(); }
+                    if (data.type === 'rocket_bet_cancelled') { showToast('❌ Ставка отменена'); setRocketButtonState('bet'); rocketHasBet = false; document.getElementById('rocket-cancel-btn').style.display = 'none'; updateBalance(); }
+                    if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') { if (data.timer) document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`; document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`; updateRoulettePlayers(data.bets || []); drawRoulette(data.bets || [], 0); let myBet = (data.bets || []).find(b => b.telegram_id === user.telegram_id); document.getElementById('roulette-cancel-btn').style.display = myBet ? 'block' : 'none'; }
+                    if (data.type === 'roulette_roll') { animateRoulette(data.bets || [], data.winner); }
+                    if (data.type === 'roulette_wait_players') { document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`; }
+                    if (data.type === 'roulette_bet_cancelled') { showToast('❌ Ставка отменена'); document.getElementById('roulette-cancel-btn').style.display = 'none'; updateBalance(); }
+                } catch(e) { console.error('WebSocket error:', e); }
             };
-            ws.onclose = () => {
-                setTimeout(() => {
-                    if (reconnectAttempts < 5) {
-                        reconnectAttempts++;
-                        initWebSocket();
-                    }
-                }, 3000);
-            };
-            ws.onerror = (err) => {
-                console.error('WebSocket error:', err);
-            };
+            ws.onclose = () => { setTimeout(() => { if (reconnectAttempts < 5) { reconnectAttempts++; initWebSocket(); } }, 3000); };
         }
 
-        function updateBalance() {
-            fetch(`${BACKEND_URL}/api/get-balance`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(d => {
-                if (d.stars !== undefined) {
-                    document.getElementById('global-balance').innerText = d.stars;
-                    user.stars = d.stars;
-                }
-            });
-        }
+        function updateBalance() { fetch(`${BACKEND_URL}/api/get-balance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.stars !== undefined) { document.getElementById('global-balance').innerText = d.stars; user.stars = d.stars; } }); }
 
-        function updateUI() {
-            document.getElementById('global-balance').innerText = user.stars || 0;
-            document.getElementById('profile-name').innerText = user.name;
-            document.getElementById('profile-username').innerText = user.username ? '@' + user.username : '';
-            if (user.avatar) {
-                document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-            } else {
-                document.getElementById('user-avatar-container').innerText = user.name.charAt(0);
-            }
-        }
+        function updateUI() { document.getElementById('global-balance').innerText = user.stars || 0; document.getElementById('profile-name').innerText = user.name; document.getElementById('profile-username').innerText = user.username ? '@' + user.username : ''; if (user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`; else document.getElementById('user-avatar-container').innerText = user.name.charAt(0); }
 
-        function loadUserStats() {
-            fetch(`${BACKEND_URL}/api/user-stats`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(data => {
-                if (data.success) {
-                    document.getElementById('stat-games').innerText = data.games_played || 0;
-                    document.getElementById('stat-turnover').innerText = data.turnover || 0;
-                    document.getElementById('stat-wins').innerText = data.wins || 0;
-                    let wr = data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0;
-                    document.getElementById('stat-wr').innerText = wr + '%';
-                }
-            });
-        }
+        function loadUserStats() { fetch(`${BACKEND_URL}/api/user-stats`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(data => { if (data.success) { document.getElementById('stat-games').innerText = data.games_played || 0; document.getElementById('stat-turnover').innerText = data.turnover || 0; document.getElementById('stat-wins').innerText = data.wins || 0; document.getElementById('stat-wr').innerText = (data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0) + '%'; } }); }
 
-        function switchPage(pageId) {
-            tg.HapticFeedback.impactOccurred('medium');
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            const target = document.getElementById(`page-${pageId}`);
-            if (target) target.classList.add('active');
-            const nav = document.getElementById(`nav-${pageId}`);
-            if (nav) nav.classList.add('active');
-            if (pageId === 'mines') buildMinesBoard();
-            if (pageId === 'profile') {
-                loadUserStats();
-                loadUserGamesHistory();
-                loadUserFinance();
-                loadUserReferrals();
-            }
-            if (pageId === 'leaderboard') loadLeaderboard();
-        }
+        function switchPage(pageId) { tg.HapticFeedback.impactOccurred('medium'); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const target = document.getElementById(`page-${pageId}`); if (target) target.classList.add('active'); const nav = document.getElementById(`nav-${pageId}`); if (nav) nav.classList.add('active'); if (pageId === 'mines') buildMinesBoard(); if (pageId === 'profile') { loadUserStats(); loadUserGamesHistory(); loadUserFinance(); loadUserReferrals(); } if (pageId === 'leaderboard') loadLeaderboard(); }
 
-        function switchProfileTab(tab) {
-            document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active'));
-            if (tab === 'stats') {
-                document.querySelectorAll('.profile-tab')[0].classList.add('active');
-                document.getElementById('profile-tab-stats').classList.add('active');
-            } else if (tab === 'games') {
-                document.querySelectorAll('.profile-tab')[1].classList.add('active');
-                document.getElementById('profile-tab-games').classList.add('active');
-                loadUserGamesHistory();
-            } else if (tab === 'finance') {
-                document.querySelectorAll('.profile-tab')[2].classList.add('active');
-                document.getElementById('profile-tab-finance').classList.add('active');
-                loadUserFinance();
-            } else if (tab === 'referrals') {
-                document.querySelectorAll('.profile-tab')[3].classList.add('active');
-                document.getElementById('profile-tab-referrals').classList.add('active');
-                loadUserReferrals();
-            }
-        }
+        function switchProfileTab(tab) { document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active')); if (tab === 'stats') { document.querySelectorAll('.profile-tab')[0].classList.add('active'); document.getElementById('profile-tab-stats').classList.add('active'); } else if (tab === 'games') { document.querySelectorAll('.profile-tab')[1].classList.add('active'); document.getElementById('profile-tab-games').classList.add('active'); loadUserGamesHistory(); } else if (tab === 'finance') { document.querySelectorAll('.profile-tab')[2].classList.add('active'); document.getElementById('profile-tab-finance').classList.add('active'); loadUserFinance(); } else if (tab === 'referrals') { document.querySelectorAll('.profile-tab')[3].classList.add('active'); document.getElementById('profile-tab-referrals').classList.add('active'); loadUserReferrals(); } }
 
-        function adjustBet(inputId, action) {
-            let el = document.getElementById(inputId);
-            let val = parseFloat(el.value) || 10;
-            let maxVal = parseInt(user.stars) || 10000;
-            if (action === 'min') val = 10;
-            else if (action === 'max') val = Math.min(maxVal, 10000);
-            else if (action === 'half') val = Math.max(10, Math.floor(val / 2));
-            else if (action === 'double') val = Math.min(val * 2, maxVal);
-            else if (typeof action === 'number') val = Math.min(val + action, maxVal);
-            el.value = Math.max(10, Math.min(val, maxVal));
-        }
+        function adjustBet(inputId, action) { let el = document.getElementById(inputId); let val = parseFloat(el.value) || 10; let maxVal = parseInt(user.stars) || 10000; if (action === 'min') val = 10; else if (action === 'max') val = Math.min(maxVal, 10000); else if (action === 'half') val = Math.max(10, Math.floor(val / 2)); else if (action === 'double') val = Math.min(val * 2, maxVal); else if (typeof action === 'number') val = Math.min(val + action, maxVal); el.value = Math.max(10, Math.min(val, maxVal)); }
 
         let currentRocketBtnState = 'bet';
-        function setRocketButtonState(state) {
-            const btn = document.getElementById('rocket-action-btn');
-            currentRocketBtnState = state;
-            if (state === 'bet') {
-                btn.className = "btn-main btn-gold";
-                btn.innerText = "💰 Сделать ставку";
-                btn.disabled = false;
-            } else if (state === 'waiting_with_bet') {
-                btn.className = "btn-main btn-gray";
-                btn.innerText = "⏳ Ожидание старта";
-                btn.disabled = true;
-            } else if (state === 'flying') {
-                btn.className = "btn-main btn-green";
-                btn.innerText = "💸 Забрать";
-                btn.disabled = false;
-            } else {
-                btn.className = "btn-main btn-gray";
-                btn.innerText = "⏳ Ожидание";
-                btn.disabled = true;
-            }
-        }
+        function setRocketButtonState(state) { const btn = document.getElementById('rocket-action-btn'); currentRocketBtnState = state; if (state === 'bet') { btn.className = "btn-main btn-gold"; btn.innerText = "💰 Сделать ставку"; btn.disabled = false; } else if (state === 'waiting_with_bet') { btn.className = "btn-main btn-gray"; btn.innerText = "⏳ Ожидание старта"; btn.disabled = true; } else if (state === 'flying') { btn.className = "btn-main btn-green"; btn.innerText = "💸 Забрать"; btn.disabled = false; } else { btn.className = "btn-main btn-gray"; btn.innerText = "⏳ Ожидание"; btn.disabled = true; } }
 
-        function handleRocketAction() {
-            if (currentRocketBtnState === 'bet') {
-                let amt = parseInt(document.getElementById('rocket-bet-amount').value);
-                if (amt > (user.stars || 0)) {
-                    showToast('❌ Недостаточно средств!');
-                    return;
-                }
-                let auto = document.getElementById('rocket-auto-check').checked;
-                let autoVal = parseFloat(document.getElementById('rocket-auto-val').value);
-                ws.send(JSON.stringify({
-                    type: 'rocket_bet',
-                    telegram_id: user.telegram_id,
-                    name: user.name,
-                    avatar: user.avatar,
-                    amount: amt,
-                    autoCashout: auto,
-                    autoCashoutValue: autoVal
-                }));
-                setRocketButtonState('waiting_with_bet');
-            } else if (currentRocketBtnState === 'flying') {
-                ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id }));
-            }
-        }
+        function handleRocketAction() { if (currentRocketBtnState === 'bet') { let amt = parseInt(document.getElementById('rocket-bet-amount').value); if (amt > (user.stars || 0)) { showToast('❌ Недостаточно средств!'); return; } let auto = document.getElementById('rocket-auto-check').checked; let autoVal = parseFloat(document.getElementById('rocket-auto-val').value); ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: autoVal })); setRocketButtonState('waiting_with_bet'); } else if (currentRocketBtnState === 'flying') { ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); } }
 
-        function cancelRocketBet() {
-            fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) {
-                    ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id }));
-                } else {
-                    showToast(d.msg || 'Нельзя отменить ставку');
-                }
-            });
-        }
+        function cancelRocketBet() { fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id })); else showToast(d.msg || 'Нельзя отменить ставку'); }); }
 
-        function cancelRouletteBet() {
-            fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) {
-                    ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id }));
-                } else {
-                    showToast(d.msg || 'Нельзя отменить ставку');
-                }
-            });
-        }
+        function cancelRouletteBet() { fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id })); else showToast(d.msg || 'Нельзя отменить ставку'); }); }
 
-        function updateRocketPlayers(bets) {
-            const container = document.getElementById('rocket-players-list');
-            if (!container) return;
-            container.innerHTML = '';
-            if (bets.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#888;">Нет участников</div>';
-                return;
-            }
-            bets.forEach(b => {
-                container.innerHTML += `
-                    <div class="list-row">
-                        <div class="list-user-info">
-                            ${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; color:#fff; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}
-                            <span>${b.name || 'Игрок'}</span>
-                        </div>
-                        <div>${b.amount}⭐ ${b.cashedOut ? `<span style="color:#00cc66;">(${b.multiplier}x)</span>` : '⏳'}</div>
-                    </div>`;
-            });
-        }
+        function updateRocketPlayers(bets) { const container = document.getElementById('rocket-players-list'); if (!container) return; container.innerHTML = bets.length ? bets.map(b => `<div class="list-row"><div class="list-user-info">${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; color:#fff; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}<span>${b.name || 'Игрок'}</span></div><div>${b.amount}⭐ ${b.cashedOut ? `<span style="color:#00cc66;">(${b.multiplier}x)</span>` : '⏳'}</div></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>'; }
 
-        function buildMinesBoard() {
-            const board = document.getElementById('mines-grid-board');
-            if (!board) return;
-            board.innerHTML = '';
-            for (let i = 0; i < 25; i++) {
-                board.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`;
-            }
-        }
+        function buildMinesBoard() { const board = document.getElementById('mines-grid-board'); if (!board) return; board.innerHTML = ''; for (let i = 0; i < 25; i++) board.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; }
 
-        function handleMinesAction() {
-            const btn = document.getElementById('mines-action-btn');
-            if (currentMinesGameStatus === 'idle') {
-                let amt = parseInt(document.getElementById('mines-bet-amount').value);
-                let count = document.getElementById('mines-count-select').value;
-                if (amt > (user.stars || 0)) {
-                    showToast('❌ Недостаточно средств!');
-                    return;
-                }
-                fetch(`${BACKEND_URL}/api/games/mines/start`, {
-                    method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: count })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) {
-                        currentMinesGameStatus = 'playing';
-                        btn.className = "btn-main btn-green";
-                        btn.innerText = "💰 Забрать (0x)";
-                        document.getElementById('mines-status-text').innerHTML = "Игра началась! Открывайте клетки.";
-                        buildMinesBoard();
-                        updateBalance();
-                    } else {
-                        showToast(d.msg || 'Ошибка');
-                    }
-                });
-            } else if (currentMinesGameStatus === 'playing') {
-                fetch(`${BACKEND_URL}/api/games/mines/cashout`, {
-                    method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: user.telegram_id })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) {
-                        tg.HapticFeedback.notificationOccurred('success');
-                        showToast(`🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`);
-                        document.getElementById('mines-status-text').innerHTML = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`;
-                        resetMinesButtons();
-                        updateBalance();
-                        loadUserStats();
-                        loadUserGamesHistory();
-                    }
-                });
-            }
-        }
+        function handleMinesAction() { const btn = document.getElementById('mines-action-btn'); if (currentMinesGameStatus === 'idle') { let amt = parseInt(document.getElementById('mines-bet-amount').value); let count = document.getElementById('mines-count-select').value; if (amt > (user.stars || 0)) { showToast('❌ Недостаточно средств!'); return; } fetch(`${BACKEND_URL}/api/games/mines/start`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: count }) }).then(r => r.json()).then(d => { if (d.success) { currentMinesGameStatus = 'playing'; btn.className = "btn-main btn-green"; btn.innerText = "💰 Забрать (0x)"; document.getElementById('mines-status-text').innerHTML = "Игра началась! Открывайте клетки."; buildMinesBoard(); updateBalance(); } else showToast(d.msg || 'Ошибка'); }); } else if (currentMinesGameStatus === 'playing') { fetch(`${BACKEND_URL}/api/games/mines/cashout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) { tg.HapticFeedback.notificationOccurred('success'); showToast(`🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`); document.getElementById('mines-status-text').innerHTML = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } }); } }
 
-        function clickMineTile(idx) {
-            if (currentMinesGameStatus !== 'playing') return;
-            fetch(`${BACKEND_URL}/api/games/mines/reveal`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ telegram_id: user.telegram_id, index: idx })
-            }).then(r => r.json()).then(d => {
-                if (!d.success) return;
-                let tile = document.getElementById(`mine-${idx}`);
-                if (d.hitMine) {
-                    tg.HapticFeedback.notificationOccurred('error');
-                    tile.classList.add('blown');
-                    tile.innerText = '💣';
-                    document.getElementById('mines-status-text').innerHTML = "💥 Взрыв! Ставка проиграна.";
-                    if (d.board) {
-                        d.board.forEach((isMine, i) => {
-                            let t = document.getElementById(`mine-${i}`);
-                            if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; }
-                        });
-                    }
-                    resetMinesButtons();
-                    updateBalance();
-                    loadUserStats();
-                    loadUserGamesHistory();
-                } else {
-                    tg.HapticFeedback.impactOccurred('light');
-                    tile.classList.add('safe');
-                    tile.innerText = '⭐';
-                    document.getElementById('mines-action-btn').innerHTML = `💰 Забрать (${d.multiplier}x)`;
-                    if (d.win) {
-                        showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`);
-                        document.getElementById('mines-status-text').innerHTML = `🎉 ПОБЕДА! Очищено всё поле: ${d.winAmount}⭐`;
-                        resetMinesButtons();
-                        updateBalance();
-                        loadUserStats();
-                        loadUserGamesHistory();
-                    }
-                }
-            });
-        }
+        function clickMineTile(idx) { if (currentMinesGameStatus !== 'playing') return; fetch(`${BACKEND_URL}/api/games/mines/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, index: idx }) }).then(r => r.json()).then(d => { if (!d.success) return; let tile = document.getElementById(`mine-${idx}`); if (d.hitMine) { tg.HapticFeedback.notificationOccurred('error'); tile.classList.add('blown'); tile.innerText = '💣'; document.getElementById('mines-status-text').innerHTML = "💥 Взрыв! Ставка проиграна."; if (d.board) d.board.forEach((isMine, i) => { let t = document.getElementById(`mine-${i}`); if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; } }); resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } else { tg.HapticFeedback.impactOccurred('light'); tile.classList.add('safe'); tile.innerText = '⭐'; document.getElementById('mines-action-btn').innerHTML = `💰 Забрать (${d.multiplier}x)`; if (d.win) { showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`); document.getElementById('mines-status-text').innerHTML = `🎉 ПОБЕДА! Очищено всё поле: ${d.winAmount}⭐`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } } }); }
 
-        function resetMinesButtons() {
-            currentMinesGameStatus = 'idle';
-            const btn = document.getElementById('mines-action-btn');
-            btn.className = "btn-main btn-gold";
-            btn.innerText = "💣 Новая игра";
-        }
+        function resetMinesButtons() { currentMinesGameStatus = 'idle'; const btn = document.getElementById('mines-action-btn'); btn.className = "btn-main btn-gold"; btn.innerText = "💣 Новая игра"; }
 
-        function handleRouletteBet() {
-            let amt = parseInt(document.getElementById('roulette-bet-amount').value);
-            if (amt > (user.stars || 0)) {
-                showToast('❌ Недостаточно средств!');
-                return;
-            }
-            ws.send(JSON.stringify({
-                type: 'roulette_bet',
-                telegram_id: user.telegram_id,
-                name: user.name,
-                avatar: user.avatar,
-                amount: amt
-            }));
-        }
+        function handleRouletteBet() { let amt = parseInt(document.getElementById('roulette-bet-amount').value); if (amt > (user.stars || 0)) { showToast('❌ Недостаточно средств!'); return; } ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt })); }
 
-        function updateRoulettePlayers(bets) {
-            const container = document.getElementById('roulette-players-list');
-            if (!container) return;
-            container.innerHTML = '';
-            if (bets.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#888;">Нет участников</div>';
-                return;
-            }
-            bets.forEach(b => {
-                container.innerHTML += `
-                    <div class="list-row" style="border-left: 4px solid ${b.color || '#FFD700'}; padding-left: 6px;">
-                        <div class="list-user-info">
-                            ${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}
-                            <span>${b.name || 'Игрок'}</span>
-                        </div>
-                        <div><b>${b.amount}⭐</b></div>
-                    </div>`;
-            });
-        }
+        function updateRoulettePlayers(bets) { const container = document.getElementById('roulette-players-list'); if (!container) return; container.innerHTML = bets.length ? bets.map(b => `<div class="list-row" style="border-left: 4px solid ${b.color || '#FFD700'}; padding-left: 6px;"><div class="list-user-info">${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}<span>${b.name || 'Игрок'}</span></div><div><b>${b.amount}⭐</b></div></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>'; }
 
-        function drawRoulette(bets, startRotation = 0) {
-            const canvas = document.getElementById('roulette-canvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 260, 260);
-            if (!bets || bets.length === 0) {
-                ctx.beginPath();
-                ctx.arc(130, 130, 120, 0, 2 * Math.PI);
-                ctx.fillStyle = '#111';
-                ctx.fill();
-                ctx.strokeStyle = '#2a2a2a';
-                ctx.stroke();
-                return;
-            }
-            let total = bets.reduce((a, b) => a + (b.amount || 0), 0);
-            if (total === 0) return;
-            let currentAngle = startRotation;
-            bets.forEach(b => {
-                let sliceAngle = ((b.amount || 0) / total) * 2 * Math.PI;
-                ctx.beginPath();
-                ctx.moveTo(130, 130);
-                ctx.arc(130, 130, 120, currentAngle, currentAngle + sliceAngle);
-                ctx.fillStyle = b.color || '#FFD700';
-                ctx.fill();
-                ctx.stroke();
-                let middleAngle = currentAngle + sliceAngle / 2;
-                let avatarX = 130 + Math.cos(middleAngle) * 70;
-                let avatarY = 130 + Math.sin(middleAngle) * 70;
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(avatarX, avatarY, 16, 0, 2 * Math.PI);
-                ctx.clip();
-                if (b.avatar) {
-                    let img = new Image();
-                    img.src = b.avatar;
-                    if (img.complete) {
-                        ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32);
-                    } else {
-                        img.onload = () => {
-                            ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32);
-                        };
-                        ctx.fillStyle = "#555";
-                        ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32);
-                        ctx.fillStyle = "#fff";
-                        ctx.font = "bold 12px Inter";
-                        ctx.textAlign = "center";
-                        ctx.textBaseline = "middle";
-                        ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY);
-                    }
-                } else {
-                    ctx.fillStyle = "#555";
-                    ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = "bold 12px Inter";
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY);
-                }
-                ctx.restore();
-                currentAngle += sliceAngle;
-            });
-        }
+        function drawRoulette(bets, startRotation = 0) { const canvas = document.getElementById('roulette-canvas'); if (!canvas) return; const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, 260, 260); if (!bets || bets.length === 0) { ctx.beginPath(); ctx.arc(130, 130, 120, 0, 2 * Math.PI); ctx.fillStyle = '#111'; ctx.fill(); ctx.strokeStyle = '#2a2a2a'; ctx.stroke(); return; } let total = bets.reduce((a, b) => a + (b.amount || 0), 0); if (total === 0) return; let currentAngle = startRotation; bets.forEach(b => { let sliceAngle = ((b.amount || 0) / total) * 2 * Math.PI; ctx.beginPath(); ctx.moveTo(130, 130); ctx.arc(130, 130, 120, currentAngle, currentAngle + sliceAngle); ctx.fillStyle = b.color || '#FFD700'; ctx.fill(); ctx.stroke(); let middleAngle = currentAngle + sliceAngle / 2; let avatarX = 130 + Math.cos(middleAngle) * 70; let avatarY = 130 + Math.sin(middleAngle) * 70; ctx.save(); ctx.beginPath(); ctx.arc(avatarX, avatarY, 16, 0, 2 * Math.PI); ctx.clip(); if (b.avatar) { let img = new Image(); img.src = b.avatar; if (img.complete) ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32); else { img.onload = () => ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32); ctx.fillStyle = "#555"; ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32); ctx.fillStyle = "#fff"; ctx.font = "bold 12px Inter"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY); } } else { ctx.fillStyle = "#555"; ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32); ctx.fillStyle = "#fff"; ctx.font = "bold 12px Inter"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY); } ctx.restore(); currentAngle += sliceAngle; }); }
 
-        function animateRoulette(bets, winner) {
-            let start = performance.now();
-            let duration = 3000;
-            let totalRotation = 10 * Math.PI + Math.random() * 2 * Math.PI;
-            function animate(time) {
-                let elapsed = time - start;
-                let progress = Math.min(elapsed / duration, 1);
-                let ease = 1 - Math.pow(1 - progress, 3);
-                let currentRot = ease * totalRotation;
-                drawRoulette(bets, currentRot);
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    document.getElementById('roulette-timer-text').innerHTML = `🏆 Победитель: ${winner.name || 'Игрок'}`;
-                    showToast(`🎡 Победитель: ${winner.name || 'Игрок'}! +${winner.amount || 0}⭐`);
-                    updateBalance();
-                    loadUserStats();
-                    loadUserGamesHistory();
-                    document.getElementById('roulette-cancel-btn').style.display = 'none';
-                }
-            }
-            requestAnimationFrame(animate);
-        }
+        function animateRoulette(bets, winner) { let start = performance.now(); let duration = 3000; let totalRotation = 10 * Math.PI + Math.random() * 2 * Math.PI; function animate(time) { let elapsed = time - start; let progress = Math.min(elapsed / duration, 1); let ease = 1 - Math.pow(1 - progress, 3); drawRoulette(bets, ease * totalRotation); if (progress < 1) requestAnimationFrame(animate); else { document.getElementById('roulette-timer-text').innerHTML = `🏆 Победитель: ${winner.name || 'Игрок'}`; showToast(`🎡 Победитель: ${winner.name || 'Игрок'}! +${winner.amount || 0}⭐`); updateBalance(); loadUserStats(); loadUserGamesHistory(); document.getElementById('roulette-cancel-btn').style.display = 'none'; } } requestAnimationFrame(animate); }
 
-        function openModal(id) { 
-            document.getElementById(id).style.display = 'flex'; 
-            toggleWithdrawFields();
-        }
-        function closeModal(id) { 
-            document.getElementById(id).style.display = 'none'; 
-        }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function switchDepTab(tab, event) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); if (tab === 'crypto') { document.getElementById('dep-tab-crypto').style.display = 'block'; document.getElementById('dep-tab-stars').style.display = 'none'; } else { document.getElementById('dep-tab-crypto').style.display = 'none'; document.getElementById('dep-tab-stars').style.display = 'block'; } if (event && event.target) event.target.classList.add('active'); }
+        function setStarsAmount(amount) { document.getElementById('dep-stars-amount').value = amount; }
+        function toggleWithdrawFields() { let asset = document.getElementById('withdraw-asset').value; let walletInput = document.getElementById('withdraw-wallet'); let usernameInput = document.getElementById('withdraw-tg-username'); if (asset === 'Stars') { walletInput.style.display = 'none'; usernameInput.style.display = 'block'; } else { walletInput.style.display = 'block'; usernameInput.style.display = 'none'; } }
 
-        function switchDepTab(tab, event) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            if (tab === 'crypto') {
-                document.getElementById('dep-tab-crypto').style.display = 'block';
-                document.getElementById('dep-tab-stars').style.display = 'none';
-            } else {
-                document.getElementById('dep-tab-crypto').style.display = 'none';
-                document.getElementById('dep-tab-stars').style.display = 'block';
-            }
-            if (event && event.target) event.target.classList.add('active');
-        }
+        // ПОПОЛНЕНИЕ STARS
+        function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; if (amt < 1) return showToast('Минимальная сумма 1 звезда'); fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if (d.success && d.invoice_link) { tg.openInvoice(d.invoice_link, function(status) { if (status === 'paid') { showToast('🎉 Зачисление прошло успешно!'); closeModal('deposit-modal'); updateBalance(); loadUserStats(); loadUserFinance(); } }); } else showToast('Ошибка создания счёта'); }); }
 
-        function setStarsAmount(amount) {
-            document.getElementById('dep-stars-amount').value = amount;
-        }
-
-        function toggleWithdrawFields() {
-            let asset = document.getElementById('withdraw-asset').value;
-            let walletInput = document.getElementById('withdraw-wallet');
-            let usernameInput = document.getElementById('withdraw-tg-username');
-            if (asset === 'Stars') {
-                walletInput.style.display = 'none';
-                usernameInput.style.display = 'block';
-            } else {
-                walletInput.style.display = 'block';
-                usernameInput.style.display = 'none';
-            }
-        }
-
-        // ========== ПОПОЛНЕНИЕ TELEGRAM STARS ==========
-        function processStarsDeposit() {
-            let amt = document.getElementById('dep-stars-amount').value;
-            if (amt < 1) return showToast('Минимальная сумма 1 звезда');
-            fetch(`${BACKEND_URL}/api/create-invoice`, {
-                method: 'POST',
-                headers: {'content-type':'application/json'},
-                body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt })
-            }).then(r => r.json()).then(d => {
-                if (d.success && d.invoice_link) {
-                    tg.openInvoice(d.invoice_link, function(status) {
-                        if (status === 'paid') {
-                            showToast('🎉 Зачисление прошло успешно!');
-                            closeModal('deposit-modal');
-                            updateBalance();
-                            loadUserStats();
-                            loadUserFinance();
-                        }
-                    });
-                } else {
-                    showToast('Ошибка создания счёта');
-                }
-            });
-        }
-
-        // ========== ПОПОЛНЕНИЕ КРИПТОЙ (TON) ==========
+        // ПОПОЛНЕНИЕ КРИПТОЙ (TON) - ИСПРАВЛЕНА ОШИБКА payload
         async function processCryptoDeposit() {
-            if (!tonConnectUI) {
-                tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
-                return;
-            }
-            
+            if (!tonConnectUI) { tg.showAlert('❌ TON Connect не загружен. Обновите страницу.'); return; }
             const connected = await tonConnectUI.connected;
-            if (!connected) {
-                tg.showAlert('❌ Кошелёк не подключён!\n\nНажмите на кнопку "💎 Подключить кошелёк" вверху экрана.');
-                closeModal('deposit-modal');
-                return;
-            }
-            
+            if (!connected) { tg.showAlert('❌ Кошелёк не подключён!\n\nНажмите на кнопку "💎 Подключить кошелёк" вверху экрана.'); closeModal('deposit-modal'); return; }
             let tonAmount = parseFloat(document.getElementById('dep-crypto-amount').value);
-            if (isNaN(tonAmount) || tonAmount < 0.5) {
-                showToast('❌ Минимум 0.5 TON');
-                return;
-            }
-            
+            if (isNaN(tonAmount) || tonAmount < 0.5) { showToast('❌ Минимум 0.5 TON'); return; }
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
-            
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 360,
-                messages: [{
-                    address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP",
-                    amount: nanoAmount,
-                    payload: user.telegram_id
-                }]
-            };
-            
-            try {
-                showToast('🔄 Отправка транзакции...');
-                await tonConnectUI.sendTransaction(transaction);
-                showToast('✅ Транзакция отправлена! Баланс обновится через несколько секунд.');
-                closeModal('deposit-modal');
-                
-                setTimeout(() => {
-                    updateBalance();
-                    showToast('🔄 Баланс обновлён!');
-                }, 10000);
-                
-            } catch (e) {
-                console.error('Transaction error:', e);
-                if (e.message && e.message.toLowerCase().includes('cancel')) {
-                    showToast('❌ Операция отменена');
-                } else {
-                    showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'));
-                }
-            }
+            // ВАЖНО: payload должен быть строкой до 64 байт
+            const payload = JSON.stringify({ uid: user.telegram_id, ts: Date.now() });
+            const transaction = { validUntil: Math.floor(Date.now() / 1000) + 360, messages: [{ address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP", amount: nanoAmount, payload: payload }] };
+            try { showToast('🔄 Отправка транзакции...'); await tonConnectUI.sendTransaction(transaction); showToast('✅ Транзакция отправлена! Баланс обновится через несколько секунд.'); closeModal('deposit-modal'); setTimeout(() => { updateBalance(); showToast('🔄 Баланс обновлён!'); }, 10000); } catch (e) { console.error('Transaction error:', e); showToast('❌ Ошибка: ' + (e.message?.includes('cancel') ? 'Операция отменена' : e.message || 'Неизвестная ошибка')); }
         }
 
-        function submitWithdraw() {
-            let asset = document.getElementById('withdraw-asset').value;
-            let amt = parseInt(document.getElementById('withdraw-amount').value);
-            let wallet = document.getElementById('withdraw-wallet').value;
-            let targetUsername = document.getElementById('withdraw-tg-username').value;
-            if (!amt || amt < 100) return showToast("Минимальная сумма для вывода — 100⭐");
-            if (amt > (user.stars || 0)) return showToast("Недостаточно средств");
-            if (asset !== 'Stars' && (!wallet || wallet.length < 10)) return showToast("Введите корректный адрес кошелька");
-            if (asset === 'Stars' && !targetUsername) return showToast("Укажите ваш @юзернейм для перевода звёзд");
-            let finalWalletText = (asset === 'Stars') ? `На аккаунт: ${targetUsername}` : wallet;
-            fetch(`${BACKEND_URL}/api/withdraw-request`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                    telegram_id: user.telegram_id,
-                    name: user.name,
-                    username: user.username || targetUsername,
-                    amount: amt,
-                    asset: asset,
-                    wallet: finalWalletText
-                })
-            }).then(r => r.json()).then(d => {
-                if (d.success) {
-                    showToast(`✅ Заявка на вывод ${amt}⭐ успешно создана!`);
-                    closeModal('withdraw-modal');
-                    updateBalance();
-                    loadUserFinance();
-                } else {
-                    showToast(`Ошибка: ${d.msg}`);
-                }
-            });
-        }
+        function submitWithdraw() { let asset = document.getElementById('withdraw-asset').value; let amt = parseInt(document.getElementById('withdraw-amount').value); let wallet = document.getElementById('withdraw-wallet').value; let targetUsername = document.getElementById('withdraw-tg-username').value; if (!amt || amt < 100) return showToast("Минимальная сумма для вывода — 100⭐"); if (amt > (user.stars || 0)) return showToast("Недостаточно средств"); if (asset !== 'Stars' && (!wallet || wallet.length < 10)) return showToast("Введите корректный адрес кошелька"); if (asset === 'Stars' && !targetUsername) return showToast("Укажите ваш @юзернейм для перевода звёзд"); let finalWalletText = (asset === 'Stars') ? `На аккаунт: ${targetUsername}` : wallet; fetch(`${BACKEND_URL}/api/withdraw-request`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, name: user.name, username: user.username || targetUsername, amount: amt, asset: asset, wallet: finalWalletText }) }).then(r => r.json()).then(d => { if (d.success) { showToast(`✅ Заявка на вывод ${amt}⭐ успешно создана!`); closeModal('withdraw-modal'); updateBalance(); loadUserFinance(); } else showToast(`Ошибка: ${d.msg}`); }); }
 
-        function copyRefLink() {
-            let link = document.getElementById('ref-link').value;
-            navigator.clipboard.writeText(link).then(() => showToast("Реферальная ссылка скопирована!"));
-        }
+        function copyRefLink() { let link = document.getElementById('ref-link').value; navigator.clipboard.writeText(link).then(() => showToast("Реферальная ссылка скопирована!")); }
 
         // Админ-функции
-        function adminAddStars() {
-            let targetId = document.getElementById('admin-target-id').value;
-            let amount = parseInt(document.getElementById('admin-add-amount').value);
-            if (!targetId || !amount) return showToast('Заполните поля');
-            fetch(`${BACKEND_URL}/api/admin/add-stars`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount })
-            }).then(r => r.json()).then(d => {
-                if (d.success) showToast('Начислено!');
-                else showToast('Ошибка');
-            });
-        }
-
-        function adminBanUser() {
-            let targetId = document.getElementById('admin-ban-id').value;
-            if (!targetId) return showToast('Введите ID');
-            fetch(`${BACKEND_URL}/api/admin/ban-user`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId })
-            }).then(r => r.json()).then(d => {
-                if (d.success) showToast('Пользователь забанен');
-                else showToast('Ошибка');
-            });
-        }
-
-        function adminUnbanUser() {
-            let targetId = document.getElementById('admin-ban-id').value;
-            if (!targetId) return showToast('Введите ID');
-            fetch(`${BACKEND_URL}/api/admin/unban-user`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId })
-            }).then(r => r.json()).then(d => {
-                if (d.success) showToast('Пользователь разбанен');
-                else showToast('Ошибка');
-            });
-        }
-
-        function adminPauseBot() {
-            fetch(`${BACKEND_URL}/api/admin/pause-bot`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) showToast('Бот на паузе');
-            });
-        }
-
-        function adminResumeBot() {
-            fetch(`${BACKEND_URL}/api/admin/resume-bot`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) showToast('Бот запущен');
-            });
-        }
-
-        function adminLoadWithdraws() {
-            fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id })
-            }).then(r => r.json()).then(requests => {
-                let html = '';
-                requests.forEach(r => {
-                    html += `<div class="admin-row"><b>${r.name}</b> | ${r.amount}⭐ | ${r.asset}<br>
-                    <small>${r.wallet}</small><br>
-                    <button class="btn-green" style="padding:4px 8px; margin-top:4px;" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button></div>`;
-                });
-                document.getElementById('admin-withdraws-list').innerHTML = html || 'Нет заявок';
-            });
-        }
-
-        function adminApproveWithdraw(id) {
-            fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id, request_id: id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) showToast('Заявка одобрена');
-                adminLoadWithdraws();
-            });
-        }
-
-        function adminLoadUsers() {
-            fetch(`${BACKEND_URL}/api/admin/get-users`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ admin_id: user.telegram_id })
-            }).then(r => r.json()).then(users => {
-                let html = '';
-                users.slice(0, 20).forEach(u => {
-                    html += `<div class="admin-row"><b>${u.name}</b> | ${u.telegram_id}<br>⭐ ${u.stars} | Игр: ${u.games_played || 0} | ${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</div>`;
-                });
-                document.getElementById('admin-users-list').innerHTML = html;
-            });
-        }
+        function adminAddStars() { let targetId = document.getElementById('admin-target-id').value; let amount = parseInt(document.getElementById('admin-add-amount').value); if (!targetId || !amount) return showToast('Заполните поля'); fetch(`${BACKEND_URL}/api/admin/add-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) }).then(r => r.json()).then(d => { if (d.success) showToast('Начислено!'); else showToast('Ошибка'); }); }
+        function adminBanUser() { let targetId = document.getElementById('admin-ban-id').value; if (!targetId) return showToast('Введите ID'); fetch(`${BACKEND_URL}/api/admin/ban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) }).then(r => r.json()).then(d => { if (d.success) showToast('Пользователь забанен'); else showToast('Ошибка'); }); }
+        function adminUnbanUser() { let targetId = document.getElementById('admin-ban-id').value; if (!targetId) return showToast('Введите ID'); fetch(`${BACKEND_URL}/api/admin/unban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) }).then(r => r.json()).then(d => { if (d.success) showToast('Пользователь разбанен'); else showToast('Ошибка'); }); }
+        function adminPauseBot() { fetch(`${BACKEND_URL}/api/admin/pause-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) showToast('Бот на паузе'); }); }
+        function adminResumeBot() { fetch(`${BACKEND_URL}/api/admin/resume-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) showToast('Бот запущен'); }); }
+        function adminLoadWithdraws() { fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(requests => { let html = ''; requests.forEach(r => { html += `<div class="admin-row"><b>${r.name}</b> | ${r.amount}⭐ | ${r.asset}<br><small>${r.wallet}</small><br><button class="btn-green" style="padding:4px 8px; margin-top:4px;" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button></div>`; }); document.getElementById('admin-withdraws-list').innerHTML = html || 'Нет заявок'; }); }
+        function adminApproveWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(r => r.json()).then(d => { if (d.success) showToast('Заявка одобрена'); adminLoadWithdraws(); }); }
+        function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(users => { let html = ''; users.slice(0, 20).forEach(u => { html += `<div class="admin-row"><b>${u.name}</b> | ${u.telegram_id}<br>⭐ ${u.stars} | Игр: ${u.games_played || 0} | ${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</div>`; }); document.getElementById('admin-users-list').innerHTML = html; }); }
     </script>
 </body>
 </html>
