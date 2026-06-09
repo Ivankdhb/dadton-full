@@ -786,12 +786,24 @@
                     <div style="margin-bottom: 8px;">✅ Кошелёк: <strong style="color:#FFD700;">${shortAddr}</strong></div>
                     <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; background:#ff4444; color:#fff; border:none;" onclick="disconnectWallet()">🔓 Отвязать кошелёк</button>
                 `;
+                // Включаем кнопку оплаты криптой
+                const cryptoPayBtn = document.getElementById('cryptoPayBtn');
+                if (cryptoPayBtn) {
+                    cryptoPayBtn.disabled = false;
+                    cryptoPayBtn.style.opacity = '1';
+                }
             } else {
                 currentWalletAddress = null;
                 statusDiv.innerHTML = `
                     <div style="margin-bottom: 8px;">❌ Кошелёк не подключён</div>
                     <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="showWalletModal()">🔗 Подключить кошелёк</button>
                 `;
+                // Отключаем кнопку оплаты криптой
+                const cryptoPayBtn = document.getElementById('cryptoPayBtn');
+                if (cryptoPayBtn) {
+                    cryptoPayBtn.disabled = true;
+                    cryptoPayBtn.style.opacity = '0.5';
+                }
             }
         } catch(e) { console.log('Check wallet error:', e); }
     }
@@ -830,6 +842,8 @@
                 tonConnectUI.onStatusChange(async (wallet) => {
                     if (wallet && wallet.account) {
                         const address = wallet.account.address;
+                        console.log('Кошелёк подключён через UI:', address);
+                        
                         const res = await fetch('/api/verify-proof', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -843,11 +857,13 @@
                         if (data.success) {
                             currentWalletAddress = address;
                             checkWalletStatus();
-                            toast('✅ Кошелёк успешно подключён!');
+                            toast('✅ Кошелёк успешно подключěn!');
                             setTimeout(() => closeWalletModal(), 1500);
                         }
                     } else {
-                        checkWalletStatus();
+                        if (currentWalletAddress) {
+                            checkWalletStatus();
+                        }
                     }
                 });
                 
