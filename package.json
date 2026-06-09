@@ -1,7 +1,6 @@
 {
-  "name": "dadton-backend",
+  "name": "dadton-server",
   "version": "1.0.0",
-  "description": "DadTon Telegram WebApp Premium Crash & Casino Platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,10 +9,5 @@
     "express": "^4.19.2",
     "socket.io": "^4.7.5",
     "sqlite3": "^5.1.7"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "author": "@Azower",
-  "license": "ISC"
+  }
 }
