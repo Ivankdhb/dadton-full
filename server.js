@@ -22,7 +22,7 @@ app.get('/tonconnect-manifest.json', (req, res) => {
     });
 });
 
-// Иконка на лету (чтобы не было 404)
+// Иконка на лету
 app.get('/icon.png', (req, res) => {
     const svg = `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
         <rect width="256" height="256" fill="#0a0a0a" rx="40"/>
@@ -33,12 +33,10 @@ app.get('/icon.png', (req, res) => {
     res.send(svg);
 });
 
-// Заглушка для terms.html
 app.get('/terms.html', (req, res) => {
     res.send(`<!DOCTYPE html><html><head><title>Terms of Use</title></head><body><h1>Terms of Use</h1><p>By using DadTon you agree to the terms...</p></body></html>`);
 });
 
-// Заглушка для privacy.html
 app.get('/privacy.html', (req, res) => {
     res.send(`<!DOCTYPE html><html><head><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1><p>Your data is safe with us...</p></body></html>`);
 });
@@ -84,7 +82,8 @@ db.serialize(() => {
         telegram_id TEXT UNIQUE,
         deposited INTEGER DEFAULT 0,
         withdrawn INTEGER DEFAULT 0,
-        admin_added INTEGER DEFAULT 0
+        admin_added INTEGER DEFAULT 0,
+        admin_removed INTEGER DEFAULT 0
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS withdraw_requests (
@@ -392,8 +391,8 @@ app.post('/api/user-games-history', (req, res) => {
 });
 
 app.post('/api/user-finance', (req, res) => {
-    db.get("SELECT deposited, withdrawn, admin_added FROM user_finance WHERE telegram_id = ?", [req.body.telegram_id], (err, row) => {
-        res.json(row || { deposited: 0, withdrawn: 0, admin_added: 0 });
+    db.get("SELECT deposited, withdrawn, admin_added, admin_removed FROM user_finance WHERE telegram_id = ?", [req.body.telegram_id], (err, row) => {
+        res.json(row || { deposited: 0, withdrawn: 0, admin_added: 0, admin_removed: 0 });
     });
 });
 
@@ -668,12 +667,45 @@ app.post('/api/admin/approve-withdraw', (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
     const { request_id } = req.body;
     db.get("SELECT * FROM withdraw_requests WHERE id = ?", [request_id], (err, row) => {
-        if (row) {
+        if (row && row.status === 'pending') {
             db.run("UPDATE withdraw_requests SET status = 'approved' WHERE id = ?", [request_id], () => {
                 sendTelegramMessage(row.telegram_id, `✅ Ваша заявка на вывод ${row.amount}⭐ подтверждена!`);
                 res.json({ success: true });
             });
         } else res.json({ success: false });
+    });
+});
+
+// НОВЫЙ: Отказ в выводе с возвратом средств
+app.post('/api/admin/reject-withdraw', (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
+    const { request_id } = req.body;
+    db.get("SELECT * FROM withdraw_requests WHERE id = ?", [request_id], (err, row) => {
+        if (row && row.status === 'pending') {
+            db.run("UPDATE withdraw_requests SET status = 'rejected' WHERE id = ?", [request_id]);
+            db.run("UPDATE users SET stars = stars + ? WHERE telegram_id = ?", [row.amount, row.telegram_id], () => {
+                sendUserBalance(row.telegram_id);
+            });
+            db.run("UPDATE user_finance SET withdrawn = withdrawn - ? WHERE telegram_id = ?", [row.amount, row.telegram_id]);
+            sendTelegramMessage(row.telegram_id, `❌ Ваша заявка на вывод ${row.amount}⭐ отклонена. Средства возвращены на баланс.`);
+            res.json({ success: true });
+        } else res.json({ success: false });
+    });
+});
+
+// НОВЫЙ: Снятие баланса админом
+app.post('/api/admin/remove-stars', (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
+    const { target_id, amount } = req.body;
+    db.get("SELECT stars FROM users WHERE telegram_id = ?", [target_id], (err, row) => {
+        if (!row || row.stars < amount) {
+            return res.json({ success: false, msg: 'Недостаточно средств' });
+        }
+        db.run("UPDATE users SET stars = stars - ? WHERE telegram_id = ?", [amount, target_id], () => {
+            db.run("UPDATE user_finance SET admin_removed = admin_removed + ? WHERE telegram_id = ?", [amount, target_id]);
+            sendUserBalance(target_id);
+            res.json({ success: true });
+        });
     });
 });
 
