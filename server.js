@@ -723,6 +723,27 @@ app.post('/api/admin/get-users', async (req, res) => {
     res.json(result.rows);
 });
 
+// Сброс всех балансов до 0
+app.post('/api/admin/reset-all', async (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
+    
+    try {
+        await pool.query("UPDATE users SET stars = 0");
+        await pool.query("UPDATE users SET turnover = 0, games_played = 0, wins = 0");
+        await pool.query("DELETE FROM games_history");
+        await pool.query("DELETE FROM rocket_history");
+        await pool.query("DELETE FROM withdraw_requests");
+        await pool.query("DELETE FROM pending_payments");
+        await pool.query("UPDATE user_finance SET deposited = 0, withdrawn = 0, admin_added = 0, admin_removed = 0");
+        
+        console.log('✅ Все балансы сброшены до 0 админом');
+        res.json({ success: true, msg: 'Все балансы сброшены до 0' });
+    } catch (err) {
+        console.error('Reset error:', err);
+        res.json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/admin/get-withdraw-requests', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
     const result = await pool.query("SELECT * FROM withdraw_requests WHERE status = 'pending' ORDER BY created_at DESC");
