@@ -350,6 +350,15 @@ app.post('/api/nft/withdraw', async (req, res) => {
 });
 
 // ========== АДМИН ==========
+app.post('/api/admin/reset-leaderboard', async (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
+    try {
+        await pool.query("UPDATE users SET turnover = 0");
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 app.post('/api/admin/get-users', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); const r = await pool.query("SELECT id, telegram_id, name, stars, banned FROM users LIMIT 50"); res.json(r.rows); });
 app.post('/api/admin/get-withdraw-requests', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); const r = await pool.query("SELECT * FROM withdraw_requests WHERE status='pending'"); res.json(r.rows); });
 app.post('/api/admin/approve-withdraw', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); await pool.query("UPDATE withdraw_requests SET status='approved' WHERE id=$1", [req.body.request_id]); res.json({ success: true }); });
