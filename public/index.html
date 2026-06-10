@@ -404,7 +404,7 @@
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">1 TON = 100⭐. Требуется подключение кошелька.</p>
                 <input type="number" id="dep-crypto-amount" value="1" min="0.5" step="0.1">
                 <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processCryptoDeposit()">💸 Оплатить через кошелёк</button>
-                <p style="font-size:11px; color:#888; margin-top:8px;">⚠️ После оплаты баланс обновится автоматически</p>
+                <p style="font-size:11px; color:#888; margin-top:8px;">⚠️ После оплаты уведомите админа для начисления</p>
             </div>
             <div id="dep-tab-stars" style="display:none;">
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">Пополнение через нативные Telegram Stars</p>
@@ -648,7 +648,7 @@
         // ПОПОЛНЕНИЕ STARS
         function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; if (amt < 1) return showToast('Минимальная сумма 1 звезда'); fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if (d.success && d.invoice_link) { tg.openInvoice(d.invoice_link, function(status) { if (status === 'paid') { showToast('🎉 Зачисление прошло успешно!'); closeModal('deposit-modal'); updateBalance(); loadUserStats(); loadUserFinance(); } }); } else showToast('Ошибка создания счёта'); }); }
 
-        // ПОПОЛНЕНИЕ КРИПТОЙ - РАБОЧАЯ ВЕРСИЯ С HEX PAYLOAD
+        // ПОПОЛНЕНИЕ КРИПТОЙ - РАБОЧАЯ ВЕРСИЯ (ПУСТОЙ PAYLOAD)
         async function processCryptoDeposit() {
             if (!tonConnectUI) {
                 tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
@@ -670,28 +670,13 @@
             
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
             
-            // Функция конвертации строки в HEX
-            function stringToHex(str) {
-                let hex = '';
-                for (let i = 0; i < str.length; i++) {
-                    hex += str.charCodeAt(i).toString(16);
-                }
-                return hex;
-            }
-            
-            // Формируем payload в HEX формате
-            const payloadText = `deposit_${user.telegram_id}_${Date.now()}`;
-            const payloadHex = stringToHex(payloadText);
-            
-            console.log('📤 Payload text:', payloadText);
-            console.log('🔢 Payload hex:', payloadHex);
-            
+            // ПУСТОЙ PAYLOAD - РАБОТАЕТ ВСЕГДА!
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
                 messages: [{
                     address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP",
                     amount: nanoAmount,
-                    payload: payloadHex
+                    payload: ""  // Пустой payload - не вызывает ошибок
                 }]
             };
             
@@ -699,10 +684,10 @@
                 showToast('🔄 Отправка транзакции...');
                 const result = await tonConnectUI.sendTransaction(transaction);
                 console.log('✅ Transaction sent:', result);
-                showToast('✅ Транзакция отправлена! После подтверждения баланс обновится.');
+                showToast('✅ Транзакция отправлена! Уведомите админа о пополнении.');
                 closeModal('deposit-modal');
                 
-                // Уведомляем сервер о транзакции
+                // Отправляем уведомление админу
                 fetch(`${BACKEND_URL}/api/check-payment`, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
@@ -713,20 +698,12 @@
                     })
                 }).catch(console.error);
                 
-                // Обновляем баланс через 30 секунд
-                setTimeout(() => {
-                    updateBalance();
-                    showToast('🔄 Баланс обновлён!');
-                }, 30000);
-                
             } catch (e) {
                 console.error('❌ Transaction error:', e);
                 let errorMsg = e.message || 'Неизвестная ошибка';
                 
                 if (errorMsg.toLowerCase().includes('cancel') || errorMsg.toLowerCase().includes('reject')) {
                     showToast('❌ Операция отменена пользователем');
-                } else if (errorMsg.toLowerCase().includes('payload')) {
-                    showToast('❌ Ошибка payload. Попробуйте ещё раз');
                 } else {
                     showToast('❌ Ошибка: ' + errorMsg.substring(0, 100));
                 }
