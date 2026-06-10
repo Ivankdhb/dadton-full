@@ -7,6 +7,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "@ton/core": "https://unpkg.com/@ton/core@0.56.0/dist/index.js"
+            }
+        }
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-user-select: none; }
         body { background-color: #0a0a0a; color: #ffffff; overflow-x: hidden; padding-bottom: 75px; }
@@ -141,6 +148,13 @@
         
         #ton-connect-btn-container { display: none; }
         
+        /* Лоадер для оплаты */
+        .deposit-loader { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:600; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+        .deposit-loader.active { display: flex; }
+        .deposit-loader .spinner { width: 60px; height: 60px; border: 5px solid #2a2a2a; border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .deposit-loader p { color: #FFD700; font-weight: 800; font-size: 16px; }
+        .deposit-loader small { color: #888; font-size: 12px; }
+        
         @media (max-width: 480px) {
             .leaderboard-podium { gap: 8px; }
             .podium-item { width: 75px; }
@@ -159,6 +173,13 @@
     <div id="loading-screen">
         <div class="spinner"></div>
         <div style="color: #FFD700; font-weight:900; margin-top:15px; letter-spacing:2px;">ЗАГРУЗКА</div>
+    </div>
+
+    <!-- Лоадер для оплаты -->
+    <div id="deposit-loader" class="deposit-loader">
+        <div class="spinner"></div>
+        <p>⏳ Ожидайте зачисления...</p>
+        <small>Транзакция отправлена, баланс обновится автоматически</small>
     </div>
 
     <header>
@@ -390,14 +411,6 @@
                 <div id="admin-users-list" style="margin-top: 12px; max-height: 250px; overflow-y: auto;"></div>
             </div>
 
-            <div class="admin-section">
-                <div class="admin-section-title">💸 Ожидающие платежи</div>
-                <div class="admin-input-group">
-                    <button class="admin-btn admin-btn-gold" onclick="adminLoadPendingPayments()">🔄 Обновить</button>
-                </div>
-                <div id="admin-payments-list" style="margin-top: 12px;"></div>
-            </div>
-
             <button class="admin-btn admin-btn-gray" style="width:100%; padding:12px; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
         </div>
     </div>
@@ -412,7 +425,7 @@
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">1 TON = 100⭐. Требуется подключение кошелька.</p>
                 <input type="number" id="dep-crypto-amount" value="1" min="0.5" step="0.1">
                 <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processCryptoDeposit()">💸 Оплатить через кошелёк</button>
-                <p style="font-size:11px; color:#888; margin-top:8px;">💰 После оплаты баланс пополнится автоматически</p>
+                <p style="font-size:11px; color:#888; margin-top:8px;">💎 После оплаты баланс пополнится автоматически</p>
             </div>
             <div id="dep-tab-stars" style="display:none;">
                 <p style="font-size:12px; color:#888; margin-bottom:8px;">Пополнение через нативные Telegram Stars</p>
@@ -459,7 +472,11 @@
 
     <div id="ton-connect-btn-container" style="display: none;"></div>
 
-    <script>
+    <script type="module">
+        import { beginCell } from '@ton/core';
+        
+        window.beginCell = beginCell;
+        
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
@@ -478,6 +495,8 @@
         let currentMinesGameStatus = 'idle';
         let rocketHasBet = false;
         let reconnectAttempts = 0;
+        let currentOrderId = null;
+        let statusCheckInterval = null;
 
         // ========== TON CONNECT ==========
         let tonConnectUI = null;
@@ -647,39 +666,16 @@
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function openAdminModal() { openModal('admin-modal'); adminLoadWithdraws(); adminLoadUsers(); adminLoadPendingPayments(); }
+        function openAdminModal() { openModal('admin-modal'); adminLoadWithdraws(); adminLoadUsers(); }
         
         function switchDepTab(tab, event) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); if (tab === 'crypto') { document.getElementById('dep-tab-crypto').style.display = 'block'; document.getElementById('dep-tab-stars').style.display = 'none'; } else { document.getElementById('dep-tab-crypto').style.display = 'none'; document.getElementById('dep-tab-stars').style.display = 'block'; } if (event && event.target) event.target.classList.add('active'); }
         function setStarsAmount(amount) { document.getElementById('dep-stars-amount').value = amount; }
         function toggleWithdrawFields() { let asset = document.getElementById('withdraw-asset').value; let walletInput = document.getElementById('withdraw-wallet'); let usernameInput = document.getElementById('withdraw-tg-username'); if (asset === 'Stars') { walletInput.style.display = 'none'; usernameInput.style.display = 'block'; } else { walletInput.style.display = 'block'; usernameInput.style.display = 'none'; } }
 
-        // ========== ФУНКЦИИ ДЛЯ PAYLOAD ==========
-        function stringToHex(str) {
-            let hex = '';
-            for (let i = 0; i < str.length; i++) {
-                hex += str.charCodeAt(i).toString(16);
-            }
-            return hex;
-        }
-
-        function createTextPayload(text) {
-            const textBytes = new TextEncoder().encode(text);
-            const prefix = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-            const total = new Uint8Array(prefix.length + textBytes.length);
-            total.set(prefix, 0);
-            total.set(textBytes, prefix.length);
-            const cellType = new Uint8Array([0x01]);
-            const bocData = new Uint8Array(cellType.length + total.length + 1);
-            bocData.set(cellType, 0);
-            bocData.set(total, cellType.length);
-            bocData[bocData.length - 1] = 0x00;
-            return btoa(String.fromCharCode(...bocData));
-        }
-
-        // ПОПОЛНЕНИЕ STARS
+        // ========== ПОПОЛНЕНИЕ STARS ==========
         function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; if (amt < 1) return showToast('Минимальная сумма 1 звезда'); fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if (d.success && d.invoice_link) { tg.openInvoice(d.invoice_link, function(status) { if (status === 'paid') { showToast('🎉 Зачисление прошло успешно!'); closeModal('deposit-modal'); updateBalance(); loadUserStats(); loadUserFinance(); } }); } else showToast('Ошибка создания счёта'); }); }
 
-        // ПОПОЛНЕНИЕ КРИПТОЙ - С АВТОМАТИЧЕСКОЙ ПРОВЕРКОЙ
+        // ========== ПОПОЛНЕНИЕ КРИПТОЙ (АВТОМАТИЧЕСКОЕ) ==========
         async function processCryptoDeposit() {
             if (!tonConnectUI) {
                 tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
@@ -700,31 +696,49 @@
             }
             
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
+            
+            // Генерируем уникальный ID заказа
             const orderId = `${user.telegram_id}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            currentOrderId = orderId;
+            
+            // Создаём payload в правильном формате BOC через @ton/core
             const payloadText = `deposit:${user.telegram_id}:${Date.now()}`;
-            const payloadBase64 = createTextPayload(payloadText);
+            const payloadCell = window.beginCell()
+                .storeUint(0, 32)  // префикс для текстовой ячейки
+                .storeStringTail(payloadText)
+                .endCell();
+            const payloadBase64 = payloadCell.toBoc().toString('base64');
             
             console.log('📝 Order ID:', orderId);
             console.log('📝 Payload text:', payloadText);
+            console.log('📝 Payload Base64:', payloadBase64);
             
-            // Сохраняем pending платеж
-            const pendingRes = await fetch(`${BACKEND_URL}/api/pending-payment`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                    telegram_id: user.telegram_id,
-                    amount: tonAmount,
-                    order_id: orderId,
-                    payload: payloadText
-                })
-            });
-            
-            const pendingData = await pendingRes.json();
-            if (!pendingData.success) {
-                showToast('❌ Ошибка создания заказа');
+            // 1. Сохраняем pending платеж
+            try {
+                const pendingRes = await fetch(`${BACKEND_URL}/api/pending-payment`, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: user.telegram_id,
+                        amount: tonAmount,
+                        order_id: orderId,
+                        payload: payloadText
+                    })
+                });
+                
+                const pendingData = await pendingRes.json();
+                if (!pendingData.success) {
+                    showToast('❌ Ошибка создания заказа: ' + (pendingData.error || 'Неизвестная ошибка'));
+                    return;
+                }
+                console.log('✅ Pending payment saved');
+            } catch (err) {
+                console.error('Save pending error:', err);
+                showToast('❌ Ошибка соединения с сервером');
                 return;
             }
             
+            // 2. Создаём транзакцию
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
                 messages: [{
@@ -734,42 +748,75 @@
                 }]
             };
             
+            // 3. Отправляем транзакцию
             try {
-                showToast('🔄 Отправка транзакции...');
-                await tonConnectUI.sendTransaction(transaction);
-                showToast('✅ Транзакция отправлена! Ожидайте подтверждения...');
+                const result = await tonConnectUI.sendTransaction(transaction);
+                console.log('✅ Transaction sent:', result);
+                
+                // Показываем лоадер
+                const loader = document.getElementById('deposit-loader');
+                loader.classList.add('active');
                 closeModal('deposit-modal');
                 
-                // Начинаем проверку статуса
-                let attempts = 0;
-                const maxAttempts = 60;
-                const interval = setInterval(async () => {
-                    attempts++;
-                    const statusRes = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
-                        method: 'POST',
-                        headers: { 'content-type': 'application/json' },
-                        body: JSON.stringify({ order_id: orderId })
-                    });
-                    const statusData = await statusRes.json();
-                    
-                    if (statusData.status === 'completed') {
-                        clearInterval(interval);
-                        showToast(`🎉 Баланс пополнен на ${tonAmount} TON (${statusData.stars}⭐)!`);
-                        updateBalance();
-                        loadUserStats();
-                        loadUserFinance();
-                    } else if (statusData.status === 'failed') {
-                        clearInterval(interval);
-                        showToast('❌ Платеж не подтверждён. Попробуйте снова.');
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(interval);
-                        showToast('⏰ Время ожидания истекло. Обратитесь в поддержку.');
+                // 4. Начинаем проверку статуса (каждые 3 секунды)
+                if (statusCheckInterval) clearInterval(statusCheckInterval);
+                
+                statusCheckInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ order_id: orderId })
+                        });
+                        const statusData = await statusRes.json();
+                        
+                        if (statusData.status === 'completed') {
+                            clearInterval(statusCheckInterval);
+                            statusCheckInterval = null;
+                            loader.classList.remove('active');
+                            
+                            // Показываем салют/уведомление
+                            showToast(`🎉 Баланс пополнен на ${tonAmount} TON (${statusData.stars}⭐)!`);
+                            tg.HapticFeedback.notificationOccurred('success');
+                            
+                            // Обновляем баланс и статистику
+                            updateBalance();
+                            loadUserStats();
+                            loadUserFinance();
+                            
+                        } else if (statusData.status === 'failed') {
+                            clearInterval(statusCheckInterval);
+                            statusCheckInterval = null;
+                            loader.classList.remove('active');
+                            showToast('❌ Платеж не подтверждён. Попробуйте снова.');
+                        }
+                    } catch (err) {
+                        console.error('Status check error:', err);
                     }
-                }, 5000);
+                }, 3000);
+                
+                // Таймаут на случай если платёж не подтвердится (5 минут)
+                setTimeout(() => {
+                    if (statusCheckInterval) {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                        const loader = document.getElementById('deposit-loader');
+                        loader.classList.remove('active');
+                        showToast('⏰ Время ожидания истекло. Если средства списались, обратитесь в поддержку.');
+                    }
+                }, 300000);
                 
             } catch (e) {
                 console.error('❌ Transaction error:', e);
-                showToast('❌ Ошибка: ' + (e.message?.substring(0, 100) || 'Неизвестная ошибка'));
+                const errorMsg = e.message || 'Неизвестная ошибка';
+                
+                if (errorMsg.toLowerCase().includes('cancel') || errorMsg.toLowerCase().includes('reject')) {
+                    showToast('❌ Операция отменена пользователем');
+                } else if (errorMsg.toLowerCase().includes('payload')) {
+                    showToast('❌ Ошибка формата платежа. Попробуйте ещё раз.');
+                } else {
+                    showToast('❌ Ошибка: ' + errorMsg.substring(0, 100));
+                }
             }
         }
 
@@ -798,9 +845,36 @@
         
         function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(users => { let html = ''; users.slice(0, 20).forEach(u => { html += `<div class="admin-user-item"><div><span class="admin-user-name">${u.name}</span><br><span style="font-size:11px; color:#888;">ID: ${u.telegram_id}</span><br><span style="font-size:12px;">⭐ ${u.stars} | 🎮 ${u.games_played || 0} | 🏆 ${u.wins || 0}</span></div><div><span class="admin-badge ${u.banned ? 'admin-badge-banned' : 'admin-badge-active'}">${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</span></div></div>`; }); document.getElementById('admin-users-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет пользователей</div>'; }); }
         
-        function adminLoadPendingPayments() { fetch(`${BACKEND_URL}/api/admin/get-pending-payments`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(payments => { let html = ''; payments.forEach(p => { html += `<div class="admin-withdraw-item"><div><b>${p.telegram_id}</b> | ${p.amount} TON | ${p.status}</div><div style="font-size:11px; color:#888;">Order: ${p.order_id}</div><div class="admin-input-group" style="margin-top:8px;"><button class="admin-btn admin-btn-green" style="padding:6px 12px;" onclick="adminApprovePayment('${p.order_id}')">✅ Подтвердить</button></div></div>`; }); document.getElementById('admin-payments-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет ожидающих платежей</div>'; }); }
-        
-        function adminApprovePayment(orderId) { fetch(`${BACKEND_URL}/api/admin/approve-payment`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, order_id: orderId }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Платеж подтверждён'); adminLoadPendingPayments(); } else showToast('❌ Ошибка'); }); }
+        // Экспорт глобальных функций
+        window.connectWallet = connectWallet;
+        window.switchPage = switchPage;
+        window.switchProfileTab = switchProfileTab;
+        window.adjustBet = adjustBet;
+        window.handleRocketAction = handleRocketAction;
+        window.cancelRocketBet = cancelRocketBet;
+        window.cancelRouletteBet = cancelRouletteBet;
+        window.handleMinesAction = handleMinesAction;
+        window.clickMineTile = clickMineTile;
+        window.handleRouletteBet = handleRouletteBet;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.switchDepTab = switchDepTab;
+        window.setStarsAmount = setStarsAmount;
+        window.processStarsDeposit = processStarsDeposit;
+        window.processCryptoDeposit = processCryptoDeposit;
+        window.submitWithdraw = submitWithdraw;
+        window.copyRefLink = copyRefLink;
+        window.openAdminModal = openAdminModal;
+        window.adminAddStars = adminAddStars;
+        window.adminRemoveStars = adminRemoveStars;
+        window.adminBanUser = adminBanUser;
+        window.adminUnbanUser = adminUnbanUser;
+        window.adminPauseBot = adminPauseBot;
+        window.adminResumeBot = adminResumeBot;
+        window.adminLoadWithdraws = adminLoadWithdraws;
+        window.adminApproveWithdraw = adminApproveWithdraw;
+        window.adminRejectWithdraw = adminRejectWithdraw;
+        window.adminLoadUsers = adminLoadUsers;
     </script>
 </body>
 </html>
