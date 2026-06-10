@@ -629,8 +629,16 @@ app.post('/api/gifts/buy', async (req, res) => {
 app.post('/api/admin/reset-leaderboard', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
     try {
-        await pool.query("UPDATE users SET turnover=0");
-        res.json({ success: true });
+        // Очищаем таблицу лидерборда (удаляем всех пользователей)
+        await pool.query("DELETE FROM users");
+        
+        // Создаём тестового пользователя (чтобы не было совсем пусто)
+        await pool.query(`
+            INSERT INTO users (telegram_id, name, stars, turnover) 
+            VALUES ('admin', 'Admin', 0, 0)
+        `);
+        
+        res.json({ success: true, message: "Лидерборд полностью очищен" });
     } catch (err) {
         console.error('Reset leaderboard error:', err);
         res.status(500).json({ success: false, error: err.message });
