@@ -6,7 +6,6 @@ const cors = require('cors');
 const axios = require('axios');
 const { Pool } = require('pg');
 const { Cell } = require('@ton/core');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.use(cors());
