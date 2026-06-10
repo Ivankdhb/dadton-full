@@ -22,12 +22,9 @@ const MERCHANT_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
 const TON_API_KEY = '06d6391b22c661acad89e10e47a3ff85eaaa179012354d517460508fbc91dabd';
 
 const MIN_BET = 10;
-const MAX_BET = 10000;
-const ROULETTE_FEE = 0.05; // 5%
-const MARKET_FEE = 0.10; // 10%
-const VIP_MARKET_FEE = 0.05; // 5%
+const ROULETTE_FEE = 0.05;
+const MARKET_FEE = 0.10;
 const WITHDRAW_GAS_FEE = 15;
-const VIP_THRESHOLD = 5000;
 
 // База средних цен на подарки
 const GIFT_PRICES = {
@@ -67,10 +64,7 @@ async function initDatabase() {
                 wins INTEGER DEFAULT 0,
                 referrer_id TEXT,
                 wallet_address TEXT,
-                banned INTEGER DEFAULT 0,
-                total_gift_value INTEGER DEFAULT 0,
-                is_vip BOOLEAN DEFAULT false,
-                weekly_free_withdraw INTEGER DEFAULT 0
+                banned INTEGER DEFAULT 0
             )
         `);
 
@@ -160,9 +154,6 @@ async function initDatabase() {
                 pattern TEXT DEFAULT 'classic',
                 rarity TEXT DEFAULT 'COMMON',
                 price_stars INTEGER DEFAULT 100,
-                is_limited BOOLEAN DEFAULT false,
-                total_supply INTEGER DEFAULT 1,
-                sold_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -182,7 +173,7 @@ async function initDatabase() {
         await client.query(`
             CREATE TABLE IF NOT EXISTS market_lots (
                 id SERIAL PRIMARY KEY,
-                gift_id TEXT REFERENCES nft_items(nft_id),
+                nft_id TEXT REFERENCES nft_items(nft_id),
                 seller_id INTEGER REFERENCES users(id),
                 price INTEGER NOT NULL,
                 status TEXT DEFAULT 'active',
@@ -191,7 +182,7 @@ async function initDatabase() {
             )
         `);
 
-        console.log('✅ База данных PostgreSQL готова (баланс по умолчанию = 0)');
+        console.log('✅ База данных PostgreSQL готова');
     } catch (err) {
         console.error('Ошибка БД:', err);
     } finally {
@@ -231,18 +222,6 @@ async function sendUserBalance(tgId) {
 async function saveGameHistory(tgId, type, name, bet, win, profit, mult) {
     await pool.query(`INSERT INTO games_history (telegram_id, game_type, game_name, bet_amount, win_amount, profit, multiplier) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
         [tgId, type, name, bet, win, profit, mult]);
-}
-
-async function updateUserVipStatus(userId) {
-    const user = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-    if (!user.rows[0]) return;
-    
-    const gifts = await pool.query("SELECT price_stars FROM user_inventory ui JOIN nft_items ni ON ui.nft_id = ni.nft_id WHERE ui.user_id = $1 AND ui.is_withdrawn = false", [userId]);
-    const totalValue = gifts.rows.reduce((sum, g) => sum + g.price_stars, 0);
-    const isVip = totalValue >= VIP_THRESHOLD;
-    
-    await pool.query("UPDATE users SET total_gift_value = $1, is_vip = $2 WHERE id = $3", [totalValue, isVip, userId]);
-    return { totalValue, isVip };
 }
 
 function generateCrashPoint() {
@@ -473,8 +452,8 @@ app.post('/api/user-finance', async (req, res) => {
 });
 
 app.post('/api/user-referrals', async (req, res) => {
-    const r = await pool.query("SELECT COUNT(*)::int as count, COALESCE(SUM(earned),0) as earned FROM referrals_log WHERE referrer_id=$1", [req.body.telegram_id]);
-    res.json({ count: r.rows[0].count, earned: r.rows[0].earned });
+    const r = await pool.query("SELECT COUNT(*)::int as count FROM users WHERE referrer_id=$1", [req.body.telegram_id]);
+    res.json({ count: r.rows[0].count, earned: 0 });
 });
 
 app.post('/api/save-wallet', async (req, res) => {
@@ -538,17 +517,17 @@ app.post('/webhook/telegram', async (req, res) => {
 // ========== NFT МАГАЗИН ==========
 app.get('/api/nft/shop', async (req, res) => {
     try {
-        const nfts = await pool.query(`SELECT * FROM nft_items WHERE (is_limited = false OR sold_count < total_supply) ORDER BY price_stars ASC`);
+        const nfts = await pool.query(`SELECT * FROM nft_items ORDER BY price_stars ASC`);
         res.json({ success: true, nfts: nfts.rows });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.get('/api/nft/inventory/:telegramId', async (req, res) => {
     try {
-        const user = await pool.query("SELECT id, is_vip, total_gift_value FROM users WHERE telegram_id = $1", [req.params.telegramId]);
+        const user = await pool.query("SELECT id FROM users WHERE telegram_id = $1", [req.params.telegramId]);
         if (!user.rows[0]) return res.status(404).json({ success: false });
         const inv = await pool.query(`SELECT ui.*, ni.* FROM user_inventory ui JOIN nft_items ni ON ui.nft_id = ni.nft_id WHERE ui.user_id = $1 AND ui.is_withdrawn = false ORDER BY ui.purchased_at DESC`, [user.rows[0].id]);
-        res.json({ success: true, inventory: inv.rows, isVip: user.rows[0].is_vip, totalValue: user.rows[0].total_gift_value });
+        res.json({ success: true, inventory: inv.rows });
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
@@ -560,14 +539,11 @@ app.post('/api/nft/purchase', async (req, res) => {
         if (!user.rows[0]) throw new Error('User not found');
         const nft = await pool.query("SELECT * FROM nft_items WHERE nft_id = $1 FOR UPDATE", [nftId]);
         if (!nft.rows[0]) throw new Error('NFT not found');
-        if (nft.rows[0].is_limited && nft.rows[0].sold_count >= nft.rows[0].total_supply) throw new Error('NFT sold out');
         if (user.rows[0].stars < nft.rows[0].price_stars) throw new Error(`Need ${nft.rows[0].price_stars} stars`);
         const existing = await pool.query("SELECT id FROM user_inventory WHERE user_id = $1 AND nft_id = $2 AND is_withdrawn = false", [user.rows[0].id, nftId]);
         if (existing.rows[0]) throw new Error('Already owned');
         await pool.query("UPDATE users SET stars = stars - $1 WHERE id = $2", [nft.rows[0].price_stars, user.rows[0].id]);
         await pool.query("INSERT INTO user_inventory (user_id, nft_id) VALUES ($1, $2)", [user.rows[0].id, nftId]);
-        if (nft.rows[0].is_limited) await pool.query("UPDATE nft_items SET sold_count = sold_count + 1 WHERE nft_id = $1", [nftId]);
-        await updateUserVipStatus(user.rows[0].id);
         await pool.query('COMMIT');
         sendUserBalance(telegramId);
         res.json({ success: true });
@@ -578,27 +554,15 @@ app.post('/api/nft/withdraw', async (req, res) => {
     const { telegramId, inventoryId } = req.body;
     try {
         await pool.query('BEGIN');
-        const user = await pool.query("SELECT id, is_vip, weekly_free_withdraw, stars FROM users WHERE telegram_id = $1 FOR UPDATE", [telegramId]);
+        const user = await pool.query("SELECT id, stars FROM users WHERE telegram_id = $1 FOR UPDATE", [telegramId]);
         if (!user.rows[0]) throw new Error('User not found');
         const item = await pool.query("SELECT * FROM user_inventory WHERE id = $1 AND user_id = $2 AND is_withdrawn = false FOR UPDATE", [inventoryId, user.rows[0].id]);
         if (!item.rows[0]) throw new Error('Item not found');
-        
-        const isVip = user.rows[0].is_vip;
-        const canFreeWithdraw = isVip && user.rows[0].weekly_free_withdraw < 1;
-        
-        if (!canFreeWithdraw) {
-            if (user.rows[0].stars < WITHDRAW_GAS_FEE) throw new Error(`Недостаточно звезд для вывода. Нужно ${WITHDRAW_GAS_FEE}⭐`);
-            await pool.query("UPDATE users SET stars = stars - $1 WHERE id = $2", [WITHDRAW_GAS_FEE, user.rows[0].id]);
-        } else {
-            await pool.query("UPDATE users SET weekly_free_withdraw = weekly_free_withdraw + 1 WHERE id = $1", [user.rows[0].id]);
-        }
-        
+        if (user.rows[0].stars < WITHDRAW_GAS_FEE) throw new Error(`Недостаточно звезд для вывода. Нужно ${WITHDRAW_GAS_FEE}⭐`);
+        await pool.query("UPDATE users SET stars = stars - $1 WHERE id = $2", [WITHDRAW_GAS_FEE, user.rows[0].id]);
         await pool.query("UPDATE user_inventory SET is_withdrawn = true, withdrawn_at = NOW() WHERE id = $1", [inventoryId]);
-        await updateUserVipStatus(user.rows[0].id);
         await pool.query('COMMIT');
-        
-        const feeMsg = canFreeWithdraw ? ' (бесплатно, VIP)' : ` (списано ${WITHDRAW_GAS_FEE}⭐)`;
-        await sendTelegramMessage(telegramId, `✅ Подарок успешно выведен на ваш Telegram-аккаунт!${feeMsg}`);
+        await sendTelegramMessage(telegramId, `✅ Подарок успешно выведен на ваш Telegram-аккаунт! Списано ${WITHDRAW_GAS_FEE}⭐`);
         res.json({ success: true });
     } catch (e) { await pool.query('ROLLBACK'); res.status(400).json({ success: false, error: e.message }); }
 });
@@ -607,9 +571,9 @@ app.post('/api/nft/withdraw', async (req, res) => {
 app.get('/api/gifts/market', async (req, res) => {
     try {
         const lots = await pool.query(`
-            SELECT ml.*, ni.name, ni.image_url, ni.rarity, u.name as seller_name 
+            SELECT ml.*, ni.name, ni.image_url, ni.rarity, u.name as seller_name, u.telegram_id as seller_telegram_id
             FROM market_lots ml 
-            JOIN nft_items ni ON ml.gift_id = ni.nft_id 
+            JOIN nft_items ni ON ml.nft_id = ni.nft_id 
             JOIN users u ON ml.seller_id = u.id 
             WHERE ml.status = 'active' 
             ORDER BY ml.price ASC
@@ -619,17 +583,17 @@ app.get('/api/gifts/market', async (req, res) => {
 });
 
 app.post('/api/gifts/sell', async (req, res) => {
-    const { telegramId, giftId, price } = req.body;
+    const { telegramId, nftId, price } = req.body;
     if (price < 10) return res.json({ success: false, error: 'Минимальная цена 10⭐' });
     try {
         await pool.query('BEGIN');
         const user = await pool.query("SELECT id FROM users WHERE telegram_id = $1", [telegramId]);
         if (!user.rows[0]) throw new Error('User not found');
-        const gift = await pool.query("SELECT * FROM user_inventory WHERE id = $1 AND user_id = $2 AND is_withdrawn = false", [giftId, user.rows[0].id]);
-        if (!gift.rows[0]) throw new Error('Gift not found');
-        const nft = await pool.query("SELECT nft_id FROM nft_items WHERE id = $1", [gift.rows[0].nft_id]);
-        await pool.query("INSERT INTO market_lots (gift_id, seller_id, price) VALUES ($1, $2, $3)", [nft.rows[0].nft_id, user.rows[0].id, price]);
-        await pool.query("UPDATE user_inventory SET is_withdrawn = true WHERE id = $1", [giftId]);
+        const inventory = await pool.query("SELECT * FROM user_inventory WHERE id = $1 AND user_id = $2 AND is_withdrawn = false", [nftId, user.rows[0].id]);
+        if (!inventory.rows[0]) throw new Error('Gift not found in inventory');
+        const nft = await pool.query("SELECT nft_id FROM nft_items WHERE id = $1", [inventory.rows[0].nft_id]);
+        await pool.query("INSERT INTO market_lots (nft_id, seller_id, price) VALUES ($1, $2, $3)", [nft.rows[0].nft_id, user.rows[0].id, price]);
+        await pool.query("UPDATE user_inventory SET is_withdrawn = true WHERE id = $1", [nftId]);
         await pool.query('COMMIT');
         res.json({ success: true });
     } catch (e) { await pool.query('ROLLBACK'); res.status(400).json({ success: false, error: e.message }); }
@@ -639,22 +603,20 @@ app.post('/api/gifts/buy', async (req, res) => {
     const { telegramId, lotId } = req.body;
     try {
         await pool.query('BEGIN');
-        const buyer = await pool.query("SELECT id, stars, is_vip FROM users WHERE telegram_id = $1 FOR UPDATE", [telegramId]);
+        const buyer = await pool.query("SELECT id, stars FROM users WHERE telegram_id = $1 FOR UPDATE", [telegramId]);
         if (!buyer.rows[0]) throw new Error('User not found');
         const lot = await pool.query("SELECT * FROM market_lots WHERE id = $1 AND status = 'active' FOR UPDATE", [lotId]);
         if (!lot.rows[0]) throw new Error('Lot not found');
         if (buyer.rows[0].stars < lot.rows[0].price) throw new Error('Insufficient stars');
         
-        const feeRate = buyer.rows[0].is_vip ? VIP_MARKET_FEE : MARKET_FEE;
-        const fee = Math.floor(lot.rows[0].price * feeRate);
+        const fee = Math.floor(lot.rows[0].price * MARKET_FEE);
         const sellerEarn = lot.rows[0].price - fee;
         
         await pool.query("UPDATE users SET stars = stars - $1 WHERE id = $2", [lot.rows[0].price, buyer.rows[0].id]);
         await pool.query("UPDATE users SET stars = stars + $1 WHERE id = $2", [sellerEarn, lot.rows[0].seller_id]);
         await pool.query("UPDATE users SET stars = stars + $1 WHERE telegram_id = $2", [fee, ADMIN_ID]);
         await pool.query("UPDATE market_lots SET status = 'sold', sold_at = NOW() WHERE id = $1", [lotId]);
-        await pool.query("INSERT INTO user_inventory (user_id, nft_id) VALUES ($1, $2)", [buyer.rows[0].id, lot.rows[0].gift_id]);
-        await updateUserVipStatus(buyer.rows[0].id);
+        await pool.query("INSERT INTO user_inventory (user_id, nft_id) VALUES ($1, $2)", [buyer.rows[0].id, lot.rows[0].nft_id]);
         await pool.query('COMMIT');
         
         sendUserBalance(telegramId);
@@ -665,7 +627,7 @@ app.post('/api/gifts/buy', async (req, res) => {
 // ========== АДМИН-ПАНЕЛЬ ==========
 app.post('/api/admin/get-users', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
-    const r = await pool.query("SELECT telegram_id, name, stars, banned, is_vip FROM users LIMIT 50");
+    const r = await pool.query("SELECT id, telegram_id, name, stars, banned FROM users LIMIT 50");
     res.json(r.rows);
 });
 
