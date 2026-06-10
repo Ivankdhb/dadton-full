@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ton/core@0.59.0/dist/index.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-user-select: none; }
         body { background-color: #0a0a0a; color: #ffffff; overflow-x: hidden; padding-bottom: 75px; }
@@ -15,8 +17,11 @@
         .logo-area { font-weight: 900; font-size: 18px; color: #FFD700; display: flex; align-items: center; gap: 8px; }
         .header-right { display: flex; align-items: center; gap: 8px; }
         .balance-plate { background: #1a1a1a; padding: 6px 12px; border-radius: 8px; border: 1px solid #FFD700; color: #FFD700; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        
+        .wallet-container { display: flex; align-items: center; gap: 6px; }
         .wallet-btn { background: #1a1a1a; padding: 6px 12px; border-radius: 8px; border: 1px solid #2a2a2a; color: #00cc66; font-weight: 600; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .wallet-btn.connected { border-color: #00cc66; background: rgba(0,204,102,0.1); }
+        .disconnect-btn { background: #ff4444; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; display: none; }
 
         #loading-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background:#000; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
         .spinner { width: 50px; height: 50px; border: 5px solid #2a2a2a; border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -133,30 +138,14 @@
         .admin-withdraw-item { background: #1a1a1a; border-radius: 12px; padding: 10px; margin-bottom: 8px; border-left: 3px solid #FFD700; }
         .admin-user-item { background: #1a1a1a; border-radius: 12px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .admin-user-name { font-weight: 700; color: #FFD700; }
-        
-        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #FFD700; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: 800; z-index: 1000; animation: fadeOut 2s forwards; }
-        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-        
-        .withdraw-rate { font-size: 11px; color: #888; margin-bottom: 10px; padding: 6px; background: #1a1a1a; border-radius: 6px; }
-        
-        #ton-connect-btn-container { display: none; }
+        .admin-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
+        .admin-badge-active { background: rgba(0,204,102,0.1); color: #00cc66; }
+        .admin-badge-banned { background: rgba(255,68,68,0.1); color: #ff4444; }
         
         .deposit-loader { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:600; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
         .deposit-loader.active { display: flex; }
         .deposit-loader .spinner { width: 60px; height: 60px; border: 5px solid #2a2a2a; border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 0.8s linear infinite; }
         .deposit-loader p { color: #FFD700; font-weight: 800; font-size: 16px; }
-        
-        @media (max-width: 480px) {
-            .leaderboard-podium { gap: 8px; }
-            .podium-item { width: 75px; }
-            .podium-avatar { width: 45px; height: 45px; font-size: 18px; }
-            .podium-1 .podium-avatar { width: 55px; height: 55px; }
-            .podium-2 .podium-avatar { width: 48px; height: 48px; }
-            .podium-3 .podium-avatar { width: 42px; height: 42px; }
-            .podium-1 .podium-base { height: 80px; }
-            .podium-2 .podium-base { height: 55px; }
-            .podium-3 .podium-base { height: 40px; }
-        }
     </style>
 </head>
 <body>
@@ -168,13 +157,16 @@
 
     <div id="deposit-loader" class="deposit-loader">
         <div class="spinner"></div>
-        <p>⏳ Ожидайте зачисления...</p>
+        <p>⏳ Ожидайте автоматического зачисления...</p>
     </div>
 
     <header>
         <div class="logo-area">🎲 DadTon</div>
         <div class="header-right">
-            <div id="wallet-status" class="wallet-btn" onclick="connectWallet()">💎 Подключить кошелёк</div>
+            <div class="wallet-container">
+                <div id="wallet-status" class="wallet-btn" onclick="connectWallet()">💎 Подключить кошелёк</div>
+                <button id="disconnect-wallet-btn" class="disconnect-btn" onclick="disconnectWallet()">❌</button>
+            </div>
             <div class="balance-plate" onclick="openModal('deposit-modal')">
                 <span>⭐</span><span id="global-balance">0</span>
             </div>
@@ -204,7 +196,6 @@
             <div id="rocket-overlay" class="rocket-overlay">ОЖИДАНИЕ</div>
             <div id="rocket-mult" class="multiplier-text" style="display:none;">1.00x</div>
         </div>
-        
         <div class="panel">
             <div class="input-group">
                 <input type="number" id="rocket-bet-amount" value="10" min="10" step="1">
@@ -212,7 +203,7 @@
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'max')">MAX</button>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:#888; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:#888;">
                 <input type="checkbox" id="rocket-auto-check"> Автовывод
                 <input type="number" id="rocket-auto-val" value="1.5" step="0.1" min="1.1" max="100" style="padding:4px; max-width:80px;">
             </div>
@@ -221,12 +212,10 @@
                 <button id="rocket-cancel-btn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRocketBet()">❌ Отмена</button>
             </div>
         </div>
-
         <div class="panel">
             <div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">📊 История крашей</div>
             <div id="rocket-history-list" class="rocket-history">Загрузка...</div>
         </div>
-
         <div class="panel">
             <div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">👥 Участники</div>
             <div id="rocket-players-list" class="list-container"></div>
@@ -249,9 +238,7 @@
                 <option value="24">24 мин</option>
             </select>
         </div>
-
         <div class="mines-grid" id="mines-grid-board"></div>
-
         <button id="mines-action-btn" class="btn-main btn-gold" onclick="handleMinesAction()">💣 Новая игра</button>
         <div id="mines-status-text" style="text-align:center; font-weight:800; margin-top:8px; color:#FFD700;"></div>
     </div>
@@ -261,7 +248,6 @@
             <canvas id="roulette-canvas" width="260" height="260"></canvas>
             <div id="roulette-timer-text" style="margin-top:10px; font-weight:800; color:#FFD700;">Ожидание игроков</div>
         </div>
-
         <div class="panel">
             <div class="input-group">
                 <input type="number" id="roulette-bet-amount" value="10" min="10" step="1">
@@ -274,7 +260,6 @@
                 <button id="roulette-cancel-btn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRouletteBet()">❌ Отмена</button>
             </div>
         </div>
-
         <div class="panel">
             <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">
                 <span>👥 Участники</span>
@@ -300,14 +285,12 @@
                 <div id="profile-username" style="font-size:12px; color:#888;">@username</div>
             </div>
         </div>
-
         <div class="profile-tabs">
             <button class="profile-tab active" onclick="switchProfileTab('stats')">📊 Статистика</button>
             <button class="profile-tab" onclick="switchProfileTab('games')">🎮 Мои игры</button>
             <button class="profile-tab" onclick="switchProfileTab('finance')">💰 Финансы</button>
             <button class="profile-tab" onclick="switchProfileTab('referrals')">👥 Рефералы</button>
         </div>
-
         <div id="profile-tab-stats" class="profile-tab-content active">
             <div class="stats-grid">
                 <div class="stat-box"><span>🎮 Игр</span><strong id="stat-games">0</strong></div>
@@ -321,11 +304,7 @@
             </div>
             <button id="admin-panel-btn" class="btn-main btn-gold" style="margin-top:15px; display:none; background:linear-gradient(135deg,#2a2a2a,#1a1a1a); color:#FFD700; border:1px solid #FFD700;" onclick="openAdminModal()">👑 АДМИН-ПАНЕЛЬ</button>
         </div>
-
-        <div id="profile-tab-games" class="profile-tab-content">
-            <div id="games-history-list" style="max-height: 400px; overflow-y: auto;"></div>
-        </div>
-
+        <div id="profile-tab-games" class="profile-tab-content"><div id="games-history-list" style="max-height: 400px; overflow-y: auto;"></div></div>
         <div id="profile-tab-finance" class="profile-tab-content">
             <div class="stats-grid">
                 <div class="stat-box"><span>💰 Пополнено</span><strong id="fin-deposited">0</strong></div>
@@ -334,7 +313,6 @@
                 <div class="stat-box"><span>🎰 Баланс</span><strong id="fin-balance">0</strong></div>
             </div>
         </div>
-
         <div id="profile-tab-referrals" class="profile-tab-content">
             <div class="stats-grid">
                 <div class="stat-box"><span>👥 Рефералов</span><strong id="ref-count">0</strong></div>
@@ -346,27 +324,23 @@
                     <input type="text" id="ref-link" readonly value="" style="flex:1; font-size:11px;">
                     <button class="btn-preset" onclick="copyRefLink()">📋 Копировать</button>
                 </div>
-                <p style="font-size:11px; color:#888; margin-top:8px;">💡 За каждого приглашённого друга вы получаете 5% от ЕГО ПОПОЛНЕНИЯ!</p>
             </div>
             <div id="referrals-list" style="margin-top:12px; max-height: 250px; overflow-y: auto;"></div>
         </div>
     </div>
 
-    <!-- АДМИН-ПАНЕЛЬ -->
     <div id="admin-modal" class="modal">
         <div class="admin-modal-content">
             <div class="admin-title">👑 DADTON ADMIN</div>
-            
             <div class="admin-section">
                 <div class="admin-section-title">💰 Управление балансом</div>
                 <input type="text" id="admin-target-id" class="admin-input" placeholder="Telegram ID пользователя">
                 <div class="admin-input-group">
                     <input type="number" id="admin-add-amount" class="admin-input" placeholder="Сумма">
-                    <button class="admin-btn admin-btn-gold" onclick="adminAddStars()">➕ Начислить</button>
-                    <button class="admin-btn admin-btn-red" onclick="adminRemoveStars()">➖ Снять</button>
+                    <button class="admin-btn admin-btn-gold" onclick="adminAddStars()">+++ Начислить</button>
+                    <button class="admin-btn admin-btn-red" onclick="adminRemoveStars()">--- Снять</button>
                 </div>
             </div>
-
             <div class="admin-section">
                 <div class="admin-section-title">⚡ Действия</div>
                 <input type="text" id="admin-ban-id" class="admin-input" placeholder="Telegram ID пользователя">
@@ -375,7 +349,6 @@
                     <button class="admin-btn admin-btn-green" onclick="adminUnbanUser()">🔓 Разбанить</button>
                 </div>
             </div>
-
             <div class="admin-section">
                 <div class="admin-section-title">⏸️ Управление ботом</div>
                 <div class="admin-input-group">
@@ -383,30 +356,21 @@
                     <button class="admin-btn admin-btn-green" onclick="adminResumeBot()">▶️ Запуск</button>
                 </div>
             </div>
-
             <div class="admin-section">
                 <div class="admin-section-title">📋 Заявки на вывод</div>
-                <div class="admin-input-group">
-                    <button class="admin-btn admin-btn-gold" onclick="adminLoadWithdraws()">🔄 Обновить</button>
-                </div>
+                <button class="admin-btn admin-btn-gold" onclick="adminLoadWithdraws()">🔄 Обновить</button>
                 <div id="admin-withdraws-list" style="margin-top: 12px;"></div>
             </div>
-
             <div class="admin-section">
                 <div class="admin-section-title">👥 Пользователи</div>
-                <div class="admin-input-group">
-                    <button class="admin-btn admin-btn-gold" onclick="adminLoadUsers()">🔄 Обновить список</button>
-                </div>
+                <button class="admin-btn admin-btn-gold" onclick="adminLoadUsers()">🔄 Обновить список</button>
                 <div id="admin-users-list" style="margin-top: 12px; max-height: 250px; overflow-y: auto;"></div>
             </div>
-
-            <!-- НОВАЯ КНОПКА СБРОСА БАЛАНСОВ -->
             <div class="admin-section">
                 <div class="admin-section-title">⚠️ ОПАСНАЯ ЗОНА</div>
                 <button class="admin-btn admin-btn-red" style="width:100%;" onclick="resetAllBalances()">💣 СБРОСИТЬ ВСЕ БАЛАНСЫ ДО 0</button>
             </div>
-
-            <button class="admin-btn admin-btn-gray" style="width:100%; padding:12px; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
+            <button class="admin-btn admin-btn-gray" style="width:100%; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
         </div>
     </div>
 
@@ -417,45 +381,36 @@
                 <button class="tab-btn" onclick="switchDepTab('stars', event)">⭐ Stars</button>
             </div>
             <div id="dep-tab-crypto">
-                <p style="font-size:12px; color:#888; margin-bottom:8px;">1 TON = 100⭐. Требуется подключение кошелька.</p>
+                <p style="font-size:12px; color:#888; margin-bottom:8px;">1 TON = 100⭐. Безопасная моментальная проверка.</p>
                 <input type="number" id="dep-crypto-amount" value="1" min="0.5" step="0.1">
-                <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processCryptoDeposit()">💸 Оплатить через кошелёк</button>
-                <p style="font-size:11px; color:#888; margin-top:8px;">💰 После оплаты баланс пополнится автоматически</p>
+                <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processCryptoDeposit()">💸 Купить через TON кошелёк</button>
             </div>
             <div id="dep-tab-stars" style="display:none;">
-                <p style="font-size:12px; color:#888; margin-bottom:8px;">Пополнение через нативные Telegram Stars</p>
                 <div class="stars-presets">
-                    <button class="stars-preset" onclick="setStarsAmount(10)">10⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(25)">25⭐</button>
                     <button class="stars-preset" onclick="setStarsAmount(50)">50⭐</button>
                     <button class="stars-preset" onclick="setStarsAmount(100)">100⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(250)">250⭐</button>
                     <button class="stars-preset" onclick="setStarsAmount(500)">500⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(1000)">1000⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(2500)">2500⭐</button>
-                    <button class="stars-preset" onclick="setStarsAmount(5000)">5000⭐</button>
                 </div>
-                <input type="number" id="dep-stars-amount" value="50" min="1" placeholder="Своя сумма" style="margin-top:8px; width:100%;">
-                <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processStarsDeposit()">⭐ Оплатить</button>
+                <input type="number" id="dep-stars-amount" value="50" min="1" style="margin-top:8px; width:100%;">
+                <button class="btn-main btn-gold" style="margin-top:10px;" onclick="processStarsDeposit()">⭐ Оплатить Stars</button>
             </div>
-            <button class="btn-main" style="background:none; color:#888; margin-top:8px; font-size:13px;" onclick="closeModal('deposit-modal')">Отмена</button>
+            <button class="btn-main" style="background:none; color:#888; margin-top:8px;" onclick="closeModal('deposit-modal')">Отмена</button>
         </div>
     </div>
 
     <div id="withdraw-modal" class="modal">
         <div class="modal-content">
             <div style="font-weight:800; font-size:16px; margin-bottom:4px; color:#FFD700;">Вывод средств</div>
-            <div class="withdraw-rate">💱 Курсы вывода (после комиссии 15%):<br>• 85⭐ = 1 TON<br>• 43⭐ = 1 USDT<br>• 1⭐ = 1 Star (но комиссия 15%)</div>
             <select id="withdraw-asset" onchange="toggleWithdrawFields()">
                 <option value="TON">💎 TON</option>
                 <option value="USDT">💵 USDT</option>
-                <option value="Stars">⭐ Stars (В Telegram)</option>
+                <option value="Stars">⭐ Stars</option>
             </select>
             <input type="number" id="withdraw-amount" placeholder="Сумма в звездах (мин. 100)" min="100" style="margin-top:8px; width:100%;">
             <input type="text" id="withdraw-wallet" placeholder="Адрес кошелька" style="margin-top:8px; width:100%;">
-            <input type="text" id="withdraw-tg-username" placeholder="@юзернейм получателя" style="margin-top:8px; width:100%; display:none;">
+            <input type="text" id="withdraw-tg-username" placeholder="@username получателя" style="margin-top:8px; width:100%; display:none;">
             <button class="btn-main btn-gold" style="margin-top:12px;" onclick="submitWithdraw()">📤 Отправить заявку</button>
-            <button class="btn-main" style="background:none; color:#888; margin-top:6px; font-size:13px;" onclick="closeModal('withdraw-modal')">Отмена</button>
+            <button class="btn-main" style="background:none; color:#888; margin-top:6px;" onclick="closeModal('withdraw-modal')">Отмена</button>
         </div>
     </div>
 
@@ -465,14 +420,11 @@
         <div class="nav-item" id="nav-profile" onclick="switchPage('profile')"><span>👤</span>Профиль</div>
     </nav>
 
-    <div id="ton-connect-btn-container" style="display: none;"></div>
-
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        tg.ready(); tg.expand();
 
-        let user = { telegram_id: "123456", name: "Тест Игрок", avatar: "", username: "test", stars: 1000 };
+        let user = { telegram_id: "123456", name: "Тест Игрок", avatar: "", username: "test", stars: 0 };
         if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
             user.telegram_id = tg.initDataUnsafe.user.id.toString();
             user.name = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
@@ -483,359 +435,177 @@
         const BACKEND_URL = "https://dadton-full.onrender.com";
         const WS_URL = "wss://dadton-full.onrender.com";
         const MIN_BET = 10;
-        let ws = null;
-        let currentMinesGameStatus = 'idle';
-        let rocketHasBet = false;
-        let reconnectAttempts = 0;
-        let statusCheckInterval = null;
+        let ws = null, currentMinesGameStatus = 'idle', rocketHasBet = false, reconnectAttempts = 0, statusCheckInterval = null;
 
-        // ========== TON CONNECT ==========
-        let tonConnectUI = null;
-        let isWalletConnected = false;
-        let walletAddress = '';
+        let tonConnectUI = null, isWalletConnected = false, walletAddress = '';
 
         function initTonConnect() {
-            if (typeof TON_CONNECT_UI === 'undefined') { setTimeout(initTonConnect, 500); return; }
             try {
                 tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
                     manifestUrl: `${BACKEND_URL}/tonconnect-manifest.json`,
                     buttonRootId: 'ton-connect-btn-container'
                 });
                 tonConnectUI.onStatusChange((wallet) => {
+                    const walletBtn = document.getElementById('wallet-status');
+                    const disconnectBtn = document.getElementById('disconnect-wallet-btn');
                     if (wallet) {
                         isWalletConnected = true;
                         walletAddress = wallet.account.address;
-                        const shortAddress = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
-                        const walletBtn = document.getElementById('wallet-status');
-                        if (walletBtn) { walletBtn.innerHTML = `💎 ${shortAddress}`; walletBtn.classList.add('connected'); }
+                        if (walletBtn) { 
+                            walletBtn.innerHTML = `💎 ${walletAddress.slice(0,6)}...${walletAddress.slice(-4)}`; 
+                            walletBtn.classList.add('connected'); 
+                        }
+                        if (disconnectBtn) disconnectBtn.style.display = 'block';
                         fetch(`${BACKEND_URL}/api/save-wallet`, {
                             method: 'POST', headers: { 'content-type': 'application/json' },
                             body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress })
                         });
-                        showToast('✅ Кошелёк подключён!');
                     } else {
-                        isWalletConnected = false;
-                        walletAddress = '';
-                        const walletBtn = document.getElementById('wallet-status');
+                        isWalletConnected = false; walletAddress = '';
                         if (walletBtn) { walletBtn.innerHTML = '💎 Подключить кошелёк'; walletBtn.classList.remove('connected'); }
+                        if (disconnectBtn) disconnectBtn.style.display = 'none';
                     }
                 });
-            } catch(e) { console.error('TON Connect init error:', e); }
+            } catch(e) { console.error(e); }
         }
         setTimeout(initTonConnect, 1000);
 
         async function connectWallet() {
-            if (!tonConnectUI) { tg.showAlert('⏳ Подождите, инициализация...'); return; }
-            try { await tonConnectUI.connectWallet(); } catch(e) { tg.showAlert('❌ Ошибка подключения кошелька'); }
+            if (!tonConnectUI) return;
+            try { await tonConnectUI.connectWallet(); } catch(e) { showToast('Ошибка подключения'); }
         }
 
-        function showToast(msg) { let toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000); }
-
-        // Функция для обновления лимитов ставок
-        function updateBetLimits() {
-            const maxBet = user.stars || MIN_BET;
-            const rocketInput = document.getElementById('rocket-bet-amount');
-            const minesInput = document.getElementById('mines-bet-amount');
-            const rouletteInput = document.getElementById('roulette-bet-amount');
-            
-            if (rocketInput) rocketInput.max = maxBet;
-            if (minesInput) minesInput.max = maxBet;
-            if (rouletteInput) rouletteInput.max = maxBet;
+        async function disconnectWallet() {
+            if (!tonConnectUI) return;
+            try { await tonConnectUI.disconnect(); showToast('🔴 Кошелёк отключен'); } catch(e) { console.error(e); }
         }
 
-        // Регистрация
-        fetch(`${BACKEND_URL}/api/register`, {
-            method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(user)
-        }).then(res => res.json()).then(data => {
-            if (data.success) {
-                user = data.user; updateUI(); initWebSocket(); loadRocketHistory();
-                if (user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display = 'block';
-                loadUserStats();
-                updateBetLimits();
-            }
-            document.getElementById('loading-screen').style.display = 'none';
-        }).catch(() => { document.getElementById('loading-screen').style.display = 'none'; showToast('Ошибка подключения'); });
-
-        function loadRocketHistory() {
-            fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(data => {
-                const container = document.getElementById('rocket-history-list');
-                if (container) container.innerHTML = data.length ? data.map(m => `<span class="crash-badge">${m}x</span>`).join('') : '<span style="color:#888;">Нет данных</span>';
-            }).catch(() => { const c = document.getElementById('rocket-history-list'); if(c) c.innerHTML = '<span style="color:#888;">Нет данных</span>'; });
-        }
-
-        function loadLeaderboard() {
-            fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(data => {
-                const podium = document.getElementById('leaderboard-podium');
-                const list = document.getElementById('leaderboard-list');
-                if (!podium || !list) return;
-                const top3 = data.slice(0,3);
-                while (top3.length < 3) top3.push({ name: '?', avatar: null, turnover: 0 });
-                podium.innerHTML = `
-                    <div class="podium-item podium-2"><div class="podium-avatar">${top3[1] && top3[1].avatar ? `<img src="${top3[1].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[1].name || '?').charAt(0)}'">` : (top3[1] ? (top3[1].name || '?').charAt(0) : '?')}</div><div class="podium-name">${top3[1] ? (top3[1].name || '?').substring(0,12) : '-'}</div><div class="podium-stars">${top3[1] ? (top3[1].turnover || 0) : 0}⭐</div><div class="podium-base"></div></div>
-                    <div class="podium-item podium-1"><div class="podium-avatar">${top3[0] && top3[0].avatar ? `<img src="${top3[0].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[0].name || '?').charAt(0)}'">` : (top3[0] ? (top3[0].name || '?').charAt(0) : '?')}</div><div class="podium-name">${top3[0] ? (top3[0].name || '?').substring(0,12) : '-'}</div><div class="podium-stars">${top3[0] ? (top3[0].turnover || 0) : 0}⭐</div><div class="podium-base"></div></div>
-                    <div class="podium-item podium-3"><div class="podium-avatar">${top3[2] && top3[2].avatar ? `<img src="${top3[2].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[2].name || '?').charAt(0)}'">` : (top3[2] ? (top3[2].name || '?').charAt(0) : '?')}</div><div class="podium-name">${top3[2] ? (top3[2].name || '?').substring(0,12) : '-'}</div><div class="podium-stars">${top3[2] ? (top3[2].turnover || 0) : 0}⭐</div><div class="podium-base"></div></div>`;
-                list.innerHTML = data.slice(3).map((u, idx) => `<div class="leaderboard-row"><div class="leaderboard-rank">#${idx+4}</div><div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(u.name || '?').charAt(0)}'">` : (u.name || '?').charAt(0)}</div><div class="leaderboard-name">${(u.name || 'Игрок').substring(0,20)}</div><div class="leaderboard-stars">${u.turnover || 0}⭐</div></div>`).join('');
-                if (data.length <= 3) list.innerHTML = '<div style="text-align:center; color:#888;">Нет других игроков</div>';
-            }).catch(() => {});
-        }
-
-        function loadUserGamesHistory() {
-            fetch(`${BACKEND_URL}/api/user-games-history`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
-            .then(r => r.json()).then(data => { const c = document.getElementById('games-history-list'); if(c) c.innerHTML = data.length ? data.map(g => `<div class="history-item"><span>${g.game_type === 'rocket' ? '🚀' : g.game_type === 'mines' ? '💣' : '🎡'} ${g.game_name || g.game_type}</span><span class="${(g.profit || 0) >= 0 ? 'history-win' : 'history-loss'}">${(g.profit || 0) >= 0 ? '+' : ''}${g.profit || 0}⭐</span></div>`).join('') : '<div style="text-align:center; color:#888;">🎮 Сыграйте в игры, чтобы увидеть историю</div>'; });
-        }
-
-        function loadUserFinance() {
-            fetch(`${BACKEND_URL}/api/user-finance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
-            .then(r => r.json()).then(data => { document.getElementById('fin-deposited').innerText = data.deposited || 0; document.getElementById('fin-withdrawn').innerText = data.withdrawn || 0; document.getElementById('fin-diff').innerText = (data.deposited || 0) - (data.withdrawn || 0); document.getElementById('fin-balance').innerText = user.stars || 0; });
-        }
-
-        function loadUserReferrals() {
-            fetch(`${BACKEND_URL}/api/user-referrals`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
-            .then(r => r.json()).then(data => { document.getElementById('ref-count').innerText = data.count || 0; document.getElementById('ref-earned').innerText = data.earned || 0; document.getElementById('ref-link').value = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`; const c = document.getElementById('referrals-list'); if(c) c.innerHTML = (data.referrals && data.referrals.length) ? data.referrals.map(r => `<div class="referral-item"><span>${r.name || 'Игрок'}</span><span style="color:#00cc66;">+${r.earned || 0}⭐</span></div>`).join('') : '<div style="text-align:center; color:#888;">👥 Пока нет приглашённых друзей</div>'; });
-        }
-
-        function initWebSocket() {
-            if (ws && ws.readyState === WebSocket.OPEN) return;
-            ws = new WebSocket(WS_URL);
-            ws.onopen = () => { reconnectAttempts = 0; ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id })); };
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'balance_update') { document.getElementById('global-balance').innerText = data.stars; user.stars = data.stars; updateBetLimits(); }
-                    if (data.type === 'rocket_tick') {
-                        document.getElementById('rocket-overlay').style.display = 'flex'; document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`; document.getElementById('rocket-mult').style.display = 'none';
-                        updateRocketPlayers(data.bets);
-                        const hasBet = data.bets.some(b => b.telegram_id === user.telegram_id && !b.cashedOut);
-                        rocketHasBet = hasBet;
-                        if (hasBet) { document.getElementById('rocket-cancel-btn').style.display = 'block'; setRocketButtonState('waiting_with_bet'); } 
-                        else { document.getElementById('rocket-cancel-btn').style.display = 'none'; setRocketButtonState('bet'); }
-                    }
-                    if (data.type === 'rocket_start') { document.getElementById('rocket-overlay').style.display = 'none'; const mEl = document.getElementById('rocket-mult'); mEl.style.display = 'block'; mEl.style.color = '#FFD700'; mEl.innerText = `1.00x`; document.getElementById('rocket-video').play(); if (rocketHasBet) setRocketButtonState('flying'); else setRocketButtonState('waiting'); }
-                    if (data.type === 'rocket_fly') { const mEl = document.getElementById('rocket-mult'); mEl.innerText = `${data.multiplier}x`; }
-                    if (data.type === 'rocket_crash') { const mEl = document.getElementById('rocket-mult'); mEl.style.color = '#ff4444'; mEl.innerText = `💥 ВЗРЫВ! ${data.multiplier}x`; document.getElementById('rocket-video').pause(); setRocketButtonState('waiting'); document.getElementById('rocket-cancel-btn').style.display = 'none'; rocketHasBet = false; updateBalance(); loadRocketHistory(); loadUserStats(); }
-                    if (data.type === 'rocket_bets_update') { updateRocketPlayers(data.bets); let myBet = data.bets.find(b => b.telegram_id === user.telegram_id); if (myBet && !myBet.cashedOut) { rocketHasBet = true; document.getElementById('rocket-cancel-btn').style.display = 'block'; setRocketButtonState('flying'); } else { rocketHasBet = false; document.getElementById('rocket-cancel-btn').style.display = 'none'; setRocketButtonState('bet'); } }
-                    if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) { tg.HapticFeedback.notificationOccurred('success'); showToast(`🎉 Выигрыш: ${data.winAmount}⭐ (${data.multiplier}x)`); setRocketButtonState('waiting'); rocketHasBet = false; document.getElementById('rocket-cancel-btn').style.display = 'none'; updateBalance(); loadUserStats(); loadUserGamesHistory(); }
-                    if (data.type === 'rocket_bet_cancelled') { showToast('❌ Ставка отменена'); setRocketButtonState('bet'); rocketHasBet = false; document.getElementById('rocket-cancel-btn').style.display = 'none'; updateBalance(); }
-                    if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') { if (data.timer) document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`; document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total || 0}⭐`; updateRoulettePlayers(data.bets || []); drawRoulette(data.bets || [], 0); let myBet = (data.bets || []).find(b => b.telegram_id === user.telegram_id); document.getElementById('roulette-cancel-btn').style.display = myBet ? 'block' : 'none'; }
-                    if (data.type === 'roulette_roll') { animateRoulette(data.bets || [], data.winner); }
-                    if (data.type === 'roulette_wait_players') { document.getElementById('roulette-timer-text').innerText = `Ожидание игроков...`; }
-                    if (data.type === 'roulette_bet_cancelled') { showToast('❌ Ставка отменена'); document.getElementById('roulette-cancel-btn').style.display = 'none'; updateBalance(); }
-                } catch(e) { console.error('WebSocket error:', e); }
-            };
-            ws.onclose = () => { setTimeout(() => { if (reconnectAttempts < 5) { reconnectAttempts++; initWebSocket(); } }, 3000); };
-        }
-
-        function updateBalance() { 
-            fetch(`${BACKEND_URL}/api/get-balance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
-            .then(r => r.json()).then(d => { if (d.stars !== undefined) { document.getElementById('global-balance').innerText = d.stars; user.stars = d.stars; updateBetLimits(); } }); 
-        }
-
-        function updateUI() { document.getElementById('global-balance').innerText = user.stars || 0; document.getElementById('profile-name').innerText = user.name; document.getElementById('profile-username').innerText = user.username ? '@' + user.username : ''; if (user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`; else document.getElementById('user-avatar-container').innerText = user.name.charAt(0); updateBetLimits(); }
-
-        function loadUserStats() { fetch(`${BACKEND_URL}/api/user-stats`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(data => { if (data.success) { document.getElementById('stat-games').innerText = data.games_played || 0; document.getElementById('stat-turnover').innerText = data.turnover || 0; document.getElementById('stat-wins').innerText = data.wins || 0; document.getElementById('stat-wr').innerText = (data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0) + '%'; } }); }
-
-        function switchPage(pageId) { tg.HapticFeedback.impactOccurred('medium'); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const target = document.getElementById(`page-${pageId}`); if (target) target.classList.add('active'); const nav = document.getElementById(`nav-${pageId}`); if (nav) nav.classList.add('active'); if (pageId === 'mines') buildMinesBoard(); if (pageId === 'profile') { loadUserStats(); loadUserGamesHistory(); loadUserFinance(); loadUserReferrals(); } if (pageId === 'leaderboard') loadLeaderboard(); }
-
-        function switchProfileTab(tab) { document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active')); if (tab === 'stats') { document.querySelectorAll('.profile-tab')[0].classList.add('active'); document.getElementById('profile-tab-stats').classList.add('active'); } else if (tab === 'games') { document.querySelectorAll('.profile-tab')[1].classList.add('active'); document.getElementById('profile-tab-games').classList.add('active'); loadUserGamesHistory(); } else if (tab === 'finance') { document.querySelectorAll('.profile-tab')[2].classList.add('active'); document.getElementById('profile-tab-finance').classList.add('active'); loadUserFinance(); } else if (tab === 'referrals') { document.querySelectorAll('.profile-tab')[3].classList.add('active'); document.getElementById('profile-tab-referrals').classList.add('active'); loadUserReferrals(); } }
-
-        function adjustBet(inputId, action) { 
-            let el = document.getElementById(inputId); 
-            let val = parseFloat(el.value) || MIN_BET; 
-            let maxVal = user.stars || MIN_BET; 
-            
-            if (action === 'min') { 
-                val = MIN_BET; 
-            } else if (action === 'max') { 
-                val = maxVal; 
-            } else if (action === 'half') { 
-                val = Math.max(MIN_BET, Math.floor(val / 2)); 
-            } else if (action === 'double') { 
-                val = Math.min(val * 2, maxVal); 
-            } else if (typeof action === 'number') { 
-                val = Math.min(val + action, maxVal); 
-            } 
-            
-            el.value = Math.max(MIN_BET, Math.min(val, maxVal)); 
-        }
-
-        let currentRocketBtnState = 'bet';
-        function setRocketButtonState(state) { const btn = document.getElementById('rocket-action-btn'); currentRocketBtnState = state; if (state === 'bet') { btn.className = "btn-main btn-gold"; btn.innerText = "💰 Сделать ставку"; btn.disabled = false; } else if (state === 'waiting_with_bet') { btn.className = "btn-main btn-gray"; btn.innerText = "⏳ Ожидание старта"; btn.disabled = true; } else if (state === 'flying') { btn.className = "btn-main btn-green"; btn.innerText = "💸 Забрать"; btn.disabled = false; } else { btn.className = "btn-main btn-gray"; btn.innerText = "⏳ Ожидание"; btn.disabled = true; } }
-
-        function handleRocketAction() { 
-            if (currentRocketBtnState === 'bet') { 
-                let amt = parseInt(document.getElementById('rocket-bet-amount').value); 
-                if (amt > user.stars) { 
-                    showToast(`❌ Максимальная ставка: ${user.stars}⭐`); 
-                    document.getElementById('rocket-bet-amount').value = user.stars; 
-                    return; 
-                } 
-                if (amt < MIN_BET) { 
-                    showToast(`❌ Минимальная ставка: ${MIN_BET}⭐`); 
-                    return; 
-                } 
-                let auto = document.getElementById('rocket-auto-check').checked; 
-                let autoVal = parseFloat(document.getElementById('rocket-auto-val').value); 
-                ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: autoVal })); 
-                setRocketButtonState('waiting_with_bet'); 
-            } else if (currentRocketBtnState === 'flying') { 
-                ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); 
-            } 
-        }
-
-        function cancelRocketBet() { fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id })); else showToast(d.msg || 'Нельзя отменить ставку'); }); }
-
-        function cancelRouletteBet() { fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id })); else showToast(d.msg || 'Нельзя отменить ставку'); }); }
-
-        function updateRocketPlayers(bets) { const container = document.getElementById('rocket-players-list'); if (!container) return; container.innerHTML = bets.length ? bets.map(b => `<div class="list-row"><div class="list-user-info">${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; color:#fff; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}<span>${b.name || 'Игрок'}</span></div><div>${b.amount}⭐ ${b.cashedOut ? `<span style="color:#00cc66;">(${b.multiplier}x)</span>` : '⏳'}</div></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>'; }
-
-        function buildMinesBoard() { const board = document.getElementById('mines-grid-board'); if (!board) return; board.innerHTML = ''; for (let i = 0; i < 25; i++) board.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; }
-
-        function handleMinesAction() { 
-            const btn = document.getElementById('mines-action-btn'); 
-            if (currentMinesGameStatus === 'idle') { 
-                let amt = parseInt(document.getElementById('mines-bet-amount').value); 
-                if (amt > user.stars) { 
-                    showToast(`❌ Максимальная ставка: ${user.stars}⭐`); 
-                    document.getElementById('mines-bet-amount').value = user.stars; 
-                    return; 
-                } 
-                if (amt < MIN_BET) { 
-                    showToast(`❌ Минимальная ставка: ${MIN_BET}⭐`); 
-                    return; 
-                } 
-                let count = document.getElementById('mines-count-select').value; 
-                fetch(`${BACKEND_URL}/api/games/mines/start`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: count }) }).then(r => r.json()).then(d => { if (d.success) { currentMinesGameStatus = 'playing'; btn.className = "btn-main btn-green"; btn.innerText = "💰 Забрать (0x)"; document.getElementById('mines-status-text').innerHTML = "Игра началась! Открывайте клетки."; buildMinesBoard(); updateBalance(); } else showToast(d.msg || 'Ошибка'); }); 
-            } else if (currentMinesGameStatus === 'playing') { 
-                fetch(`${BACKEND_URL}/api/games/mines/cashout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) { tg.HapticFeedback.notificationOccurred('success'); showToast(`🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`); document.getElementById('mines-status-text').innerHTML = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } }); 
-            } 
-        }
-
-        function clickMineTile(idx) { if (currentMinesGameStatus !== 'playing') return; fetch(`${BACKEND_URL}/api/games/mines/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, index: idx }) }).then(r => r.json()).then(d => { if (!d.success) return; let tile = document.getElementById(`mine-${idx}`); if (d.hitMine) { tg.HapticFeedback.notificationOccurred('error'); tile.classList.add('blown'); tile.innerText = '💣'; document.getElementById('mines-status-text').innerHTML = "💥 Взрыв! Ставка проиграна."; if (d.board) d.board.forEach((isMine, i) => { let t = document.getElementById(`mine-${i}`); if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; } }); resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } else { tg.HapticFeedback.impactOccurred('light'); tile.classList.add('safe'); tile.innerText = '⭐'; document.getElementById('mines-action-btn').innerHTML = `💰 Забрать (${d.multiplier}x)`; if (d.win) { showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`); document.getElementById('mines-status-text').innerHTML = `🎉 ПОБЕДА! Очищено всё поле: ${d.winAmount}⭐`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } } }); }
-
-        function resetMinesButtons() { currentMinesGameStatus = 'idle'; const btn = document.getElementById('mines-action-btn'); btn.className = "btn-main btn-gold"; btn.innerText = "💣 Новая игра"; }
-
-        function handleRouletteBet() { let amt = parseInt(document.getElementById('roulette-bet-amount').value); if (amt > user.stars) { showToast(`❌ Максимальная ставка: ${user.stars}⭐`); document.getElementById('roulette-bet-amount').value = user.stars; return; } if (amt < MIN_BET) { showToast(`❌ Минимальная ставка: ${MIN_BET}⭐`); return; } ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt })); }
-
-        function updateRoulettePlayers(bets) { const container = document.getElementById('roulette-players-list'); if (!container) return; container.innerHTML = bets.length ? bets.map(b => `<div class="list-row" style="border-left: 4px solid ${b.color || '#FFD700'}; padding-left: 6px;"><div class="list-user-info">${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}<span>${b.name || 'Игрок'}</span></div><div><b>${b.amount}⭐</b></div></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>'; }
-
-        function drawRoulette(bets, startRotation = 0) { const canvas = document.getElementById('roulette-canvas'); if (!canvas) return; const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, 260, 260); if (!bets || bets.length === 0) { ctx.beginPath(); ctx.arc(130, 130, 120, 0, 2 * Math.PI); ctx.fillStyle = '#111'; ctx.fill(); ctx.strokeStyle = '#2a2a2a'; ctx.stroke(); return; } let total = bets.reduce((a, b) => a + (b.amount || 0), 0); if (total === 0) return; let currentAngle = startRotation; bets.forEach(b => { let sliceAngle = ((b.amount || 0) / total) * 2 * Math.PI; ctx.beginPath(); ctx.moveTo(130, 130); ctx.arc(130, 130, 120, currentAngle, currentAngle + sliceAngle); ctx.fillStyle = b.color || '#FFD700'; ctx.fill(); ctx.stroke(); let middleAngle = currentAngle + sliceAngle / 2; let avatarX = 130 + Math.cos(middleAngle) * 70; let avatarY = 130 + Math.sin(middleAngle) * 70; ctx.save(); ctx.beginPath(); ctx.arc(avatarX, avatarY, 16, 0, 2 * Math.PI); ctx.clip(); if (b.avatar) { let img = new Image(); img.src = b.avatar; if (img.complete) ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32); else { img.onload = () => ctx.drawImage(img, avatarX - 16, avatarY - 16, 32, 32); ctx.fillStyle = "#555"; ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32); ctx.fillStyle = "#fff"; ctx.font = "bold 12px Inter"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY); } } else { ctx.fillStyle = "#555"; ctx.fillRect(avatarX - 16, avatarY - 16, 32, 32); ctx.fillStyle = "#fff"; ctx.font = "bold 12px Inter"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText((b.name || '?').charAt(0), avatarX, avatarY); } ctx.restore(); currentAngle += sliceAngle; }); }
-
-        function animateRoulette(bets, winner) { let start = performance.now(); let duration = 3000; let totalRotation = 10 * Math.PI + Math.random() * 2 * Math.PI; function animate(time) { let elapsed = time - start; let progress = Math.min(elapsed / duration, 1); let ease = 1 - Math.pow(1 - progress, 3); drawRoulette(bets, ease * totalRotation); if (progress < 1) requestAnimationFrame(animate); else { document.getElementById('roulette-timer-text').innerHTML = `🏆 Победитель: ${winner.name || 'Игрок'}`; showToast(`🎡 Победитель: ${winner.name || 'Игрок'}! +${winner.amount || 0}⭐`); updateBalance(); loadUserStats(); loadUserGamesHistory(); document.getElementById('roulette-cancel-btn').style.display = 'none'; } } requestAnimationFrame(animate); }
-
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function openAdminModal() { openModal('admin-modal'); adminLoadWithdraws(); adminLoadUsers(); }
-        
-        function switchDepTab(tab, event) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); if (tab === 'crypto') { document.getElementById('dep-tab-crypto').style.display = 'block'; document.getElementById('dep-tab-stars').style.display = 'none'; } else { document.getElementById('dep-tab-crypto').style.display = 'none'; document.getElementById('dep-tab-stars').style.display = 'block'; } if (event && event.target) event.target.classList.add('active'); }
-        function setStarsAmount(amount) { document.getElementById('dep-stars-amount').value = amount; }
-        function toggleWithdrawFields() { let asset = document.getElementById('withdraw-asset').value; let walletInput = document.getElementById('withdraw-wallet'); let usernameInput = document.getElementById('withdraw-tg-username'); if (asset === 'Stars') { walletInput.style.display = 'none'; usernameInput.style.display = 'block'; } else { walletInput.style.display = 'block'; usernameInput.style.display = 'none'; } }
-
-        // ПОПОЛНЕНИЕ STARS
-        function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; if (amt < 1) return showToast('Минимальная сумма 1 звезда'); fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if (d.success && d.invoice_link) { tg.openInvoice(d.invoice_link, function(status) { if (status === 'paid') { showToast('🎉 Зачисление прошло успешно!'); closeModal('deposit-modal'); updateBalance(); loadUserStats(); loadUserFinance(); } }); } else showToast('Ошибка создания счёта'); }); }
-
-        // ПОПОЛНЕНИЕ КРИПТОЙ
+        // АВТОМАТИЧЕСКАЯ ПОДГОТОВКА С ПРАВИЛЬНЫМ TON BOC PAYLOAD
         async function processCryptoDeposit() {
-            if (!tonConnectUI) {
-                tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
-                return;
-            }
-            
-            const connected = await tonConnectUI.connected;
-            if (!connected) {
-                tg.showAlert('❌ Кошелёк не подключён!\n\nНажмите на кнопку "💎 Подключить кошелёк" вверху экрана.');
-                closeModal('deposit-modal');
-                return;
-            }
-            
+            if (!tonConnectUI || !isWalletConnected) { tg.showAlert('❌ Сначала подключите TON кошелёк!'); return; }
             let tonAmount = parseFloat(document.getElementById('dep-crypto-amount').value);
-            if (isNaN(tonAmount) || tonAmount < 0.5) {
-                showToast('❌ Минимум 0.5 TON');
-                return;
-            }
-            
+            if (isNaN(tonAmount) || tonAmount < 0.5) { showToast('❌ Минимум 0.5 TON'); return; }
+
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
-            const orderId = `${user.telegram_id}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-            
+            const orderId = `${user.telegram_id}_${Date.now()}`;
+            const commentText = `deposit:${user.telegram_id}:${Date.now()}`;
+
+            // Сборка бинарной структуры ячейки с комментарием блокчейна TON через импортированный CDN модуль
+            const cell = TonCore.beginCell()
+                .storeUint(0, 32) // Текстовый маркер
+                .storeStringTail(commentText)
+                .endCell();
+            const base64Boc = cell.toBoc().toString('base64');
+
             try {
-                const pendingRes = await fetch(`${BACKEND_URL}/api/pending-payment`, {
+                const res = await fetch(`${BACKEND_URL}/api/pending-payment`, {
                     method: 'POST', headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: user.telegram_id, amount: tonAmount, order_id: orderId, payload: `deposit:${user.telegram_id}:${Date.now()}` })
+                    body: JSON.stringify({ telegram_id: user.telegram_id, amount: tonAmount, order_id: orderId, payload: commentText })
                 });
-                const pendingData = await pendingRes.json();
-                if (!pendingData.success) { showToast('❌ Ошибка создания заказа'); return; }
-            } catch (err) { showToast('❌ Ошибка соединения с сервером'); return; }
-            
-            const transaction = { validUntil: Math.floor(Date.now() / 1000) + 600, messages: [{ address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP", amount: nanoAmount }] };
-            
-            try {
+                const serverData = await res.json();
+                if (!serverData.success) { showToast('Ошибка сервера'); return; }
+
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 600,
+                    messages: [{
+                        address: serverData.target_wallet, // Назначенный мерчант-адрес
+                        amount: nanoAmount,
+                        payload: base64Boc // Абсолютно валидный BOC Cell
+                    }]
+                };
+
                 await tonConnectUI.sendTransaction(transaction);
                 const loader = document.getElementById('deposit-loader');
-                loader.classList.add('active');
-                closeModal('deposit-modal');
-                
+                loader.classList.add('active'); closeModal('deposit-modal');
+
                 if (statusCheckInterval) clearInterval(statusCheckInterval);
                 statusCheckInterval = setInterval(async () => {
-                    try {
-                        const statusRes = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: orderId }) });
-                        const statusData = await statusRes.json();
-                        if (statusData.status === 'completed') {
-                            clearInterval(statusCheckInterval);
-                            loader.classList.remove('active');
-                            showToast(`🎉 Баланс пополнен на ${tonAmount} TON (${statusData.stars}⭐)!`);
-                            tg.HapticFeedback.notificationOccurred('success');
-                            updateBalance();
-                            loadUserStats();
-                            loadUserFinance();
-                        } else if (statusData.status === 'failed') {
-                            clearInterval(statusCheckInterval);
-                            loader.classList.remove('active');
-                            showToast('❌ Платеж не подтверждён');
-                        }
-                    } catch (err) { console.error('Status check error:', err); }
-                }, 3000);
-                
-                setTimeout(() => {
-                    if (statusCheckInterval) { clearInterval(statusCheckInterval); const l = document.getElementById('deposit-loader'); if(l) l.classList.remove('active'); showToast('⏰ Время ожидания истекло'); }
-                }, 300000);
-            } catch (e) { showToast('❌ Ошибка: ' + (e.message?.substring(0, 100) || 'Неизвестная ошибка')); }
-        }
-
-        function submitWithdraw() { let asset = document.getElementById('withdraw-asset').value; let amt = parseInt(document.getElementById('withdraw-amount').value); let wallet = document.getElementById('withdraw-wallet').value; let targetUsername = document.getElementById('withdraw-tg-username').value; if (!amt || amt < 100) return showToast("Минимальная сумма для вывода — 100⭐"); if (amt > (user.stars || 0)) return showToast("Недостаточно средств"); if (asset !== 'Stars' && (!wallet || wallet.length < 10)) return showToast("Введите корректный адрес кошелька"); if (asset === 'Stars' && !targetUsername) return showToast("Укажите ваш @юзернейм для перевода звёзд"); let finalWalletText = (asset === 'Stars') ? `На аккаунт: ${targetUsername}` : wallet; fetch(`${BACKEND_URL}/api/withdraw-request`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, name: user.name, username: user.username || targetUsername, amount: amt, asset: asset, wallet: finalWalletText }) }).then(r => r.json()).then(d => { if (d.success) { showToast(`✅ Заявка на вывод ${amt}⭐ успешно создана!`); closeModal('withdraw-modal'); updateBalance(); loadUserFinance(); } else showToast(`Ошибка: ${d.msg}`); }); }
-
-        function copyRefLink() { let link = document.getElementById('ref-link').value; navigator.clipboard.writeText(link).then(() => showToast("Реферальная ссылка скопирована!")); }
-
-        // НОВАЯ ФУНКЦИЯ ДЛЯ СБРОСА ВСЕХ БАЛАНСОВ
-        function resetAllBalances() {
-            if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит ВСЕ балансы пользователей до 0. Вы уверены?')) {
-                fetch(`${BACKEND_URL}/api/admin/reset-all`, {
-                    method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ admin_id: user.telegram_id })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) {
-                        showToast('✅ Все балансы сброшены до 0');
-                        updateBalance();
-                        loadUserStats();
-                        loadUserFinance();
-                    } else {
-                        showToast('❌ Ошибка: ' + (d.error || 'Неизвестная ошибка'));
+                    const check = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: orderId }) });
+                    const statusData = await check.json();
+                    if (statusData.status === 'completed') {
+                        clearInterval(statusCheckInterval); loader.classList.remove('active');
+                        showToast(`🎉 Начислено ${statusData.stars} ⭐!`); updateBalance();
                     }
-                }).catch(err => showToast('❌ Ошибка соединения'));
-            }
+                }, 4000);
+            } catch(e) { showToast('❌ Отменено пользователем'); }
         }
 
-        // ========== АДМИН-ФУНКЦИИ ==========
-        function adminAddStars() { let targetId = document.getElementById('admin-target-id').value; let amount = parseInt(document.getElementById('admin-add-amount').value); if (!targetId || !amount) return showToast('Заполните поля'); fetch(`${BACKEND_URL}/api/admin/add-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Начислено!'); updateBalance(); } else showToast('❌ Ошибка'); }); }
-        function adminRemoveStars() { let targetId = document.getElementById('admin-target-id').value; let amount = parseInt(document.getElementById('admin-add-amount').value); if (!targetId || !amount) return showToast('Заполните поля'); fetch(`${BACKEND_URL}/api/admin/remove-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Списано!'); updateBalance(); } else showToast('❌ Ошибка'); }); }
-        function adminBanUser() { let targetId = document.getElementById('admin-ban-id').value; if (!targetId) return showToast('Введите ID'); fetch(`${BACKEND_URL}/api/admin/ban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) }).then(r => r.json()).then(d => { if (d.success) showToast('🔨 Пользователь забанен'); else showToast('❌ Ошибка'); }); }
-        function adminUnbanUser() { let targetId = document.getElementById('admin-ban-id').value; if (!targetId) return showToast('Введите ID'); fetch(`${BACKEND_URL}/api/admin/unban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) }).then(r => r.json()).then(d => { if (d.success) showToast('🔓 Пользователь разбанен'); else showToast('❌ Ошибка'); }); }
-        function adminPauseBot() { fetch(`${BACKEND_URL}/api/admin/pause-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) showToast('⏸️ Бот на паузе'); }); }
-        function adminResumeBot() { fetch(`${BACKEND_URL}/api/admin/resume-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) showToast('▶️ Бот запущен'); }); }
-        function adminLoadWithdraws() { fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(requests => { let html = ''; requests.forEach(r => { html += `<div class="admin-withdraw-item"><div><b>${r.name}</b> | ${r.amount}⭐ | ${r.asset}</div><div style="font-size:11px; color:#888;">${r.wallet}</div><div class="admin-input-group" style="margin-top:8px;"><button class="admin-btn admin-btn-green" style="padding:6px 12px;" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button><button class="admin-btn admin-btn-red" style="padding:6px 12px;" onclick="adminRejectWithdraw(${r.id})">❌ Отказать</button></div></div>`; }); document.getElementById('admin-withdraws-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет заявок</div>'; }); }
-        function adminApproveWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Заявка одобрена'); adminLoadWithdraws(); } else showToast('❌ Ошибка'); }); }
-        function adminRejectWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/reject-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(r => r.json()).then(d => { if (d.success) { showToast('❌ Заявка отклонена'); adminLoadWithdraws(); } else showToast('❌ Ошибка'); }); }
-        function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(users => { let html = ''; users.slice(0, 20).forEach(u => { html += `<div class="admin-user-item"><div><span class="admin-user-name">${u.name}</span><br><span style="font-size:11px; color:#888;">ID: ${u.telegram_id}</span><br><span style="font-size:12px;">⭐ ${u.stars} | 🎮 ${u.games_played || 0} | 🏆 ${u.wins || 0}</span></div><div><span class="admin-badge ${u.banned ? 'admin-badge-banned' : 'admin-badge-active'}">${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</span></div></div>`; }); document.getElementById('admin-users-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет пользователей</div>'; }); }
+        // ОСТАЛЬНАЯ ИГРОВАЯ И ИНТЕРФЕЙСНАЯ СТРУКТУРА
+        function updateBetLimits() {
+            const max = user.stars || MIN_BET;
+            document.getElementById('rocket-bet-amount').max = max;
+            document.getElementById('mines-bet-amount').max = max;
+            document.getElementById('roulette-bet-amount').max = max;
+        }
+        function updateUI() { document.getElementById('global-balance').innerText = user.stars || 0; document.getElementById('profile-name').innerText = user.name; document.getElementById('profile-username').innerText = user.username ? '@'+user.username : ''; if(user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; updateBetLimits(); }
+        function switchPage(pageId) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const target = document.getElementById(`page-${pageId}`); if (target) target.classList.add('active'); const nav = document.getElementById(`nav-${pageId}`); if (nav) nav.classList.add('active'); if (pageId === 'mines') buildMinesBoard(); if (pageId === 'profile') { loadUserStats(); loadUserGamesHistory(); loadUserFinance(); loadUserReferrals(); } if (pageId === 'leaderboard') loadLeaderboard(); }
+        function switchProfileTab(tab) { document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); document.getElementById(`profile-tab-${tab}`).classList.add('active'); }
+        function adjustBet(id, act) { let el = document.getElementById(id), v = parseInt(el.value)||MIN_BET, m = user.stars||MIN_BET; if(act==='min') v=MIN_BET; else if(act==='max') v=m; else if(act==='half') v=Math.max(MIN_BET, Math.floor(v/2)); else if(act==='double') v=Math.min(v*2, m); else if(typeof act==='number') v=Math.min(v+act, m); el.value = Math.max(MIN_BET, Math.min(v, m)); }
+        function setStarsAmount(a) { document.getElementById('dep-stars-amount').value = a; }
+        function toggleWithdrawFields() { let a = document.getElementById('withdraw-asset').value; document.getElementById('withdraw-wallet').style.display = a==='Stars'?'none':'block'; document.getElementById('withdraw-tg-username').style.display = a==='Stars'?'block':'none'; }
+        
+        fetch(`${BACKEND_URL}/api/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(user) }).then(r => r.json()).then(d => { if(d.success) { user = d.user; updateUI(); initWebSocket(); loadRocketHistory(); if(user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display='block'; } document.getElementById('loading-screen').style.display='none'; });
+
+        // ЛОГИКА РАКЕТЫ (FRONTEND)
+        let currentRocketBtnState = 'bet';
+        function setRocketButtonState(s) { const b = document.getElementById('rocket-action-btn'); currentRocketBtnState = s; if (s === 'bet') { b.className = "btn-main btn-gold"; b.innerText = "💰 Сделать ставку"; b.disabled = false; } else if (s === 'waiting_with_bet') { b.className = "btn-main btn-gray"; b.innerText = "⏳ Ожидание старта"; b.disabled = true; } else if (s === 'flying') { b.className = "btn-main btn-green"; b.innerText = "💸 Забрать"; b.disabled = false; } else { b.className = "btn-main btn-gray"; b.innerText = "⏳ Ожидание"; b.disabled = true; } }
+        function handleRocketAction() { if(currentRocketBtnState === 'bet') { let amt = parseInt(document.getElementById('rocket-bet-amount').value); if(amt > user.stars || amt < MIN_BET) return showToast('Ошибка суммы'); let auto = document.getElementById('rocket-auto-check').checked, av = parseFloat(document.getElementById('rocket-auto-val').value); ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: av })); setRocketButtonState('waiting_with_bet'); } else if(currentRocketBtnState === 'flying') { ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); } }
+        function cancelRocketBet() { fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id })); }); }
+        function updateRocketPlayers(b) { document.getElementById('rocket-players-list').innerHTML = b.length ? b.map(x => `<div class="list-row"><span>${x.name}</span><span>${x.amount}⭐ ${x.cashedOut ? `<span style="color:#00cc66;">(${x.multiplier}x)</span>` : '⏳'}</span></div>`).join('') : 'Нет участников'; }
+        function loadRocketHistory() { fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(d => { document.getElementById('rocket-history-list').innerHTML = d.map(m => `<span class="crash-badge">${m}x</span>`).join(''); }); }
+
+        // ЛОГИКА МИН (FRONTEND)
+        function buildMinesBoard() { const b = document.getElementById('mines-grid-board'); b.innerHTML = ''; for (let i = 0; i < 25; i++) b.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; }
+        function handleMinesAction() { const btn = document.getElementById('mines-action-btn'); if (currentMinesGameStatus === 'idle') { let amt = parseInt(document.getElementById('mines-bet-amount').value), c = document.getElementById('mines-count-select').value; fetch(`${BACKEND_URL}/api/games/mines/start`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: c }) }).then(r => r.json()).then(d => { if(d.success) { currentMinesGameStatus = 'playing'; btn.className = "btn-main btn-green"; btn.innerText = "💰 Забрать (0x)"; document.getElementById('mines-status-text').innerText = "Выбирайте клетки!"; buildMinesBoard(); updateBalance(); } else showToast(d.msg); }); } else { fetch(`${BACKEND_URL}/api/games/mines/cashout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if(d.success) { showToast(`🎉 +${d.winAmount}⭐`); currentMinesGameStatus = 'idle'; btn.className = "btn-main btn-gold"; btn.innerText = "💣 Новая игра"; updateBalance(); } }); } }
+        function clickMineTile(i) { if(currentMinesGameStatus !== 'playing') return; fetch(`${BACKEND_URL}/api/games/mines/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, index: i }) }).then(r => r.json()).then(d => { let t = document.getElementById(`mine-${i}`); if(d.hitMine) { t.classList.add('blown'); t.innerText='💣'; currentMinesGameStatus='idle'; document.getElementById('mines-action-btn').className="btn-main btn-gold"; document.getElementById('mines-action-btn').innerText="💣 Новая игра"; updateBalance(); } else { t.classList.add('safe'); t.innerText='⭐'; document.getElementById('mines-action-btn').innerText = `💰 Забрать (${d.multiplier}x)`; if(d.win) { showToast('Победа!'); currentMinesGameStatus='idle'; updateBalance(); } } }); }
+
+        // ЛОГИКА РУЛЕТКИ (FRONTEND)
+        function handleRouletteBet() { let amt = document.getElementById('roulette-bet-amount').value; ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: parseInt(amt) })); }
+        function cancelRouletteBet() { fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if(d.success) ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id })); }); }
+        function updateRoulettePlayers(b) { document.getElementById('roulette-players-list').innerHTML = b.map(x => `<div class="list-row" style="border-left:4px solid ${x.color}"><span>${x.name}</span><span>${x.amount}⭐</span></div>`).join(''); }
+        function drawRoulette(b, r) { const c = document.getElementById('roulette-canvas'); if(!c)return; const ctx = c.getContext('2d'); ctx.clearRect(0,0,260,260); ctx.beginPath(); ctx.arc(130,130,110,0,2*Math.PI); ctx.fillStyle='#1a1a1a'; ctx.fill(); }
+        function animateRoulette(b, w) { let s = performance.now(); function a(t) { let p = Math.min((t-s)/3000, 1); drawRoulette(b, p*15); if(p<1) requestAnimationFrame(a); else { document.getElementById('roulette-timer-text').innerText = `🏆 Победитель: ${w.name}`; updateBalance(); } } requestAnimationFrame(a); }
+
+        // ВЕБСОКЕТ КЛИЕНТ
+        function initWebSocket() {
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => { ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id })); };
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'balance_update') { document.getElementById('global-balance').innerText = data.stars; user.stars = data.stars; updateBetLimits(); }
+                if (data.type === 'rocket_tick') { document.getElementById('rocket-overlay').innerText = `ДО ВЗЛЕТА: ${data.timer}с`; document.getElementById('rocket-mult').style.display = 'none'; updateRocketPlayers(data.bets); rocketHasBet = data.bets.some(x=>x.telegram_id===user.telegram_id); setRocketButtonState(rocketHasBet?'waiting_with_bet':'bet'); document.getElementById('rocket-cancel-btn').style.display=rocketHasBet?'block':'none'; }
+                if (data.type === 'rocket_start') { document.getElementById('rocket-overlay').style.display = 'none'; document.getElementById('rocket-mult').style.display = 'block'; document.getElementById('rocket-mult').innerText = '1.00x'; document.getElementById('rocket-video').play(); setRocketButtonState(rocketHasBet?'flying':'waiting'); }
+                if (data.type === 'rocket_fly') { document.getElementById('rocket-mult').innerText = `${data.multiplier}x`; }
+                if (data.type === 'rocket_crash') { document.getElementById('rocket-mult').innerText = `💥 ВЗРЫВ: ${data.multiplier}x`; document.getElementById('rocket-video').pause(); setRocketButtonState('waiting'); updateBalance(); loadRocketHistory(); }
+                if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) { showToast(`Выиграли: ${data.winAmount}⭐`); setRocketButtonState('waiting'); updateBalance(); }
+                if (data.type === 'rocket_bet_cancelled') { setRocketButtonState('bet'); document.getElementById('rocket-cancel-btn').style.display='none'; updateBalance(); }
+                if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') { document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`; document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total}⭐`; updateRoulettePlayers(data.bets||[]); document.getElementById('roulette-cancel-btn').style.display = (data.bets||[]).some(x=>x.telegram_id===user.telegram_id)?'block':'none'; }
+                if (data.type === 'roulette_roll') { animateRoulette(data.bets, data.winner); }
+            };
+        }
+
+        // РАБОТА С ФИНАНСАМИ (ДАННЫЕ БАЗЫ)
+        function loadUserStats() { fetch(`${BACKEND_URL}/api/user-stats`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if(d.success) { document.getElementById('stat-games').innerText=d.games_played; document.getElementById('stat-turnover').innerText=d.turnover; document.getElementById('stat-wins').innerText=d.wins; document.getElementById('stat-wr').innerText=Math.round((d.wins/d.games_played)*100 || 0)+'%'; } }); }
+        function loadUserGamesHistory() { fetch(`${BACKEND_URL}/api/user-games-history`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { document.getElementById('games-history-list').innerHTML = d.map(g => `<div class="history-item"><span>${g.game_name}</span><span class="${g.profit>=0?'history-win':'history-loss'}">${g.profit}⭐</span></div>`).join(''); }); }
+        function loadUserFinance() { fetch(`${BACKEND_URL}/api/user-finance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { document.getElementById('fin-deposited').innerText=d.deposited; document.getElementById('fin-withdrawn').innerText=d.withdrawn; document.getElementById('fin-diff').innerText=d.deposited-d.withdrawn; document.getElementById('fin-balance').innerText=user.stars; }); }
+        function loadUserReferrals() { fetch(`${BACKEND_URL}/api/user-referrals`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { document.getElementById('ref-count').innerText=d.count; document.getElementById('ref-earned').innerText=d.earned; document.getElementById('ref-link').value=`https://t.me/dadtonbot?start=ref_${user.telegram_id}`; }); }
+        function submitWithdraw() { let asset=document.getElementById('withdraw-asset').value, amt=parseInt(document.getElementById('withdraw-amount').value), w=document.getElementById('withdraw-wallet').value, tu=document.getElementById('withdraw-tg-username').value; fetch(`${BACKEND_URL}/api/withdraw-request`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, name: user.name, username: user.username, amount: amt, asset: asset, wallet: asset==='Stars'?tu:w }) }).then(r => r.json()).then(d => { if(d.success) { showToast('Заявка отправлена!'); closeModal('withdraw-modal'); updateBalance(); } else showToast(d.msg); }); }
+        function loadLeaderboard() { fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(d => { document.getElementById('leaderboard-list').innerHTML = d.map((u, i) => `<div class="leaderboard-row"><div class="leaderboard-rank">#${i+1}</div><div class="leaderboard-name">${u.name}</div><div class="leaderboard-stars">${u.turnover}⭐</div></div>`).join(''); }); }
+        function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if(d.success) tg.openInvoice(d.invoice_link, (status) => { if(status==='paid') { closeModal('deposit-modal'); updateBalance(); } }); }); }
+        function copyRefLink() { navigator.clipboard.writeText(document.getElementById('ref-link').value); showToast('Скопировано!'); }
+
+        // АДМИН ПАНЕЛЬ (FRONTEND)
+        function adminAddStars() { fetch(`${BACKEND_URL}/api/admin/add-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-target-id').value, amount: parseInt(document.getElementById('admin-add-amount').value) }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Успешно'); }); }
+        function adminRemoveStars() { fetch(`${BACKEND_URL}/api/admin/remove-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-target-id').value, amount: parseInt(document.getElementById('admin-add-amount').value) }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Успешно'); }); }
+        function adminBanUser() { fetch(`${BACKEND_URL}/api/admin/ban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-ban-id').value }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Забанен'); }); }
+        function adminUnbanUser() { fetch(`${BACKEND_URL}/api/admin/unban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-ban-id').value }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Разбанен'); }); }
+        function adminPauseBot() { fetch(`${BACKEND_URL}/api/admin/pause-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }); }
+        function adminResumeBot() { fetch(`${BACKEND_URL}/api/admin/resume-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }); }
+        function adminLoadWithdraws() { fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r=>r.json()).then(res=>{ document.getElementById('admin-withdraws-list').innerHTML = res.map(x=>`<div>${x.name} | ${x.amount}⭐ <button onclick="adminApproveWithdraw(${x.id})">✅</button></div>`).join(''); }); }
+        function adminApproveWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(()=>adminLoadWithdraws()); }
+        function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r=>r.json()).then(res=>{ document.getElementById('admin-users-list').innerHTML = res.map(u=>`<div>${u.name} (ID: ${u.telegram_id}) - ⭐ ${u.stars}</div>`).join(''); }); }
+        function resetAllBalances() { if(confirm('Сбросить всё?')) fetch(`${BACKEND_URL}/api/admin/reset-all`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(()=>location.reload()); }
     </script>
+    <div id="ton-connect-btn-container" style="display: none;"></div>
 </body>
 </html>
