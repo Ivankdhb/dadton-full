@@ -138,18 +138,13 @@
 
         .admin-modal-content { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 16px; padding: 20px; max-width: 500px; width: 100%; max-height: 85vh; overflow-y: auto; }
         .admin-title { font-weight: 800; font-size: 20px; text-align: center; margin-bottom: 20px; color: #FFD700; }
-        .admin-section { background: #0d0d0d; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #1a1a1a; }
-        .admin-section-title { font-weight: 700; font-size: 14px; color: #FFD700; margin-bottom: 12px; border-left: 3px solid #FFD700; padding-left: 10px; }
-        .admin-input-group { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-        .admin-input { flex: 1; background: #111; border: 1px solid #1a1a1a; color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; outline: none; }
-        .admin-input:focus { border-color: #FFD700; }
-        .admin-btn { padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; }
-        .admin-btn-gold { background: #FFD700; color: #000; }
-        .admin-btn-red { background: #ff4444; color: #fff; }
-        .admin-btn-green { background: #00cc66; color: #fff; }
-        .admin-btn-gray { background: #1a1a1a; color: #888; }
-        .admin-withdraw-item, .admin-user-item { background: #111; border-radius: 8px; padding: 10px; margin-bottom: 8px; border-left: 3px solid #FFD700; cursor: pointer; }
-        .admin-user-item:hover { background: #1a1a1a; }
+        .admin-buttons-grid { display: flex; flex-direction: column; gap: 10px; }
+        .admin-action-btn { background: #1a1a1a; border: 1px solid #FFD700; color: #FFD700; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; text-align: center; transition: 0.2s; }
+        .admin-action-btn:hover { background: #FFD700; color: #000; }
+        .admin-action-input { display: none; margin-top: 10px; padding: 10px; background: #111; border-radius: 8px; }
+        .admin-action-input.active { display: block; }
+        .admin-action-input input, .admin-action-input textarea, .admin-action-input select { width: 100%; margin-bottom: 8px; background: #0a0a0a; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 6px; }
+        .admin-submit-btn { background: #FFD700; color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: 700; cursor: pointer; width: 100%; }
         
         .deposit-loader { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:600; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
         .deposit-loader.active { display: flex; }
@@ -201,8 +196,8 @@
 <!-- РАКЕТА -->
 <div id="page-rocket" class="page">
     <div class="video-container">
-        <video id="rocket-video" loop muted playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23111'/%3E%3Ctext x='50' y='55' font-size='14' text-anchor='middle' fill='%23FFD700'%3EROCKET%3C/text%3E%3C/svg%3E">
-            <source src="https://cdn.pixabay.com/vimeo/404248564/rocket-14605.mp4" type="video/mp4">
+        <video id="rocket-video" loop muted playsinline autoplay>
+            <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4">
         </video>
         <div id="rocket-overlay" class="rocket-overlay">
             <div>ОЖИДАНИЕ</div>
@@ -346,89 +341,71 @@
 
 <div id="withdraw-modal" class="modal"><div class="modal-content"><div style="font-weight:800; font-size:16px; margin-bottom:12px; color:#FFD700;">Вывод средств</div><select id="withdraw-asset" onchange="toggleWithdrawFields()"><option value="TON">💎 TON</option><option value="USDT">💵 USDT</option><option value="Stars">⭐ Stars</option></select><input type="number" id="withdraw-amount" placeholder="Сумма (мин. 100)" min="100" style="margin-top:8px;"><input type="text" id="withdraw-wallet" placeholder="Адрес кошелька" style="margin-top:8px;"><input type="text" id="withdraw-tg-username" placeholder="@username" style="margin-top:8px; display:none;"><button class="btn-main btn-gold" style="margin-top:12px;" onclick="submitWithdraw()">📤 Отправить</button><button class="btn-main" style="background:none; color:#666; margin-top:6px;" onclick="closeModal('withdraw-modal')">Отмена</button></div></div>
 
-<!-- АДМИН ПАНЕЛЬ -->
+<!-- АДМИН ПАНЕЛЬ С 15 КНОПКАМИ -->
 <div id="admin-modal" class="modal">
     <div class="admin-modal-content">
         <div class="admin-title">👑 АДМИН ПАНЕЛЬ</div>
-        
-        <div class="admin-section">
-            <div class="admin-section-title">💰 Управление балансом</div>
-            <input type="text" id="admin-target-id" class="admin-input" placeholder="Telegram ID">
-            <div class="admin-input-group">
-                <input type="number" id="admin-amount" class="admin-input" placeholder="Сумма">
-                <button class="admin-btn admin-btn-gold" onclick="adminBalance('add')">➕ Начислить</button>
-                <button class="admin-btn admin-btn-red" onclick="adminBalance('remove')">➖ Снять</button>
+        <div class="admin-buttons-grid">
+            <!-- 1 -->
+            <div class="admin-action-btn" onclick="toggleAdminInput('admin-balance-input')">💰 Пополнить/снять баланс</div>
+            <div id="admin-balance-input" class="admin-action-input">
+                <input type="text" id="balance-target" placeholder="Telegram ID">
+                <input type="number" id="balance-amount" placeholder="Сумма">
+                <button class="admin-submit-btn" onclick="adminAddBalance()">➕ Начислить</button>
+                <button class="admin-submit-btn" style="background:#ff4444; margin-top:5px;" onclick="adminRemoveBalance()">➖ Снять</button>
             </div>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">🔨 Блокировка</div>
-            <input type="text" id="admin-ban-id" class="admin-input" placeholder="Telegram ID">
-            <div class="admin-input-group">
-                <button class="admin-btn admin-btn-red" onclick="adminBan('ban')">🔨 Забанить</button>
-                <button class="admin-btn admin-btn-green" onclick="adminBan('unban')">🔓 Разбанить</button>
+            <!-- 2 -->
+            <div class="admin-action-btn" onclick="toggleAdminInput('admin-ban-input')">🔨 Заблокировать/разблокировать</div>
+            <div id="admin-ban-input" class="admin-action-input">
+                <input type="text" id="ban-target" placeholder="Telegram ID">
+                <button class="admin-submit-btn" onclick="adminBanUser()">🔨 Забанить</button>
+                <button class="admin-submit-btn" style="background:#00cc66; margin-top:5px;" onclick="adminUnbanUser()">🔓 Разбанить</button>
             </div>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">📩 Написать пользователю</div>
-            <input type="text" id="admin-message-id" class="admin-input" placeholder="Telegram ID">
-            <textarea id="admin-message-text" rows="2" placeholder="Текст сообщения"></textarea>
-            <button class="admin-btn admin-btn-gold" onclick="adminMessageUser()">📤 Отправить</button>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">📢 Рассылка</div>
-            <textarea id="admin-broadcast-text" rows="2" placeholder="Текст рассылки для всех пользователей"></textarea>
-            <button class="admin-btn admin-btn-gold" onclick="adminBroadcast()">📢 Отправить всем</button>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">⏸️ Управление ботом</div>
-            <div class="admin-input-group">
-                <button class="admin-btn admin-btn-red" onclick="adminTogglePause()">⏸️ Пауза/Возобновить</button>
-                <button class="admin-btn admin-btn-gold" onclick="adminToggleMaintenance()">🔧 Техобслуживание</button>
+            <!-- 3 -->
+            <div class="admin-action-btn" onclick="toggleAdminInput('admin-msg-input')">📩 Написать пользователю</div>
+            <div id="admin-msg-input" class="admin-action-input">
+                <input type="text" id="msg-target" placeholder="Telegram ID">
+                <textarea id="msg-text" rows="3" placeholder="Текст сообщения"></textarea>
+                <button class="admin-submit-btn" onclick="adminSendMessage()">📤 Отправить</button>
             </div>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">🎯 Сброс пользователя</div>
-            <input type="text" id="admin-reset-id" class="admin-input" placeholder="Telegram ID">
-            <div class="admin-input-group">
-                <button class="admin-btn admin-btn-red" onclick="adminResetUserBalance()">💰 Сбросить баланс</button>
-                <button class="admin-btn admin-btn-red" onclick="adminResetUserTurnover()">📊 Сбросить оборот</button>
+            <!-- 4 -->
+            <div class="admin-action-btn" onclick="toggleAdminInput('admin-broadcast-input')">📢 Сделать рассылку</div>
+            <div id="admin-broadcast-input" class="admin-action-input">
+                <textarea id="broadcast-text" rows="3" placeholder="Текст рассылки"></textarea>
+                <button class="admin-submit-btn" onclick="adminBroadcast()">📢 Отправить всем</button>
             </div>
+            <!-- 5 -->
+            <div class="admin-action-btn" onclick="adminTogglePause()">⏸️ Приостановить/возобновить бота</div>
+            <!-- 6 -->
+            <div class="admin-action-btn" onclick="toggleAdminInput('admin-reset-balance-input')">💰 Обнулить баланс пользователя</div>
+            <div id="admin-reset-balance-input" class="admin-action-input">
+                <input type="text" id="reset-balance-target" placeholder="Telegram ID">
+                <button class="admin-submit-btn" onclick="adminResetBalance()">💰 Сбросить баланс</button>
+            </div>
+            <!-- 7 -->
+            <div class="admin-action-btn" onclick="toggleAdminInput('admin-reset-turnover-input')">📊 Сбросить оборот пользователя</div>
+            <div id="admin-reset-turnover-input" class="admin-action-input">
+                <input type="text" id="reset-turnover-target" placeholder="Telegram ID">
+                <button class="admin-submit-btn" onclick="adminResetTurnover()">📊 Сбросить оборот</button>
+            </div>
+            <!-- 8 -->
+            <div class="admin-action-btn" onclick="adminLoadUsers()">👥 Посмотреть всех пользователей</div>
+            <!-- 9 -->
+            <div class="admin-action-btn" onclick="adminLoadWithdraws()">📋 Заявки на вывод</div>
+            <!-- 10 -->
+            <div class="admin-action-btn" onclick="adminResetLeaderboard()">🏆 Очистить лидерборд</div>
+            <!-- 11 -->
+            <div class="admin-action-btn" onclick="adminClearWallets()">💳 Отключить все кошельки</div>
+            <!-- 12 -->
+            <div class="admin-action-btn" onclick="adminClearAllBalances()">💣 Очистить все балансы</div>
+            <!-- 13 -->
+            <div class="admin-action-btn" onclick="adminToggleMaintenance()">🔧 Закрыть бота на ТО</div>
+            <!-- 14 -->
+            <div class="admin-action-btn" onclick="adminResetAdminStats()">👑 Очистить мою статистику</div>
+            <!-- 15 -->
+            <div class="admin-action-btn" onclick="adminClearAllData()">💀 Очистить полностью БД</div>
         </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">👥 Список пользователей</div>
-            <button class="admin-btn admin-btn-gold" onclick="adminLoadUsers()">🔄 Загрузить</button>
-            <div id="admin-users-list" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">📋 Заявки на вывод</div>
-            <button class="admin-btn admin-btn-gold" onclick="adminLoadWithdraws()">🔄 Загрузить</button>
-            <div id="admin-withdraws-list" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">🏆 Лидерборд</div>
-            <button class="admin-btn admin-btn-red" onclick="adminResetLeaderboard()">🔄 Сбросить лидерборд</button>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">💳 Кошельки</div>
-            <button class="admin-btn admin-btn-red" onclick="adminClearWallets()">🗑️ Очистить все кошельки</button>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-title">⚠️ ОПАСНАЯ ЗОНА</div>
-            <button class="admin-btn admin-btn-red" onclick="adminClearAllBalances()">💣 Очистить все балансы</button>
-            <button class="admin-btn admin-btn-red" onclick="adminResetAdminStats()" style="margin-top:8px;">👑 Сбросить статистику админа</button>
-            <button class="admin-btn admin-btn-red" onclick="adminClearAllData()" style="margin-top:8px;">💀 ПОЛНЫЙ СБРОС БД</button>
-        </div>
-
+        <div id="admin-result" style="margin-top:15px; max-height:200px; overflow-y:auto; font-size:12px;"></div>
         <button class="admin-btn admin-btn-gray" style="width:100%; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
     </div>
 </div>
@@ -471,13 +448,17 @@ function copyToClipboard(text) {
     showToast(`Скопировано: ${text}`);
 }
 
-// TON Connect - как в старых версиях
+function toggleAdminInput(id) {
+    let el = document.getElementById(id);
+    if(el) el.classList.toggle('active');
+}
+
+// TON Connect - рабочий с прошлых кодов
 function initTonConnect() {
     try {
         if (typeof TonConnectUI !== 'undefined') {
             tonConnectUI = new TonConnectUI.TonConnectUI({ 
-                manifestUrl: `${BACKEND_URL}/tonconnect-manifest.json`,
-                buttonRootId: 'wallet-status'
+                manifestUrl: `${BACKEND_URL}/tonconnect-manifest.json`
             });
             tonConnectUI.onStatusChange((wallet) => {
                 const walletBtn = document.getElementById('wallet-status');
@@ -566,7 +547,7 @@ function updateBalance() {
 function adjustBet(id, act) { let el=document.getElementById(id), v=parseInt(el.value)||MIN_BET, m=user.stars||MIN_BET; if(act==='min') v=MIN_BET; else if(act==='max') v=m; else if(act==='half') v=Math.max(MIN_BET,Math.floor(v/2)); else if(act==='double') v=Math.min(v*2,m); else if(typeof act==='number') v=Math.min(v+act,m); el.value=Math.max(MIN_BET,Math.min(v,m)); }
 function openModal(id) { document.getElementById(id).style.display='flex'; }
 function closeModal(id) { document.getElementById(id).style.display='none'; }
-function openAdminModal() { openModal('admin-modal'); adminLoadWithdraws(); adminLoadUsers(); }
+function openAdminModal() { openModal('admin-modal'); }
 function switchDepTab(tab,e) { document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById('dep-tab-crypto').style.display=tab==='crypto'?'block':'none'; document.getElementById('dep-tab-stars').style.display=tab==='stars'?'block':'none'; e.target.classList.add('active'); }
 function toggleWithdrawFields() { let a=document.getElementById('withdraw-asset').value; document.getElementById('withdraw-wallet').style.display=a==='Stars'?'none':'block'; document.getElementById('withdraw-tg-username').style.display=a==='Stars'?'block':'none'; }
 function switchPage(pageId) { 
@@ -754,26 +735,43 @@ function drawRoulette(bets,rot=0){ let c=document.getElementById('roulette-canva
 function animateRoulette(bets,winner,prize){ let start=performance.now(),duration=3000,totalRot=10*Math.PI+Math.random()*2*Math.PI; function animate(time){ let elapsed=time-start,progress=Math.min(elapsed/duration,1),ease=1-Math.pow(1-progress,3); drawRoulette(bets,ease*totalRot); if(progress<1) requestAnimationFrame(animate); else { document.getElementById('roulette-timer-text').innerHTML=`🏆 Победитель: ${winner.name}! +${prize}⭐`; if(winner.telegram_id===user.telegram_id) showToast(`🎉 ПОБЕДА! +${prize}⭐`); updateBalance(); rouletteHasBet=false; document.getElementById('roulette-cancel-btn').style.display='none'; } } requestAnimationFrame(animate); }
 
 // ========== АДМИН ФУНКЦИИ ==========
-function adminBalance(action) {
-    let target = document.getElementById('admin-target-id').value;
-    let amount = parseInt(document.getElementById('admin-amount').value);
+function adminAddBalance() {
+    let target = document.getElementById('balance-target').value;
+    let amount = parseInt(document.getElementById('balance-amount').value);
     if(!target || !amount) { showToast('Заполните все поля'); return; }
     fetch(`${BACKEND_URL}/api/admin/balance`, {
         method: 'POST', headers: {'content-type': 'application/json'},
-        body: JSON.stringify({ admin_id: user.telegram_id, target_id: target, amount: amount, action: action })
-    }).then(() => { showToast(`${action === 'add' ? 'Начислено' : 'Снято'} ${amount}⭐`); updateBalance(); });
+        body: JSON.stringify({ admin_id: user.telegram_id, target_id: target, amount: amount, action: 'add' })
+    }).then(() => { showToast(`Начислено ${amount}⭐`); updateBalance(); });
 }
-function adminBan(action) {
-    let target = document.getElementById('admin-ban-id').value;
+function adminRemoveBalance() {
+    let target = document.getElementById('balance-target').value;
+    let amount = parseInt(document.getElementById('balance-amount').value);
+    if(!target || !amount) { showToast('Заполните все поля'); return; }
+    fetch(`${BACKEND_URL}/api/admin/balance`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({ admin_id: user.telegram_id, target_id: target, amount: amount, action: 'remove' })
+    }).then(() => { showToast(`Снято ${amount}⭐`); updateBalance(); });
+}
+function adminBanUser() {
+    let target = document.getElementById('ban-target').value;
     if(!target) { showToast('Введите Telegram ID'); return; }
     fetch(`${BACKEND_URL}/api/admin/ban`, {
         method: 'POST', headers: {'content-type': 'application/json'},
-        body: JSON.stringify({ admin_id: user.telegram_id, target_id: target, action: action })
-    }).then(() => showToast(`Пользователь ${action === 'ban' ? 'забанен' : 'разбанен'}`));
+        body: JSON.stringify({ admin_id: user.telegram_id, target_id: target, action: 'ban' })
+    }).then(() => showToast('Пользователь забанен'));
 }
-function adminMessageUser() {
-    let target = document.getElementById('admin-message-id').value;
-    let message = document.getElementById('admin-message-text').value;
+function adminUnbanUser() {
+    let target = document.getElementById('ban-target').value;
+    if(!target) { showToast('Введите Telegram ID'); return; }
+    fetch(`${BACKEND_URL}/api/admin/ban`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({ admin_id: user.telegram_id, target_id: target, action: 'unban' })
+    }).then(() => showToast('Пользователь разбанен'));
+}
+function adminSendMessage() {
+    let target = document.getElementById('msg-target').value;
+    let message = document.getElementById('msg-text').value;
     if(!target || !message) { showToast('Заполните все поля'); return; }
     fetch(`${BACKEND_URL}/api/admin/message-user`, {
         method: 'POST', headers: {'content-type': 'application/json'},
@@ -781,7 +779,7 @@ function adminMessageUser() {
     }).then(() => showToast('Сообщение отправлено'));
 }
 function adminBroadcast() {
-    let message = document.getElementById('admin-broadcast-text').value;
+    let message = document.getElementById('broadcast-text').value;
     if(!message) { showToast('Введите сообщение'); return; }
     fetch(`${BACKEND_URL}/api/admin/broadcast`, {
         method: 'POST', headers: {'content-type': 'application/json'},
@@ -794,14 +792,8 @@ function adminTogglePause() {
         body: JSON.stringify({ admin_id: user.telegram_id })
     }).then(r => r.json()).then(d => showToast(d.paused ? '⏸️ Бот на паузе' : '▶️ Бот запущен'));
 }
-function adminToggleMaintenance() {
-    fetch(`${BACKEND_URL}/api/admin/maintenance`, {
-        method: 'POST', headers: {'content-type': 'application/json'},
-        body: JSON.stringify({ admin_id: user.telegram_id })
-    }).then(r => r.json()).then(d => showToast(d.maintenance ? '🔧 Режим обслуживания ВКЛ' : '✅ Режим обслуживания ВЫКЛ'));
-}
-function adminResetUserBalance() {
-    let target = document.getElementById('admin-reset-id').value;
+function adminResetBalance() {
+    let target = document.getElementById('reset-balance-target').value;
     if(!target) { showToast('Введите Telegram ID'); return; }
     if(!confirm(`Сбросить баланс пользователю ${target}?`)) return;
     fetch(`${BACKEND_URL}/api/admin/reset-user-balance`, {
@@ -809,8 +801,8 @@ function adminResetUserBalance() {
         body: JSON.stringify({ admin_id: user.telegram_id, target_id: target })
     }).then(() => { showToast('Баланс сброшен'); updateBalance(); });
 }
-function adminResetUserTurnover() {
-    let target = document.getElementById('admin-reset-id').value;
+function adminResetTurnover() {
+    let target = document.getElementById('reset-turnover-target').value;
     if(!target) { showToast('Введите Telegram ID'); return; }
     if(!confirm(`Сбросить оборот пользователю ${target}?`)) return;
     fetch(`${BACKEND_URL}/api/admin/reset-user-turnover`, {
@@ -823,12 +815,15 @@ function adminLoadUsers() {
         method: 'POST', headers: {'content-type': 'application/json'},
         body: JSON.stringify({ admin_id: user.telegram_id })
     }).then(r => r.json()).then(users => {
-        document.getElementById('admin-users-list').innerHTML = users.map(u => `
-            <div class="admin-user-item" onclick="copyToClipboard('${u.telegram_id}')">
+        let html = '<div style="margin-top:10px;">';
+        users.forEach(u => {
+            html += `<div onclick="copyToClipboard('${u.telegram_id}')" style="background:#111; padding:8px; margin-bottom:5px; border-radius:6px; cursor:pointer;">
                 <b>${u.name}</b> | ${u.telegram_id} | ⭐${u.stars} | ${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}
                 <small> 🎮${u.games_played} 🏆${u.wins}</small>
-            </div>
-        `).join('') || 'Нет пользователей';
+            </div>`;
+        });
+        html += '</div>';
+        document.getElementById('admin-result').innerHTML = html;
     });
 }
 function adminLoadWithdraws() {
@@ -836,17 +831,20 @@ function adminLoadWithdraws() {
         method: 'POST', headers: {'content-type': 'application/json'},
         body: JSON.stringify({ admin_id: user.telegram_id })
     }).then(r => r.json()).then(requests => {
-        document.getElementById('admin-withdraws-list').innerHTML = requests.map(r => `
-            <div class="admin-user-item">
+        let html = '<div style="margin-top:10px;">';
+        requests.forEach(r => {
+            html += `<div style="background:#111; padding:8px; margin-bottom:5px; border-radius:6px;">
                 <b>${r.name}</b> | ${r.amount} ${r.asset}<br>
                 @${r.username || 'нет username'}<br>
                 💳 ${r.wallet || 'N/A'}
                 <div style="margin-top:5px">
-                    <button class="admin-btn admin-btn-green" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button>
-                    <button class="admin-btn admin-btn-red" onclick="adminRejectWithdraw(${r.id})">❌ Отказать</button>
+                    <button onclick="adminApproveWithdraw(${r.id})" style="background:#00cc66; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">✅ Одобрить</button>
+                    <button onclick="adminRejectWithdraw(${r.id})" style="background:#ff4444; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">❌ Отказать</button>
                 </div>
-            </div>
-        `).join('') || 'Нет заявок';
+            </div>`;
+        });
+        html += '</div>';
+        document.getElementById('admin-result').innerHTML = html;
     });
 }
 function adminApproveWithdraw(id) {
@@ -897,6 +895,12 @@ function adminClearAllData() {
         method: 'POST', headers: {'content-type': 'application/json'},
         body: JSON.stringify({ admin_id: user.telegram_id })
     }).then(() => { showToast('База данных очищена'); updateBalance(); loadLeaderboard(); });
+}
+function adminToggleMaintenance() {
+    fetch(`${BACKEND_URL}/api/admin/maintenance`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({ admin_id: user.telegram_id })
+    }).then(r => r.json()).then(d => showToast(d.maintenance ? '🔧 Режим обслуживания ВКЛ' : '✅ Режим обслуживания ВЫКЛ'));
 }
 </script>
 </body>
