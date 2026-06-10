@@ -93,8 +93,9 @@
         .podium-2 .podium-avatar { width: 60px; height: 60px; border: 3px solid #C0C0C0; }
         .podium-3 .podium-avatar { width: 55px; height: 55px; border: 3px solid #CD7F32; }
         .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .podium-name { font-size: 12px; font-weight: 600; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+        .podium-name { font-size: 12px; font-weight: 600; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; color: #ddd; }
         .podium-stars { font-size: 10px; color: #FFD700; margin-top: 4px; }
+        .podium-rank { font-size: 10px; color: #888; margin-top: 2px; }
         
         .leaderboard-list { max-height: 300px; overflow-y: auto; }
         .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #1a1a1a; }
@@ -181,7 +182,7 @@
     <div class="logo-area" onclick="switchPage('home')">DADTON</div>
     <div class="header-right">
         <div class="wallet-container">
-            <div id="wallet-status" class="wallet-btn" onclick="connectWallet()">💎 Подключить кошелёк</div>
+            <div id="wallet-status" class="wallet-btn" onclick="connectWallet()">Connect Wallet</div>
             <button id="disconnect-wallet-btn" class="disconnect-btn" onclick="disconnectWallet()">❌</button>
         </div>
         <div class="balance-plate" onclick="openModal('deposit-modal')">
@@ -200,7 +201,7 @@
 <!-- РАКЕТА -->
 <div id="page-rocket" class="page">
     <div class="video-container">
-        <video id="rocket-video" loop muted playsinline>
+        <video id="rocket-video" loop muted playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23111'/%3E%3Ctext x='50' y='55' font-size='14' text-anchor='middle' fill='%23FFD700'%3EROCKET%3C/text%3E%3C/svg%3E">
             <source src="https://cdn.pixabay.com/vimeo/404248564/rocket-14605.mp4" type="video/mp4">
         </video>
         <div id="rocket-overlay" class="rocket-overlay">
@@ -470,22 +471,66 @@ function copyToClipboard(text) {
     showToast(`Скопировано: ${text}`);
 }
 
-// TON Connect
-async function connectWallet() {
+// TON Connect - как в старых версиях
+function initTonConnect() {
     try {
-        const link = `https://app.tonkeeper.com/transfer/${encodeURIComponent("UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP")}?amount=1000000000&text=${encodeURIComponent("connect:" + user.telegram_id)}`;
-        tg.openTelegramLink(link);
-        showToast("Перейдите в Tonkeeper для подключения");
-    } catch(e) { showToast("Ошибка подключения"); }
+        if (typeof TonConnectUI !== 'undefined') {
+            tonConnectUI = new TonConnectUI.TonConnectUI({ 
+                manifestUrl: `${BACKEND_URL}/tonconnect-manifest.json`,
+                buttonRootId: 'wallet-status'
+            });
+            tonConnectUI.onStatusChange((wallet) => {
+                const walletBtn = document.getElementById('wallet-status');
+                const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+                if (wallet) {
+                    isWalletConnected = true;
+                    walletAddress = wallet.account.address;
+                    if (walletBtn) { 
+                        walletBtn.innerHTML = `${walletAddress.slice(0,6)}...${walletAddress.slice(-4)}`; 
+                        walletBtn.classList.add('connected'); 
+                    }
+                    if (disconnectBtn) disconnectBtn.style.display = 'block';
+                    fetch(`${BACKEND_URL}/api/save-wallet`, { 
+                        method: 'POST', 
+                        headers: { 'content-type': 'application/json' }, 
+                        body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress }) 
+                    });
+                    showToast('Wallet connected!');
+                } else {
+                    isWalletConnected = false;
+                    walletAddress = '';
+                    if (walletBtn) { 
+                        walletBtn.innerHTML = 'Connect Wallet'; 
+                        walletBtn.classList.remove('connected'); 
+                    }
+                    if (disconnectBtn) disconnectBtn.style.display = 'none';
+                }
+            });
+        }
+    } catch(e) { console.error(e); }
 }
 
-function disconnectWallet() {
-    isWalletConnected = false;
-    walletAddress = '';
-    document.getElementById('wallet-status').innerHTML = '💎 Подключить кошелёк';
-    document.getElementById('wallet-status').classList.remove('connected');
-    document.getElementById('disconnect-wallet-btn').style.display = 'none';
-    showToast('Кошелёк отключен');
+async function connectWallet() { 
+    if (tonConnectUI) {
+        try { 
+            await tonConnectUI.connectWallet(); 
+        } catch(e) { 
+            showToast('Ошибка подключения'); 
+        }
+    } else {
+        showToast('Загрузка... попробуйте еще раз');
+        initTonConnect();
+        setTimeout(() => connectWallet(), 500);
+    }
+}
+
+async function disconnectWallet() { 
+    if (tonConnectUI) {
+        try { 
+            await tonConnectUI.disconnect(); 
+            showToast('Wallet disconnected'); 
+        } catch(e) {}
+    }
 }
 
 // Регистрация
@@ -501,6 +546,7 @@ fetch(`${BACKEND_URL}/api/register`, { method: 'POST', headers: { 'content-type'
             loadUserStats(); 
             loadMarket(); 
             loadInventory(); 
+            initTonConnect();
         } 
         document.getElementById('loading-screen').style.display='none'; 
     });
@@ -546,19 +592,24 @@ function switchProfileTab(tab, e) {
 
 // ========== КРИПТО ПОПОЛНЕНИЕ ==========
 async function processCryptoDeposit() {
+    if(!tonConnectUI||!isWalletConnected) { showToast('Connect wallet first!'); return; }
     let tonAmount = parseFloat(document.getElementById('dep-crypto-amount').value);
-    if(isNaN(tonAmount)||tonAmount<0.5) { showToast('Минимум 0.5 TON'); return; }
+    if(isNaN(tonAmount)||tonAmount<0.5) { showToast('Minimum 0.5 TON'); return; }
     const orderId = `${user.telegram_id}_${Date.now()}`;
-    const link = `https://app.tonkeeper.com/transfer/${encodeURIComponent("UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP")}?amount=${Math.floor(tonAmount*1000000000)}&text=${encodeURIComponent("deposit:" + user.telegram_id + ":" + Date.now())}`;
-    await fetch(`${BACKEND_URL}/api/pending-payment`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ telegram_id:user.telegram_id, amount:tonAmount, order_id:orderId, payload:"" }) });
-    tg.openTelegramLink(link);
-    document.getElementById('deposit-loader').classList.add('active'); 
-    closeModal('deposit-modal');
-    let int = setInterval(async () => {
-        let r = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ order_id:orderId }) });
-        let d = await r.json();
-        if(d.status==='completed') { clearInterval(int); document.getElementById('deposit-loader').classList.remove('active'); showToast(`🎉 Начислено ${d.stars}⭐!`); updateBalance(); loadUserStats(); }
-    }, 4000);
+    try {
+        await fetch(`${BACKEND_URL}/api/pending-payment`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ telegram_id:user.telegram_id, amount:tonAmount, order_id:orderId, payload:"" }) });
+        await tonConnectUI.sendTransaction({ 
+            validUntil: Math.floor(Date.now()/1000)+600, 
+            messages: [{ address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP", amount: Math.floor(tonAmount*1000000000).toString(), payload: null }] 
+        });
+        document.getElementById('deposit-loader').classList.add('active'); 
+        closeModal('deposit-modal');
+        let int = setInterval(async () => {
+            let r = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ order_id:orderId }) });
+            let d = await r.json();
+            if(d.status==='completed') { clearInterval(int); document.getElementById('deposit-loader').classList.remove('active'); showToast(`🎉 +${d.stars}⭐!`); updateBalance(); loadUserStats(); }
+        }, 4000);
+    } catch(e) { showToast('Cancelled'); }
 }
 function processStarsDeposit() { 
     fetch(`${BACKEND_URL}/api/create-invoice`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ telegram_id:user.telegram_id, amount:document.getElementById('dep-stars-amount').value }) })
@@ -655,7 +706,7 @@ function loadLeaderboard() {
         let podium=document.getElementById('leaderboard-podium'), list=document.getElementById('leaderboard-list');
         let top3=data.slice(0,3);
         while(top3.length<3) top3.push({name:'?',avatar:null,turnover:0});
-        podium.innerHTML=`<div class="podium-item podium-2"><div class="podium-avatar">${top3[1]?.avatar?`<img src="${top3[1].avatar}">`:top3[1]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[1]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[1]?.turnover||0}⭐</div><div class="podium-rank">🥈 2 место</div><div class="podium-base"></div></div><div class="podium-item podium-1"><div class="podium-avatar">${top3[0]?.avatar?`<img src="${top3[0].avatar}">`:top3[0]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[0]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[0]?.turnover||0}⭐</div><div class="podium-rank">🥇 1 место</div><div class="podium-base"></div></div><div class="podium-item podium-3"><div class="podium-avatar">${top3[2]?.avatar?`<img src="${top3[2].avatar}">`:top3[2]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[2]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[2]?.turnover||0}⭐</div><div class="podium-rank">🥉 3 место</div><div class="podium-base"></div></div>`;
+        podium.innerHTML=`<div class="podium-item podium-2"><div class="podium-avatar">${top3[1]?.avatar?`<img src="${top3[1].avatar}">`:top3[1]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[1]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[1]?.turnover||0}⭐</div><div class="podium-base"></div></div><div class="podium-item podium-1"><div class="podium-avatar">${top3[0]?.avatar?`<img src="${top3[0].avatar}">`:top3[0]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[0]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[0]?.turnover||0}⭐</div><div class="podium-base"></div></div><div class="podium-item podium-3"><div class="podium-avatar">${top3[2]?.avatar?`<img src="${top3[2].avatar}">`:top3[2]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[2]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[2]?.turnover||0}⭐</div><div class="podium-base"></div></div>`;
         list.innerHTML=data.slice(3).map((u,i)=>`<div class="leaderboard-row"><div class="leaderboard-rank">#${i+4}</div><div class="leaderboard-avatar">${u.avatar?`<img src="${u.avatar}">`:u.name?.charAt(0)||'?'}</div><div class="leaderboard-name">${u.name?.substring(0,20)||'Игрок'}</div><div class="leaderboard-stars">${u.turnover||0}⭐</div></div>`).join('')||'<div style="text-align:center; color:#666;">Нет игроков</div>';
     }); 
 }
