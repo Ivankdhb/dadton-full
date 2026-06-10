@@ -23,22 +23,13 @@ const TON_API_KEY = '06d6391b22c661acad89e10e47a3ff85eaaa179012354d517460508fbc9
 
 const MIN_BET = 10;
 const ROULETTE_FEE = 0.05;
-const MARKET_FEE = 0.10;
-const WITHDRAW_GAS_FEE = 15;
 
-const GIFT_PRICES = {
-  'Chill Flame': 300, 'Hanging Star': 2500, 'Mousse Cake': 600,
-  'Snoop Dogg': 550, 'Abstract Art': 400, 'Cyber Punk': 800,
-  'Golden Trophy': 5000, 'Diamond Ring': 3500, 'Neon Heart': 350, 'Space Rocket': 1200
-};
-const DEFAULT_GIFT_PRICE = 200;
-
-// ========== БАЗА ДАННЫХ ==========
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/dadton',
     ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
+// ========== ИНИЦИАЛИЗАЦИЯ ТАБЛИЦ ==========
 async function initDatabase() {
     const client = await pool.connect();
     try {
@@ -61,7 +52,7 @@ async function initDatabase() {
 }
 initDatabase();
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+// ========== ВСПОМОГАТЕЛЬНЫЕ ==========
 async function sendTelegramMessage(chatId, text) {
     try { await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: chatId, text, parse_mode: 'HTML' }); } catch(e) {}
 }
@@ -184,7 +175,7 @@ let activeMineGames = {};
 app.post('/api/games/mines/start', async (req, res) => {
     const { telegram_id, amount, minesCount } = req.body;
     const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [telegram_id]);
-    if (!u.rows[0] || u.rows[0].stars < amount) return res.json({ success: false, msg: `Недостаточно баланса. Пополните на ${amount - u.rows[0].stars}⭐` });
+    if (!u.rows[0] || u.rows[0].stars < amount) return res.json({ success: false, msg: `Недостаточно баланса` });
     let board = Array(25).fill(false), p = 0;
     while (p < minesCount) { let i = Math.floor(Math.random()*25); if(!board[i]) { board[i]=true; p++; } }
     await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [amount, telegram_id]);
@@ -222,7 +213,7 @@ app.post('/api/games/mines/cashout', async (req, res) => {
 
 // ========== API ==========
 app.post('/api/register', async (req, res) => {
-    const { telegram_id, name, avatar, username, referrer_id } = req.body;
+    const { telegram_id, name, avatar, username } = req.body;
     const existing = await pool.query("SELECT * FROM users WHERE telegram_id = $1", [telegram_id]);
     if (existing.rows[0]) {
         await pool.query("UPDATE users SET name=$1, avatar=$2, username=$3 WHERE telegram_id=$4", [name, avatar, username, telegram_id]);
@@ -235,7 +226,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/get-balance', async (req, res) => { const r = await pool.query("SELECT stars, banned FROM users WHERE telegram_id=$1", [req.body.telegram_id]); res.json(r.rows[0] || { stars: 0, banned: 0 }); });
 app.post('/api/user-stats', async (req, res) => { const r = await pool.query("SELECT games_played, turnover, wins FROM users WHERE telegram_id=$1", [req.body.telegram_id]); res.json({ success: true, ...r.rows[0] }); });
 app.get('/api/rocket-history', async (req, res) => { const r = await pool.query("SELECT multiplier FROM rocket_history ORDER BY timestamp DESC LIMIT 10"); res.json(r.rows.map(x => x.multiplier)); });
-app.get('/api/leaderboard', async (req, res) => { const r = await pool.query("SELECT telegram_id, name, avatar, turnover FROM users WHERE turnover > 0 ORDER BY turnover DESC LIMIT 50"); res.json(r.rows); });
+app.get('/api/leaderboard', async (req, res) => { const r = await pool.query("SELECT telegram_id, name, avatar, turnover FROM users ORDER BY turnover DESC LIMIT 50"); res.json(r.rows); });
 app.post('/api/user-games-history', async (req, res) => { const r = await pool.query("SELECT game_name, profit FROM games_history WHERE telegram_id=$1 ORDER BY created_at DESC LIMIT 20", [req.body.telegram_id]); res.json(r.rows); });
 app.post('/api/user-finance', async (req, res) => { const r = await pool.query("SELECT deposited, withdrawn FROM user_finance WHERE telegram_id=$1", [req.body.telegram_id]); res.json(r.rows[0] || { deposited: 0, withdrawn: 0 }); });
 app.post('/api/user-referrals', async (req, res) => { const r = await pool.query("SELECT COUNT(*)::int as count FROM users WHERE referrer_id=$1", [req.body.telegram_id]); res.json({ count: r.rows[0].count, earned: 0 }); });
@@ -285,16 +276,12 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ========== NFT МАРКЕТ И ИНВЕНТАРЬ ==========
-app.get('/api/nft/inventory/:telegramId', async (req, res) => {
-    const user = await pool.query("SELECT id FROM users WHERE telegram_id = $1", [req.params.telegramId]);
-    if (!user.rows[0]) return res.json({ success: false });
-    const inv = await pool.query(`SELECT ui.*, ni.* FROM user_inventory ui JOIN nft_items ni ON ui.nft_id = ni.nft_id WHERE ui.user_id = $1 AND ui.is_withdrawn = false ORDER BY ui.purchased_at DESC`, [user.rows[0].id]);
-    res.json({ success: true, inventory: inv.rows });
-});
+// ========== NFT МАРКЕТ ==========
 app.get('/api/gifts/market', async (req, res) => {
-    const lots = await pool.query(`SELECT ml.*, ni.name, ni.image_url, ni.rarity, u.name as seller_name FROM market_lots ml JOIN nft_items ni ON ml.nft_id = ni.nft_id JOIN users u ON ml.seller_id = u.id WHERE ml.status = 'active' ORDER BY ml.price ASC`);
-    res.json({ success: true, lots: lots.rows });
+    try {
+        const lots = await pool.query(`SELECT ml.*, ni.name, ni.image_url, ni.rarity, u.name as seller_name FROM market_lots ml JOIN nft_items ni ON ml.nft_id = ni.nft_id JOIN users u ON ml.seller_id = u.id WHERE ml.status = 'active' ORDER BY ml.price ASC`);
+        res.json({ success: true, lots: lots.rows });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.post('/api/gifts/sell', async (req, res) => {
     const { telegramId, nftId, price } = req.body;
@@ -321,7 +308,8 @@ app.post('/api/gifts/buy', async (req, res) => {
         const lot = await pool.query("SELECT * FROM market_lots WHERE id = $1 AND status = 'active' FOR UPDATE", [lotId]);
         if (!lot.rows[0]) throw new Error('Lot not found');
         if (buyer.rows[0].stars < lot.rows[0].price) throw new Error('Insufficient stars');
-        const fee = Math.floor(lot.rows[0].price * MARKET_FEE), sellerEarn = lot.rows[0].price - fee;
+        const fee = Math.floor(lot.rows[0].price * 0.10);
+        const sellerEarn = lot.rows[0].price - fee;
         await pool.query("UPDATE users SET stars = stars - $1 WHERE id = $2", [lot.rows[0].price, buyer.rows[0].id]);
         await pool.query("UPDATE users SET stars = stars + $1 WHERE id = $2", [sellerEarn, lot.rows[0].seller_id]);
         await pool.query("UPDATE users SET stars = stars + $1 WHERE telegram_id = $2", [fee, ADMIN_ID]);
@@ -332,6 +320,14 @@ app.post('/api/gifts/buy', async (req, res) => {
         res.json({ success: true, fee });
     } catch (e) { await pool.query('ROLLBACK'); res.status(400).json({ success: false, error: e.message }); }
 });
+app.get('/api/nft/inventory/:telegramId', async (req, res) => {
+    try {
+        const user = await pool.query("SELECT id FROM users WHERE telegram_id = $1", [req.params.telegramId]);
+        if (!user.rows[0]) return res.json({ success: false });
+        const inv = await pool.query(`SELECT ui.*, ni.* FROM user_inventory ui JOIN nft_items ni ON ui.nft_id = ni.nft_id WHERE ui.user_id = $1 AND ui.is_withdrawn = false ORDER BY ui.purchased_at DESC`, [user.rows[0].id]);
+        res.json({ success: true, inventory: inv.rows });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
 app.post('/api/nft/withdraw', async (req, res) => {
     const { telegramId, inventoryId } = req.body;
     try {
@@ -340,25 +336,24 @@ app.post('/api/nft/withdraw', async (req, res) => {
         if (!user.rows[0]) throw new Error('User not found');
         const item = await pool.query("SELECT * FROM user_inventory WHERE id = $1 AND user_id = $2 AND is_withdrawn = false FOR UPDATE", [inventoryId, user.rows[0].id]);
         if (!item.rows[0]) throw new Error('Item not found');
-        if (user.rows[0].stars < WITHDRAW_GAS_FEE) throw new Error(`Недостаточно звезд. Нужно ${WITHDRAW_GAS_FEE}⭐`);
-        await pool.query("UPDATE users SET stars = stars - $1 WHERE id = $2", [WITHDRAW_GAS_FEE, user.rows[0].id]);
+        if (user.rows[0].stars < 15) throw new Error(`Недостаточно звезд. Нужно 15⭐`);
+        await pool.query("UPDATE users SET stars = stars - 15 WHERE id = $1", [user.rows[0].id]);
         await pool.query("UPDATE user_inventory SET is_withdrawn = true, withdrawn_at = NOW() WHERE id = $1", [inventoryId]);
         await pool.query('COMMIT');
-        await sendTelegramMessage(telegramId, `✅ Подарок выведен на ваш Telegram-аккаунт! Списано ${WITHDRAW_GAS_FEE}⭐`);
+        await sendTelegramMessage(telegramId, `✅ Подарок выведен на ваш Telegram-аккаунт! Списано 15⭐`);
         res.json({ success: true });
     } catch (e) { await pool.query('ROLLBACK'); res.status(400).json({ success: false, error: e.message }); }
 });
+app.post('/api/admin/add-nft', async (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
+    const { nft_id, name, description, image_url, rarity, price_stars } = req.body;
+    try {
+        await pool.query(`INSERT INTO nft_items (nft_id, name, description, image_url, rarity, price_stars) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (nft_id) DO UPDATE SET name = EXCLUDED.name, price_stars = EXCLUDED.price_stars`, [nft_id, name, description, image_url, rarity || 'COMMON', price_stars]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
 
 // ========== АДМИН ==========
-app.post('/api/admin/reset-leaderboard', async (req, res) => {
-    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
-    try {
-        await pool.query("UPDATE users SET turnover = 0");
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 app.post('/api/admin/get-users', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); const r = await pool.query("SELECT id, telegram_id, name, stars, banned FROM users LIMIT 50"); res.json(r.rows); });
 app.post('/api/admin/get-withdraw-requests', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); const r = await pool.query("SELECT * FROM withdraw_requests WHERE status='pending'"); res.json(r.rows); });
 app.post('/api/admin/approve-withdraw', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); await pool.query("UPDATE withdraw_requests SET status='approved' WHERE id=$1", [req.body.request_id]); res.json({ success: true }); });
@@ -369,11 +364,10 @@ app.post('/api/admin/ban-user', async (req, res) => { if (req.body.admin_id !== 
 app.post('/api/admin/unban-user', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); await pool.query("UPDATE users SET banned=0 WHERE telegram_id=$1", [req.body.target_id]); res.json({ success: true }); });
 app.post('/api/admin/reset-all', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); await pool.query("UPDATE users SET stars=0, turnover=0, games_played=0, wins=0"); await pool.query("DELETE FROM pending_payments"); await pool.query("DELETE FROM games_history"); res.json({ success: true }); });
 app.post('/api/admin/reset-leaderboard', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); await pool.query("UPDATE users SET turnover=0"); res.json({ success: true }); });
-app.post('/api/admin/add-nft', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); const { nft_id, name, description, image_url, rarity, price_stars } = req.body; await pool.query(`INSERT INTO nft_items (nft_id, name, description, image_url, rarity, price_stars) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (nft_id) DO UPDATE SET name = EXCLUDED.name, price_stars = EXCLUDED.price_stars`, [nft_id, name, description, image_url, rarity || 'COMMON', price_stars]); res.json({ success: true }); });
 app.post('/api/admin/pause-bot', (req, res) => { if (req.body.admin_id === ADMIN_ID) { botPaused = true; res.json({ success: true }); } });
 app.post('/api/admin/resume-bot', (req, res) => { if (req.body.admin_id === ADMIN_ID) { botPaused = false; res.json({ success: true }); } });
 
-// ========== TON API ПРОВЕРКА ==========
+// ========== TON API ==========
 function parseBocBodyPayload(inMsg) {
     try {
         if (!inMsg?.msg_data?.body) return null;
@@ -412,8 +406,6 @@ setInterval(checkPendingPayments, 15000);
 // ========== MANIFEST ==========
 app.get('/tonconnect-manifest.json', (req, res) => { res.json({ url: "https://dadton-full.onrender.com", name: "DadTon Casino", iconUrl: "https://dadton-full.onrender.com/icon.png" }); });
 app.get('/icon.png', (req, res) => { res.setHeader('Content-Type', 'image/svg+xml'); res.send('<svg width="256" height="256"><rect width="256" height="256" fill="#0a0a0a" rx="40"/><circle cx="128" cy="128" r="80" fill="#FFD700"/><text x="128" y="150" font-size="64" text-anchor="middle" fill="#000" font-weight="900">D</text></svg>'); });
-app.get('/terms.html', (req, res) => { res.send('Terms of Use'); });
-app.get('/privacy.html', (req, res) => { res.send('Privacy Policy'); });
 
 // ========== WEBSOCKET ==========
 wss.on('connection', ws => {
@@ -423,7 +415,6 @@ wss.on('connection', ws => {
             if (data.type === 'auth') ws.telegram_id = data.telegram_id;
             if (data.type === 'rocket_bet') {
                 if (rocketState.status !== 'waiting') return;
-                if (data.amount < MIN_BET) return;
                 const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [data.telegram_id]);
                 if (!u.rows[0] || u.rows[0].stars < data.amount) return;
                 await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [data.amount, data.telegram_id]);
@@ -445,7 +436,6 @@ wss.on('connection', ws => {
             if (data.type === 'roulette_bet') {
                 if (rouletteState.status !== 'waiting') return;
                 if (rouletteState.hasActiveBet[data.telegram_id]) return;
-                if (data.amount < MIN_BET) return;
                 const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [data.telegram_id]);
                 if (!u.rows[0] || u.rows[0].stars < data.amount) return;
                 await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [data.amount, data.telegram_id]);
