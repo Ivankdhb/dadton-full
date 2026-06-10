@@ -18,3 +18,8 @@
     "node": "18.x"
   }
 }
+{
+  "dependencies": {
+    "@ton/core": "^0.56.0"
+  }
+}
