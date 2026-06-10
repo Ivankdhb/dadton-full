@@ -433,10 +433,9 @@ app.post('/api/save-wallet', async (req, res) => {
     res.json({ success: true });
 });
 
-// Проверка крипто-платежа
 app.post('/api/check-payment', async (req, res) => {
-    const { telegram_id, tx_hash } = req.body;
-    sendTelegramMessage(ADMIN_ID, `🟡 НОВАЯ КРИПТО-ТРАНЗАКЦИЯ\n👤 ID: ${telegram_id}\n📝 Хеш: ${tx_hash}\n\nПроверьте и начислите баланс вручную через админ-панель.`);
+    const { telegram_id, amount, tx_hash } = req.body;
+    sendTelegramMessage(ADMIN_ID, `🟡 НОВАЯ КРИПТО-ТРАНЗАКЦИЯ\n👤 ID: ${telegram_id}\n💰 Сумма: ${amount} TON\n📝 Хеш: ${tx_hash}\n\nПроверьте и начислите баланс вручную через админ-панель.`);
     res.json({ success: true, msg: 'Транзакция отправлена на проверку' });
 });
 
