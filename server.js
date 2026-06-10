@@ -40,7 +40,7 @@ async function initDatabase() {
                 name TEXT,
                 avatar TEXT,
                 username TEXT,
-                stars INTEGER DEFAULT 1000,
+                stars INTEGER DEFAULT 0,
                 turnover INTEGER DEFAULT 0,
                 games_played INTEGER DEFAULT 0,
                 wins INTEGER DEFAULT 0,
