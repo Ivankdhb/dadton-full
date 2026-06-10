@@ -7,6 +7,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "@ton/core": "https://unpkg.com/@ton/core@0.56.0/dist/index.js"
+            }
+        }
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-user-select: none; }
         body { background-color: #0a0a0a; color: #ffffff; overflow-x: hidden; padding-bottom: 75px; }
@@ -451,7 +458,12 @@
 
     <div id="ton-connect-btn-container" style="display: none;"></div>
 
-    <script>
+    <script type="module">
+        import { beginCell } from '@ton/core';
+        
+        // Делаем beginCell глобально доступным
+        window.beginCell = beginCell;
+        
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
@@ -470,23 +482,6 @@
         let currentMinesGameStatus = 'idle';
         let rocketHasBet = false;
         let reconnectAttempts = 0;
-
-        // Импорт @ton/core для правильного payload
-        let beginCell;
-        
-        function loadTonCore() {
-            return import('https://unpkg.com/@ton/core@0.56.0/dist/index.js')
-                .then(module => {
-                    beginCell = module.beginCell;
-                    console.log('✅ @ton/core загружен');
-                })
-                .catch(err => {
-                    console.error('❌ Ошибка загрузки @ton/core:', err);
-                });
-        }
-        
-        // Загружаем @ton/core
-        loadTonCore();
 
         // ========== TON CONNECT ==========
         let tonConnectUI = null;
@@ -687,15 +682,9 @@
             
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
             
-            // Ждём загрузки @ton/core
-            if (!beginCell) {
-                showToast('⏳ Подождите, загрузка библиотеки...');
-                await loadTonCore();
-            }
-            
-            // Создаём правильный payload в формате BOC
+            // Создаём правильный payload в формате BOC с помощью @ton/core
             const comment = `deposit_${user.telegram_id}_${Date.now()}`;
-            const payloadCell = beginCell()
+            const payloadCell = window.beginCell()
                 .storeUint(0, 32)  // префикс 0x00000000 для текстового сообщения
                 .storeStringTail(comment)
                 .endCell();
@@ -760,6 +749,37 @@
         function adminRejectWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/reject-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(r => r.json()).then(d => { if (d.success) { showToast('❌ Заявка отклонена'); adminLoadWithdraws(); } else showToast('❌ Ошибка'); }); }
         
         function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(users => { let html = ''; users.slice(0, 20).forEach(u => { html += `<div class="admin-user-item"><div><span class="admin-user-name">${u.name}</span><br><span style="font-size:11px; color:#888;">ID: ${u.telegram_id}</span><br><span style="font-size:12px;">⭐ ${u.stars} | 🎮 ${u.games_played || 0} | 🏆 ${u.wins || 0}</span></div><div><span class="admin-badge ${u.banned ? 'admin-badge-banned' : 'admin-badge-active'}">${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</span></div></div>`; }); document.getElementById('admin-users-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет пользователей</div>'; }); }
+        
+        // Делаем функции глобальными для onclick
+        window.connectWallet = connectWallet;
+        window.switchPage = switchPage;
+        window.switchProfileTab = switchProfileTab;
+        window.adjustBet = adjustBet;
+        window.handleRocketAction = handleRocketAction;
+        window.cancelRocketBet = cancelRocketBet;
+        window.cancelRouletteBet = cancelRouletteBet;
+        window.handleMinesAction = handleMinesAction;
+        window.clickMineTile = clickMineTile;
+        window.handleRouletteBet = handleRouletteBet;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.switchDepTab = switchDepTab;
+        window.setStarsAmount = setStarsAmount;
+        window.processStarsDeposit = processStarsDeposit;
+        window.processCryptoDeposit = processCryptoDeposit;
+        window.submitWithdraw = submitWithdraw;
+        window.copyRefLink = copyRefLink;
+        window.openAdminModal = openAdminModal;
+        window.adminAddStars = adminAddStars;
+        window.adminRemoveStars = adminRemoveStars;
+        window.adminBanUser = adminBanUser;
+        window.adminUnbanUser = adminUnbanUser;
+        window.adminPauseBot = adminPauseBot;
+        window.adminResumeBot = adminResumeBot;
+        window.adminLoadWithdraws = adminLoadWithdraws;
+        window.adminApproveWithdraw = adminApproveWithdraw;
+        window.adminRejectWithdraw = adminRejectWithdraw;
+        window.adminLoadUsers = adminLoadUsers;
     </script>
 </body>
 </html>
