@@ -33,7 +33,6 @@ const pool = new Pool({
 async function initDatabase() {
     const client = await pool.connect();
     try {
-        // Users table
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -51,7 +50,6 @@ async function initDatabase() {
             )
         `);
 
-        // Rocket history
         await client.query(`
             CREATE TABLE IF NOT EXISTS rocket_history (
                 id SERIAL PRIMARY KEY,
@@ -60,7 +58,6 @@ async function initDatabase() {
             )
         `);
 
-        // User finance
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_finance (
                 id SERIAL PRIMARY KEY,
@@ -72,7 +69,6 @@ async function initDatabase() {
             )
         `);
 
-        // Withdraw requests
         await client.query(`
             CREATE TABLE IF NOT EXISTS withdraw_requests (
                 id SERIAL PRIMARY KEY,
@@ -87,7 +83,6 @@ async function initDatabase() {
             )
         `);
 
-        // Referrals log
         await client.query(`
             CREATE TABLE IF NOT EXISTS referrals_log (
                 id SERIAL PRIMARY KEY,
@@ -100,7 +95,21 @@ async function initDatabase() {
             )
         `);
 
-        // Games history
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS pending_payments (
+                id SERIAL PRIMARY KEY,
+                telegram_id TEXT NOT NULL,
+                order_id TEXT UNIQUE NOT NULL,
+                amount REAL NOT NULL,
+                stars_amount INTEGER NOT NULL,
+                payload TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                tx_hash TEXT
+            )
+        `);
+
         await client.query(`
             CREATE TABLE IF NOT EXISTS games_history (
                 id SERIAL PRIMARY KEY,
@@ -115,24 +124,7 @@ async function initDatabase() {
             )
         `);
 
-        // Pending payments - ПРАВИЛЬНАЯ СТРУКТУРА (пересоздаём для гарантии)
-        await client.query(`DROP TABLE IF EXISTS pending_payments CASCADE`);
-        await client.query(`
-            CREATE TABLE pending_payments (
-                id SERIAL PRIMARY KEY,
-                telegram_id TEXT NOT NULL,
-                order_id TEXT UNIQUE NOT NULL,
-                amount REAL NOT NULL,
-                stars_amount INTEGER NOT NULL,
-                payload TEXT,
-                status TEXT DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-                tx_hash TEXT
-            )
-        `);
-
-        console.log('✅ Все таблицы PostgreSQL созданы/обновлены');
+        console.log('✅ Все таблицы PostgreSQL созданы/проверены');
     } catch (err) {
         console.error('Ошибка инициализации БД:', err);
     } finally {
@@ -140,7 +132,6 @@ async function initDatabase() {
     }
 }
 
-// Запускаем инициализацию
 initDatabase();
 
 // ========== TON CONNECT MANIFEST ==========
@@ -458,12 +449,20 @@ app.post('/api/pending-payment', async (req, res) => {
     
     console.log('📝 Creating pending payment:', { telegram_id, amount, order_id, starsAmount });
     
+    if (!telegram_id || !amount || !order_id) {
+        return res.json({ success: false, error: 'Missing required fields' });
+    }
+    
+    if (amount < 0.5) {
+        return res.json({ success: false, error: 'Minimum amount is 0.5 TON' });
+    }
+    
     try {
         const result = await pool.query(
             `INSERT INTO pending_payments (telegram_id, order_id, amount, stars_amount, payload) 
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [telegram_id, order_id, amount, starsAmount, payload]
+            [telegram_id, order_id, amount, starsAmount, payload || null]
         );
         console.log('✅ Pending payment created:', result.rows[0]);
         res.json({ success: true, order_id });
@@ -475,18 +474,29 @@ app.post('/api/pending-payment', async (req, res) => {
 
 app.post('/api/check-payment-status', async (req, res) => {
     const { order_id } = req.body;
-    const result = await pool.query(
-        "SELECT status, amount, stars_amount FROM pending_payments WHERE order_id = $1",
-        [order_id]
-    );
-    if (result.rows[0]) {
-        res.json({
-            status: result.rows[0].status,
-            amount: result.rows[0].amount,
-            stars: result.rows[0].stars_amount
-        });
-    } else {
-        res.json({ status: 'not_found' });
+    
+    if (!order_id) {
+        return res.json({ status: 'error', error: 'Missing order_id' });
+    }
+    
+    try {
+        const result = await pool.query(
+            "SELECT status, amount, stars_amount FROM pending_payments WHERE order_id = $1",
+            [order_id]
+        );
+        
+        if (result.rows[0]) {
+            res.json({
+                status: result.rows[0].status,
+                amount: result.rows[0].amount,
+                stars: result.rows[0].stars_amount
+            });
+        } else {
+            res.json({ status: 'not_found' });
+        }
+    } catch (err) {
+        console.error('Check status error:', err);
+        res.json({ status: 'error', error: err.message });
     }
 });
 
@@ -766,28 +776,6 @@ app.post('/api/admin/add-stars', async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/admin/get-pending-payments', async (req, res) => {
-    if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-    const result = await pool.query("SELECT * FROM pending_payments WHERE status = 'pending' ORDER BY created_at DESC");
-    res.json(result.rows);
-});
-
-app.post('/api/admin/approve-payment', async (req, res) => {
-    if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-    const { order_id } = req.body;
-    const payment = await pool.query("SELECT * FROM pending_payments WHERE order_id = $1 AND status = 'pending'", [order_id]);
-    if (payment.rows[0]) {
-        await pool.query("UPDATE users SET stars = stars + $1 WHERE telegram_id = $2", [payment.rows[0].stars_amount, payment.rows[0].telegram_id]);
-        await pool.query("UPDATE user_finance SET deposited = deposited + $1 WHERE telegram_id = $2", [payment.rows[0].stars_amount, payment.rows[0].telegram_id]);
-        await pool.query("UPDATE pending_payments SET status = 'completed', completed_at = NOW() WHERE order_id = $1", [order_id]);
-        sendUserBalance(payment.rows[0].telegram_id);
-        sendTelegramMessage(payment.rows[0].telegram_id, `✅ Ваш платёж подтверждён! Начислено ${payment.rows[0].stars_amount}⭐`);
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
-    }
-});
-
 app.post('/api/admin/ban-user', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
     await pool.query("UPDATE users SET banned = 1 WHERE telegram_id = $1", [req.body.target_id]);
@@ -813,7 +801,7 @@ app.post('/api/admin/resume-bot', (req, res) => {
 });
 
 // ========== АВТОМАТИЧЕСКАЯ ПРОВЕРКА ТРАНЗАКЦИЙ TON ==========
-async function getWalletTransactionsFast(limit = 30) {
+async function getWalletTransactions(limit = 30) {
     try {
         const url = `https://toncenter.com/api/v2/getTransactions`;
         const response = await axios.get(url, {
@@ -823,7 +811,7 @@ async function getWalletTransactionsFast(limit = 30) {
                 include_msg_data: true,
                 api_key: TON_API_KEY
             },
-            timeout: 5000
+            timeout: 10000
         });
         
         if (response.data && response.data.ok && response.data.result) {
@@ -839,6 +827,8 @@ async function getWalletTransactionsFast(limit = 30) {
 function decodePayloadFromTx(inMsg) {
     try {
         if (!inMsg || !inMsg.msg_data || !inMsg.msg_data.body) return null;
+        
+        // Пробуем декодировать как UTF-8 текст
         const decoded = Buffer.from(inMsg.msg_data.body, 'base64').toString('utf-8');
         const match = decoded.match(/deposit:(\d+):(\d+)/);
         if (match) {
@@ -859,7 +849,7 @@ async function checkPendingPayments() {
     
     if (pending.rows.length === 0) return;
     
-    const transactions = await getWalletTransactionsFast(30);
+    const transactions = await getWalletTransactions(30);
     if (transactions.length === 0) {
         console.log('⚠️ No transactions fetched');
         return;
@@ -883,42 +873,71 @@ async function checkPendingPayments() {
         });
         
         if (matchingTx) {
-            const starsAmount = Math.floor(payment.amount * 100);
-            
-            await pool.query(
-                "UPDATE users SET stars = stars + $1 WHERE telegram_id = $2",
-                [starsAmount, payment.telegram_id]
-            );
-            await pool.query(
-                "UPDATE user_finance SET deposited = deposited + $1 WHERE telegram_id = $2",
-                [starsAmount, payment.telegram_id]
-            );
-            await pool.query(
-                "UPDATE pending_payments SET status = 'completed', completed_at = NOW() WHERE order_id = $1",
-                [payment.order_id]
-            );
-            
-            await sendTelegramMessage(
-                payment.telegram_id,
-                `✅ <b>Пополнение баланса!</b>\n\n💰 Сумма: ${payment.amount} TON\n⭐ Получено: ${starsAmount} звёзд\n\nСпасибо! 🚀`
-            );
-            
-            await sendTelegramMessage(
-                ADMIN_ID,
-                `🟢 <b>УСПЕШНОЕ ПОПОЛНЕНИЕ</b>\n👤 ID: ${payment.telegram_id}\n💰 ${payment.amount} TON\n⭐ ${starsAmount}⭐`
-            );
-            
-            sendUserBalance(payment.telegram_id);
+            // Транзакция найдена! Используем SQL транзакцию для атомарности
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                
+                // Начисляем звёзды
+                await client.query(
+                    "UPDATE users SET stars = stars + $1 WHERE telegram_id = $2",
+                    [payment.stars_amount, payment.telegram_id]
+                );
+                
+                // Обновляем финансы
+                await client.query(
+                    "UPDATE user_finance SET deposited = deposited + $1 WHERE telegram_id = $2",
+                    [payment.stars_amount, payment.telegram_id]
+                );
+                
+                // Обновляем статус платежа
+                await client.query(
+                    "UPDATE pending_payments SET status = 'completed', completed_at = NOW(), tx_hash = $1 WHERE order_id = $2",
+                    [matchingTx.transaction_id?.hash || 'unknown', payment.order_id]
+                );
+                
+                await client.query('COMMIT');
+                
+                console.log(`✅ Payment completed for user ${payment.telegram_id}, order ${payment.order_id}`);
+                
+                // Уведомляем пользователя
+                await sendTelegramMessage(
+                    payment.telegram_id,
+                    `✅ <b>Пополнение баланса!</b>\n\n` +
+                    `💰 Сумма: ${payment.amount} TON\n` +
+                    `⭐ Получено: ${payment.stars_amount} звёзд\n\n` +
+                    `Спасибо, что выбираете DadTon! 🚀`
+                );
+                
+                // Лог для админа (только информационно)
+                await sendTelegramMessage(
+                    ADMIN_ID,
+                    `📊 <b>АВТОМАТИЧЕСКОЕ ПОПОЛНЕНИЕ</b>\n\n` +
+                    `👤 Пользователь: <code>${payment.telegram_id}</code>\n` +
+                    `💰 Сумма: ${payment.amount} TON\n` +
+                    `⭐ Начислено: ${payment.stars_amount}⭐\n` +
+                    `🆔 Order: ${payment.order_id}`
+                );
+                
+                // Обновляем баланс через WebSocket
+                sendUserBalance(payment.telegram_id);
+                
+            } catch (err) {
+                await client.query('ROLLBACK');
+                console.error('Transaction failed:', err);
+            } finally {
+                client.release();
+            }
         }
     }
 }
 
-// Запускаем проверку КАЖДЫЕ 5 СЕКУНД
+// Запускаем проверку каждые 10 секунд
 setInterval(() => {
     checkPendingPayments();
-}, 5000);
+}, 10000);
 
-console.log('✅ TON payment checker started (every 5 seconds)');
+console.log('✅ TON payment checker started (every 10 seconds)');
 
 // ========== WEBSOCKET ОБРАБОТКА ==========
 wss.on('connection', (ws) => {
