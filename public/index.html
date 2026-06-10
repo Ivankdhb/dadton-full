@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -79,6 +78,7 @@
         .history-win { color: #00cc66; }
         .history-loss { color: #ff4444; }
         
+        /* ПЬЕДЕСТАЛЫ ДЛЯ ЛИДЕРБОРДА */
         .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin: 30px 0 40px; flex-wrap: wrap; }
         .podium-item { text-align: center; display: flex; flex-direction: column; align-items: center; width: 100px; }
         .podium-base { width: 100%; background: linear-gradient(180deg, #2a2a2a, #1a1a1a); border-radius: 8px 8px 0 0; margin-top: 8px; }
@@ -89,9 +89,10 @@
         .podium-1 .podium-avatar { width: 70px; height: 70px; border: 3px solid #FFD700; box-shadow: 0 0 20px #FFD700; }
         .podium-2 .podium-avatar { width: 60px; height: 60px; border: 3px solid #C0C0C0; }
         .podium-3 .podium-avatar { width: 55px; height: 55px; border: 3px solid #CD7F32; }
-        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .podium-name { font-size: 12px; font-weight: 600; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
-        .podium-stars { font-size: 11px; color: #FFD700; margin-top: 4px; }
+        .podium-stars { font-size: 10px; color: #FFD700; margin-top: 4px; }
+        .podium-rank { font-size: 10px; color: #888; margin-top: 2px; }
         
         .leaderboard-list { max-height: 300px; overflow-y: auto; }
         .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #2a2a2a; }
@@ -146,6 +147,18 @@
         .deposit-loader.active { display: flex; }
         .deposit-loader .spinner { width: 60px; height: 60px; border: 5px solid #2a2a2a; border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 0.8s linear infinite; }
         .deposit-loader p { color: #FFD700; font-weight: 800; font-size: 16px; }
+        
+        @media (max-width: 480px) {
+            .leaderboard-podium { gap: 8px; }
+            .podium-item { width: 75px; }
+            .podium-avatar { width: 45px; height: 45px; font-size: 18px; }
+            .podium-1 .podium-avatar { width: 55px; height: 55px; }
+            .podium-2 .podium-avatar { width: 48px; height: 48px; }
+            .podium-3 .podium-avatar { width: 42px; height: 42px; }
+            .podium-1 .podium-base { height: 80px; }
+            .podium-2 .podium-base { height: 55px; }
+            .podium-3 .podium-base { height: 40px; }
+        }
     </style>
 </head>
 <body>
@@ -286,10 +299,10 @@
             </div>
         </div>
         <div class="profile-tabs">
-            <button class="profile-tab active" onclick="switchProfileTab('stats')">📊 Статистика</button>
-            <button class="profile-tab" onclick="switchProfileTab('games')">🎮 Мои игры</button>
-            <button class="profile-tab" onclick="switchProfileTab('finance')">💰 Финансы</button>
-            <button class="profile-tab" onclick="switchProfileTab('referrals')">👥 Рефералы</button>
+            <button class="profile-tab active" onclick="switchProfileTab('stats', event)">📊 Статистика</button>
+            <button class="profile-tab" onclick="switchProfileTab('games', event)">🎮 Мои игры</button>
+            <button class="profile-tab" onclick="switchProfileTab('finance', event)">💰 Финансы</button>
+            <button class="profile-tab" onclick="switchProfileTab('referrals', event)">👥 Рефералы</button>
         </div>
         <div id="profile-tab-stats" class="profile-tab-content active">
             <div class="stats-grid">
@@ -337,8 +350,8 @@
                 <input type="text" id="admin-target-id" class="admin-input" placeholder="Telegram ID пользователя">
                 <div class="admin-input-group">
                     <input type="number" id="admin-add-amount" class="admin-input" placeholder="Сумма">
-                    <button class="admin-btn admin-btn-gold" onclick="adminAddStars()">+++ Начислить</button>
-                    <button class="admin-btn admin-btn-red" onclick="adminRemoveStars()">--- Снять</button>
+                    <button class="admin-btn admin-btn-gold" onclick="adminAddStars()">➕ Начислить</button>
+                    <button class="admin-btn admin-btn-red" onclick="adminRemoveStars()">➖ Снять</button>
                 </div>
             </div>
             <div class="admin-section">
@@ -460,6 +473,7 @@
                             method: 'POST', headers: { 'content-type': 'application/json' },
                             body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress })
                         });
+                        showToast('✅ Кошелёк подключён!');
                     } else {
                         isWalletConnected = false; walletAddress = '';
                         if (walletBtn) { walletBtn.innerHTML = '💎 Подключить кошелёк'; walletBtn.classList.remove('connected'); }
@@ -480,6 +494,14 @@
             try { await tonConnectUI.disconnect(); showToast('🔴 Кошелёк отключен'); } catch(e) { console.error(e); }
         }
 
+        function showToast(msg) { 
+            let toast = document.createElement('div'); 
+            toast.className = 'toast'; 
+            toast.innerText = msg; 
+            document.body.appendChild(toast); 
+            setTimeout(() => toast.remove(), 2000); 
+        }
+
         // АВТОМАТИЧЕСКАЯ ПОДГОТОВКА С ПРАВИЛЬНЫМ TON BOC PAYLOAD
         async function processCryptoDeposit() {
             if (!tonConnectUI || !isWalletConnected) { tg.showAlert('❌ Сначала подключите TON кошелёк!'); return; }
@@ -490,14 +512,13 @@
             const orderId = `${user.telegram_id}_${Date.now()}`;
             const commentText = `deposit:${user.telegram_id}:${Date.now()}`;
 
-            // Сборка бинарной структуры ячейки с комментарием блокчейна TON через импортированный CDN модуль
-            const cell = TonCore.beginCell()
-                .storeUint(0, 32) // Текстовый маркер
-                .storeStringTail(commentText)
-                .endCell();
-            const base64Boc = cell.toBoc().toString('base64');
-
             try {
+                const cell = TonCore.beginCell()
+                    .storeUint(0, 32)
+                    .storeStringTail(commentText)
+                    .endCell();
+                const base64Boc = cell.toBoc().toString('base64');
+
                 const res = await fetch(`${BACKEND_URL}/api/pending-payment`, {
                     method: 'POST', headers: { 'content-type': 'application/json' },
                     body: JSON.stringify({ telegram_id: user.telegram_id, amount: tonAmount, order_id: orderId, payload: commentText })
@@ -508,9 +529,9 @@
                 const transaction = {
                     validUntil: Math.floor(Date.now() / 1000) + 600,
                     messages: [{
-                        address: serverData.target_wallet, // Назначенный мерчант-адрес
+                        address: serverData.target_wallet,
                         amount: nanoAmount,
-                        payload: base64Boc // Абсолютно валидный BOC Cell
+                        payload: base64Boc
                     }]
                 };
 
@@ -520,92 +541,613 @@
 
                 if (statusCheckInterval) clearInterval(statusCheckInterval);
                 statusCheckInterval = setInterval(async () => {
-                    const check = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: orderId }) });
+                    const check = await fetch(`${BACKEND_URL}/api/check-payment-status`, { 
+                        method: 'POST', headers: { 'content-type': 'application/json' }, 
+                        body: JSON.stringify({ order_id: orderId }) 
+                    });
                     const statusData = await check.json();
                     if (statusData.status === 'completed') {
                         clearInterval(statusCheckInterval); loader.classList.remove('active');
-                        showToast(`🎉 Начислено ${statusData.stars} ⭐!`); updateBalance();
+                        showToast(`🎉 Начислено ${statusData.stars} ⭐!`); updateBalance(); loadUserStats(); loadUserFinance();
                     }
                 }, 4000);
             } catch(e) { showToast('❌ Отменено пользователем'); }
         }
 
-        // ОСТАЛЬНАЯ ИГРОВАЯ И ИНТЕРФЕЙСНАЯ СТРУКТУРА
         function updateBetLimits() {
             const max = user.stars || MIN_BET;
-            document.getElementById('rocket-bet-amount').max = max;
-            document.getElementById('mines-bet-amount').max = max;
-            document.getElementById('roulette-bet-amount').max = max;
+            const rocketInput = document.getElementById('rocket-bet-amount');
+            const minesInput = document.getElementById('mines-bet-amount');
+            const rouletteInput = document.getElementById('roulette-bet-amount');
+            if (rocketInput) rocketInput.max = max;
+            if (minesInput) minesInput.max = max;
+            if (rouletteInput) rouletteInput.max = max;
         }
-        function updateUI() { document.getElementById('global-balance').innerText = user.stars || 0; document.getElementById('profile-name').innerText = user.name; document.getElementById('profile-username').innerText = user.username ? '@'+user.username : ''; if(user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; updateBetLimits(); }
-        function switchPage(pageId) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const target = document.getElementById(`page-${pageId}`); if (target) target.classList.add('active'); const nav = document.getElementById(`nav-${pageId}`); if (nav) nav.classList.add('active'); if (pageId === 'mines') buildMinesBoard(); if (pageId === 'profile') { loadUserStats(); loadUserGamesHistory(); loadUserFinance(); loadUserReferrals(); } if (pageId === 'leaderboard') loadLeaderboard(); }
-        function switchProfileTab(tab) { document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); document.getElementById(`profile-tab-${tab}`).classList.add('active'); }
-        function adjustBet(id, act) { let el = document.getElementById(id), v = parseInt(el.value)||MIN_BET, m = user.stars||MIN_BET; if(act==='min') v=MIN_BET; else if(act==='max') v=m; else if(act==='half') v=Math.max(MIN_BET, Math.floor(v/2)); else if(act==='double') v=Math.min(v*2, m); else if(typeof act==='number') v=Math.min(v+act, m); el.value = Math.max(MIN_BET, Math.min(v, m)); }
-        function setStarsAmount(a) { document.getElementById('dep-stars-amount').value = a; }
-        function toggleWithdrawFields() { let a = document.getElementById('withdraw-asset').value; document.getElementById('withdraw-wallet').style.display = a==='Stars'?'none':'block'; document.getElementById('withdraw-tg-username').style.display = a==='Stars'?'block':'none'; }
         
-        fetch(`${BACKEND_URL}/api/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(user) }).then(r => r.json()).then(d => { if(d.success) { user = d.user; updateUI(); initWebSocket(); loadRocketHistory(); if(user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display='block'; } document.getElementById('loading-screen').style.display='none'; });
+        function updateUI() { 
+            document.getElementById('global-balance').innerText = user.stars || 0; 
+            document.getElementById('profile-name').innerText = user.name; 
+            document.getElementById('profile-username').innerText = user.username ? '@'+user.username : ''; 
+            if(user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+            updateBetLimits(); 
+        }
+        
+        function switchPage(pageId) { 
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); 
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
+            const target = document.getElementById(`page-${pageId}`); 
+            if (target) target.classList.add('active'); 
+            const nav = document.getElementById(`nav-${pageId}`); 
+            if (nav) nav.classList.add('active'); 
+            if (pageId === 'mines') buildMinesBoard(); 
+            if (pageId === 'profile') { loadUserStats(); loadUserGamesHistory(); loadUserFinance(); loadUserReferrals(); } 
+            if (pageId === 'leaderboard') loadLeaderboard(); 
+        }
+        
+        function switchProfileTab(tab, event) { 
+            document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active')); 
+            document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active')); 
+            event.target.classList.add('active'); 
+            document.getElementById(`profile-tab-${tab}`).classList.add('active'); 
+            if(tab === 'games') loadUserGamesHistory();
+            if(tab === 'finance') loadUserFinance();
+            if(tab === 'referrals') loadUserReferrals();
+        }
+        
+        function adjustBet(id, act) { 
+            let el = document.getElementById(id), v = parseInt(el.value)||MIN_BET, m = user.stars||MIN_BET; 
+            if(act==='min') v=MIN_BET; 
+            else if(act==='max') v=m; 
+            else if(act==='half') v=Math.max(MIN_BET, Math.floor(v/2)); 
+            else if(act==='double') v=Math.min(v*2, m); 
+            else if(typeof act==='number') v=Math.min(v+act, m); 
+            el.value = Math.max(MIN_BET, Math.min(v, m)); 
+        }
+        
+        function setStarsAmount(a) { document.getElementById('dep-stars-amount').value = a; }
+        function toggleWithdrawFields() { 
+            let a = document.getElementById('withdraw-asset').value; 
+            document.getElementById('withdraw-wallet').style.display = a==='Stars'?'none':'block'; 
+            document.getElementById('withdraw-tg-username').style.display = a==='Stars'?'block':'none'; 
+        }
+        
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; toggleWithdrawFields(); }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openAdminModal() { openModal('admin-modal'); adminLoadWithdraws(); adminLoadUsers(); }
+        function switchDepTab(tab, event) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (tab === 'crypto') {
+                document.getElementById('dep-tab-crypto').style.display = 'block';
+                document.getElementById('dep-tab-stars').style.display = 'none';
+            } else {
+                document.getElementById('dep-tab-crypto').style.display = 'none';
+                document.getElementById('dep-tab-stars').style.display = 'block';
+            }
+            event.target.classList.add('active');
+        }
+
+        fetch(`${BACKEND_URL}/api/register`, { 
+            method: 'POST', headers: { 'content-type': 'application/json' }, 
+            body: JSON.stringify(user) 
+        }).then(r => r.json()).then(d => { 
+            if(d.success) { 
+                user = d.user; updateUI(); initWebSocket(); loadRocketHistory(); 
+                if(user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display='block'; 
+                loadUserStats();
+            } 
+            document.getElementById('loading-screen').style.display='none'; 
+        });
 
         // ЛОГИКА РАКЕТЫ (FRONTEND)
         let currentRocketBtnState = 'bet';
-        function setRocketButtonState(s) { const b = document.getElementById('rocket-action-btn'); currentRocketBtnState = s; if (s === 'bet') { b.className = "btn-main btn-gold"; b.innerText = "💰 Сделать ставку"; b.disabled = false; } else if (s === 'waiting_with_bet') { b.className = "btn-main btn-gray"; b.innerText = "⏳ Ожидание старта"; b.disabled = true; } else if (s === 'flying') { b.className = "btn-main btn-green"; b.innerText = "💸 Забрать"; b.disabled = false; } else { b.className = "btn-main btn-gray"; b.innerText = "⏳ Ожидание"; b.disabled = true; } }
-        function handleRocketAction() { if(currentRocketBtnState === 'bet') { let amt = parseInt(document.getElementById('rocket-bet-amount').value); if(amt > user.stars || amt < MIN_BET) return showToast('Ошибка суммы'); let auto = document.getElementById('rocket-auto-check').checked, av = parseFloat(document.getElementById('rocket-auto-val').value); ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: av })); setRocketButtonState('waiting_with_bet'); } else if(currentRocketBtnState === 'flying') { ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); } }
-        function cancelRocketBet() { fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id })); }); }
-        function updateRocketPlayers(b) { document.getElementById('rocket-players-list').innerHTML = b.length ? b.map(x => `<div class="list-row"><span>${x.name}</span><span>${x.amount}⭐ ${x.cashedOut ? `<span style="color:#00cc66;">(${x.multiplier}x)</span>` : '⏳'}</span></div>`).join('') : 'Нет участников'; }
-        function loadRocketHistory() { fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(d => { document.getElementById('rocket-history-list').innerHTML = d.map(m => `<span class="crash-badge">${m}x</span>`).join(''); }); }
+        function setRocketButtonState(s) { 
+            const b = document.getElementById('rocket-action-btn'); 
+            currentRocketBtnState = s; 
+            if (s === 'bet') { 
+                b.className = "btn-main btn-gold"; 
+                b.innerText = "💰 Сделать ставку"; 
+                b.disabled = false; 
+            } else if (s === 'waiting_with_bet') { 
+                b.className = "btn-main btn-gray"; 
+                b.innerText = "⏳ Ожидание старта"; 
+                b.disabled = true; 
+            } else if (s === 'flying') { 
+                b.className = "btn-main btn-green"; 
+                b.innerText = "💸 Забрать"; 
+                b.disabled = false; 
+            } else { 
+                b.className = "btn-main btn-gray"; 
+                b.innerText = "⏳ Ожидание"; 
+                b.disabled = true; 
+            } 
+        }
+        
+        function handleRocketAction() { 
+            if(currentRocketBtnState === 'bet') { 
+                let amt = parseInt(document.getElementById('rocket-bet-amount').value); 
+                if(amt > user.stars) { showToast(`❌ Макс ставка: ${user.stars}⭐`); return; }
+                if(amt < MIN_BET) { showToast(`❌ Мин ставка: ${MIN_BET}⭐`); return; }
+                let auto = document.getElementById('rocket-auto-check').checked, 
+                    av = parseFloat(document.getElementById('rocket-auto-val').value); 
+                ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: av })); 
+                setRocketButtonState('waiting_with_bet'); 
+            } else if(currentRocketBtnState === 'flying') { 
+                ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); 
+            } 
+        }
+        
+        function cancelRocketBet() { 
+            fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id })); }); 
+        }
+        
+        function cancelRouletteBet() { 
+            fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id })); }); 
+        }
+        
+        function updateRocketPlayers(bets) { 
+            const container = document.getElementById('rocket-players-list');
+            if(!container) return;
+            container.innerHTML = bets.length ? bets.map(x => `<div class="list-row"><div class="list-user-info"><div class="mini-avatar" style="background:#444;">${(x.name||'?').charAt(0)}</div><span>${x.name}</span></div><div>${x.amount}⭐ ${x.cashedOut ? `<span style="color:#00cc66;">(${x.multiplier}x)</span>` : '⏳'}</div></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>';
+        }
+        
+        function loadRocketHistory() { 
+            fetch(`${BACKEND_URL}/api/rocket-history`).then(r => r.json()).then(d => { 
+                const container = document.getElementById('rocket-history-list');
+                if(container) container.innerHTML = d.map(m => `<span class="crash-badge">${m}x</span>`).join(''); 
+            }); 
+        }
 
         // ЛОГИКА МИН (FRONTEND)
-        function buildMinesBoard() { const b = document.getElementById('mines-grid-board'); b.innerHTML = ''; for (let i = 0; i < 25; i++) b.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; }
-        function handleMinesAction() { const btn = document.getElementById('mines-action-btn'); if (currentMinesGameStatus === 'idle') { let amt = parseInt(document.getElementById('mines-bet-amount').value), c = document.getElementById('mines-count-select').value; fetch(`${BACKEND_URL}/api/games/mines/start`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: c }) }).then(r => r.json()).then(d => { if(d.success) { currentMinesGameStatus = 'playing'; btn.className = "btn-main btn-green"; btn.innerText = "💰 Забрать (0x)"; document.getElementById('mines-status-text').innerText = "Выбирайте клетки!"; buildMinesBoard(); updateBalance(); } else showToast(d.msg); }); } else { fetch(`${BACKEND_URL}/api/games/mines/cashout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if(d.success) { showToast(`🎉 +${d.winAmount}⭐`); currentMinesGameStatus = 'idle'; btn.className = "btn-main btn-gold"; btn.innerText = "💣 Новая игра"; updateBalance(); } }); } }
-        function clickMineTile(i) { if(currentMinesGameStatus !== 'playing') return; fetch(`${BACKEND_URL}/api/games/mines/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, index: i }) }).then(r => r.json()).then(d => { let t = document.getElementById(`mine-${i}`); if(d.hitMine) { t.classList.add('blown'); t.innerText='💣'; currentMinesGameStatus='idle'; document.getElementById('mines-action-btn').className="btn-main btn-gold"; document.getElementById('mines-action-btn').innerText="💣 Новая игра"; updateBalance(); } else { t.classList.add('safe'); t.innerText='⭐'; document.getElementById('mines-action-btn').innerText = `💰 Забрать (${d.multiplier}x)`; if(d.win) { showToast('Победа!'); currentMinesGameStatus='idle'; updateBalance(); } } }); }
+        function buildMinesBoard() { 
+            const b = document.getElementById('mines-grid-board'); 
+            b.innerHTML = ''; 
+            for (let i = 0; i < 25; i++) b.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; 
+        }
+        
+        function handleMinesAction() { 
+            const btn = document.getElementById('mines-action-btn'); 
+            if (currentMinesGameStatus === 'idle') { 
+                let amt = parseInt(document.getElementById('mines-bet-amount').value);
+                if(amt > user.stars) { showToast(`❌ Макс ставка: ${user.stars}⭐`); return; }
+                if(amt < MIN_BET) { showToast(`❌ Мин ставка: ${MIN_BET}⭐`); return; }
+                let c = document.getElementById('mines-count-select').value; 
+                fetch(`${BACKEND_URL}/api/games/mines/start`, { 
+                    method: 'POST', headers: { 'content-type': 'application/json' }, 
+                    body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: c }) 
+                }).then(r => r.json()).then(d => { 
+                    if(d.success) { 
+                        currentMinesGameStatus = 'playing'; 
+                        btn.className = "btn-main btn-green"; 
+                        btn.innerText = "💰 Забрать (0x)"; 
+                        document.getElementById('mines-status-text').innerHTML = "Выбирайте клетки!"; 
+                        buildMinesBoard(); 
+                        updateBalance(); 
+                    } else showToast(d.msg); 
+                }); 
+            } else { 
+                fetch(`${BACKEND_URL}/api/games/mines/cashout`, { 
+                    method: 'POST', headers: { 'content-type': 'application/json' }, 
+                    body: JSON.stringify({ telegram_id: user.telegram_id }) 
+                }).then(r => r.json()).then(d => { 
+                    if(d.success) { 
+                        showToast(`🎉 +${d.winAmount}⭐`); 
+                        currentMinesGameStatus = 'idle'; 
+                        btn.className = "btn-main btn-gold"; 
+                        btn.innerText = "💣 Новая игра"; 
+                        updateBalance(); 
+                        loadUserStats();
+                    } 
+                }); 
+            } 
+        }
+        
+        function clickMineTile(i) { 
+            if(currentMinesGameStatus !== 'playing') return; 
+            fetch(`${BACKEND_URL}/api/games/mines/reveal`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id, index: i }) 
+            }).then(r => r.json()).then(d => { 
+                let t = document.getElementById(`mine-${i}`); 
+                if(d.hitMine) { 
+                    t.classList.add('blown'); 
+                    t.innerText='💣'; 
+                    currentMinesGameStatus='idle'; 
+                    document.getElementById('mines-action-btn').className="btn-main btn-gold"; 
+                    document.getElementById('mines-action-btn').innerText="💣 Новая игра"; 
+                    updateBalance(); 
+                    loadUserStats();
+                } else { 
+                    t.classList.add('safe'); 
+                    t.innerText='⭐'; 
+                    document.getElementById('mines-action-btn').innerHTML = `💰 Забрать (${d.multiplier}x)`; 
+                    if(d.win) { 
+                        showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`); 
+                        currentMinesGameStatus='idle'; 
+                        document.getElementById('mines-action-btn').className="btn-main btn-gold"; 
+                        document.getElementById('mines-action-btn').innerText="💣 Новая игра";
+                        updateBalance(); 
+                        loadUserStats();
+                    } 
+                } 
+            }); 
+        }
 
         // ЛОГИКА РУЛЕТКИ (FRONTEND)
-        function handleRouletteBet() { let amt = document.getElementById('roulette-bet-amount').value; ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: parseInt(amt) })); }
-        function cancelRouletteBet() { fetch(`${BACKEND_URL}/api/cancel-roulette-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if(d.success) ws.send(JSON.stringify({ type: 'cancel_roulette_bet', telegram_id: user.telegram_id })); }); }
-        function updateRoulettePlayers(b) { document.getElementById('roulette-players-list').innerHTML = b.map(x => `<div class="list-row" style="border-left:4px solid ${x.color}"><span>${x.name}</span><span>${x.amount}⭐</span></div>`).join(''); }
-        function drawRoulette(b, r) { const c = document.getElementById('roulette-canvas'); if(!c)return; const ctx = c.getContext('2d'); ctx.clearRect(0,0,260,260); ctx.beginPath(); ctx.arc(130,130,110,0,2*Math.PI); ctx.fillStyle='#1a1a1a'; ctx.fill(); }
-        function animateRoulette(b, w) { let s = performance.now(); function a(t) { let p = Math.min((t-s)/3000, 1); drawRoulette(b, p*15); if(p<1) requestAnimationFrame(a); else { document.getElementById('roulette-timer-text').innerText = `🏆 Победитель: ${w.name}`; updateBalance(); } } requestAnimationFrame(a); }
+        function handleRouletteBet() { 
+            let amt = parseInt(document.getElementById('roulette-bet-amount').value);
+            if(amt > user.stars) { showToast(`❌ Макс ставка: ${user.stars}⭐`); return; }
+            if(amt < MIN_BET) { showToast(`❌ Мин ставка: ${MIN_BET}⭐`); return; }
+            ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt })); 
+        }
+        
+        function updateRoulettePlayers(bets) { 
+            const container = document.getElementById('roulette-players-list');
+            if(!container) return;
+            container.innerHTML = bets.length ? bets.map(x => `<div class="list-row" style="border-left:4px solid ${x.color||'#FFD700'}"><div class="list-user-info"><div class="mini-avatar" style="background:#444;">${(x.name||'?').charAt(0)}</div><span>${x.name}</span></div><span><b>${x.amount}⭐</b></span></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>';
+        }
+        
+        function drawRoulette(bets, rot) { 
+            const canvas = document.getElementById('roulette-canvas'); 
+            if(!canvas) return; 
+            const ctx = canvas.getContext('2d'); 
+            ctx.clearRect(0,0,260,260); 
+            if(!bets || bets.length===0) { 
+                ctx.beginPath(); ctx.arc(130,130,120,0,2*Math.PI); ctx.fillStyle='#111'; ctx.fill(); ctx.strokeStyle='#2a2a2a'; ctx.stroke(); 
+                return; 
+            } 
+            let total = bets.reduce((a,b)=>a+b.amount,0); 
+            if(total===0) return; 
+            let start = rot; 
+            bets.forEach(b => { 
+                let angle = (b.amount/total)*2*Math.PI; 
+                ctx.beginPath(); ctx.moveTo(130,130); ctx.arc(130,130,120,start,start+angle); 
+                ctx.fillStyle = b.color||'#FFD700'; ctx.fill(); ctx.stroke(); 
+                start += angle; 
+            }); 
+        }
+        
+        function animateRoulette(bets, winner) { 
+            let start = performance.now(); 
+            let duration = 3000; 
+            let totalRot = 10*Math.PI + Math.random()*2*Math.PI; 
+            function animate(time) { 
+                let elapsed = time-start; 
+                let progress = Math.min(elapsed/duration,1); 
+                let ease = 1 - Math.pow(1-progress,3); 
+                drawRoulette(bets, ease*totalRot); 
+                if(progress<1) requestAnimationFrame(animate); 
+                else { 
+                    document.getElementById('roulette-timer-text').innerHTML = `🏆 Победитель: ${winner.name}`; 
+                    showToast(`🎡 Победитель: ${winner.name}!`); 
+                    updateBalance(); 
+                    loadUserStats(); 
+                } 
+            } 
+            requestAnimationFrame(animate); 
+        }
 
         // ВЕБСОКЕТ КЛИЕНТ
         function initWebSocket() {
+            if(ws && ws.readyState === WebSocket.OPEN) return;
             ws = new WebSocket(WS_URL);
             ws.onopen = () => { ws.send(JSON.stringify({ type: 'auth', telegram_id: user.telegram_id })); };
             ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.type === 'balance_update') { document.getElementById('global-balance').innerText = data.stars; user.stars = data.stars; updateBetLimits(); }
-                if (data.type === 'rocket_tick') { document.getElementById('rocket-overlay').innerText = `ДО ВЗЛЕТА: ${data.timer}с`; document.getElementById('rocket-mult').style.display = 'none'; updateRocketPlayers(data.bets); rocketHasBet = data.bets.some(x=>x.telegram_id===user.telegram_id); setRocketButtonState(rocketHasBet?'waiting_with_bet':'bet'); document.getElementById('rocket-cancel-btn').style.display=rocketHasBet?'block':'none'; }
-                if (data.type === 'rocket_start') { document.getElementById('rocket-overlay').style.display = 'none'; document.getElementById('rocket-mult').style.display = 'block'; document.getElementById('rocket-mult').innerText = '1.00x'; document.getElementById('rocket-video').play(); setRocketButtonState(rocketHasBet?'flying':'waiting'); }
-                if (data.type === 'rocket_fly') { document.getElementById('rocket-mult').innerText = `${data.multiplier}x`; }
-                if (data.type === 'rocket_crash') { document.getElementById('rocket-mult').innerText = `💥 ВЗРЫВ: ${data.multiplier}x`; document.getElementById('rocket-video').pause(); setRocketButtonState('waiting'); updateBalance(); loadRocketHistory(); }
-                if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) { showToast(`Выиграли: ${data.winAmount}⭐`); setRocketButtonState('waiting'); updateBalance(); }
-                if (data.type === 'rocket_bet_cancelled') { setRocketButtonState('bet'); document.getElementById('rocket-cancel-btn').style.display='none'; updateBalance(); }
-                if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') { document.getElementById('roulette-timer-text').innerText = `Прокрутка через: ${data.timer}с`; document.getElementById('roulette-total-bank').innerText = `Банк: ${data.total}⭐`; updateRoulettePlayers(data.bets||[]); document.getElementById('roulette-cancel-btn').style.display = (data.bets||[]).some(x=>x.telegram_id===user.telegram_id)?'block':'none'; }
-                if (data.type === 'roulette_roll') { animateRoulette(data.bets, data.winner); }
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'balance_update') { 
+                        document.getElementById('global-balance').innerText = data.stars; 
+                        user.stars = data.stars; 
+                        updateBetLimits(); 
+                    }
+                    if (data.type === 'rocket_tick') { 
+                        document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`; 
+                        document.getElementById('rocket-mult').style.display = 'none'; 
+                        updateRocketPlayers(data.bets); 
+                        rocketHasBet = data.bets.some(x=>x.telegram_id===user.telegram_id && !x.cashedOut); 
+                        setRocketButtonState(rocketHasBet?'waiting_with_bet':'bet'); 
+                        document.getElementById('rocket-cancel-btn').style.display = rocketHasBet?'block':'none'; 
+                    }
+                    if (data.type === 'rocket_start') { 
+                        document.getElementById('rocket-overlay').style.display = 'none'; 
+                        document.getElementById('rocket-mult').style.display = 'block'; 
+                        document.getElementById('rocket-mult').innerHTML = '1.00x'; 
+                        document.getElementById('rocket-video').play(); 
+                        setRocketButtonState(rocketHasBet?'flying':'waiting'); 
+                    }
+                    if (data.type === 'rocket_fly') { document.getElementById('rocket-mult').innerHTML = `${data.multiplier}x`; }
+                    if (data.type === 'rocket_crash') { 
+                        document.getElementById('rocket-mult').innerHTML = `💥 ВЗРЫВ: ${data.multiplier}x`; 
+                        document.getElementById('rocket-video').pause(); 
+                        setRocketButtonState('waiting'); 
+                        updateBalance(); 
+                        loadRocketHistory(); 
+                        loadUserStats();
+                    }
+                    if (data.type === 'rocket_cashout_success' && data.telegram_id === user.telegram_id) { 
+                        showToast(`🎉 Выиграли: ${data.winAmount}⭐ (${data.multiplier}x)`); 
+                        setRocketButtonState('waiting'); 
+                        updateBalance(); 
+                        loadUserStats();
+                    }
+                    if (data.type === 'rocket_bet_cancelled') { 
+                        setRocketButtonState('bet'); 
+                        document.getElementById('rocket-cancel-btn').style.display='none'; 
+                        updateBalance(); 
+                    }
+                    if (data.type === 'roulette_tick' || data.type === 'roulette_bets_update') { 
+                        document.getElementById('roulette-timer-text').innerHTML = `Прокрутка через: ${data.timer}с`; 
+                        document.getElementById('roulette-total-bank').innerHTML = `Банк: ${data.total||0}⭐`; 
+                        updateRoulettePlayers(data.bets||[]); 
+                        drawRoulette(data.bets||[], 0);
+                        const hasBet = (data.bets||[]).some(x=>x.telegram_id===user.telegram_id);
+                        document.getElementById('roulette-cancel-btn').style.display = hasBet?'block':'none'; 
+                    }
+                    if (data.type === 'roulette_roll') { animateRoulette(data.bets, data.winner); }
+                    if (data.type === 'roulette_bet_cancelled') { 
+                        showToast('❌ Ставка отменена'); 
+                        document.getElementById('roulette-cancel-btn').style.display = 'none'; 
+                        updateBalance(); 
+                    }
+                } catch(e) { console.error(e); }
             };
+            ws.onclose = () => { setTimeout(() => { if(reconnectAttempts<5) initWebSocket(); }, 3000); };
+        }
+
+        function updateBalance() { 
+            fetch(`${BACKEND_URL}/api/get-balance`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { 
+                if(d.stars !== undefined) { 
+                    document.getElementById('global-balance').innerText = d.stars; 
+                    user.stars = d.stars; 
+                    updateBetLimits();
+                } 
+            }); 
         }
 
         // РАБОТА С ФИНАНСАМИ (ДАННЫЕ БАЗЫ)
-        function loadUserStats() { fetch(`${BACKEND_URL}/api/user-stats`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if(d.success) { document.getElementById('stat-games').innerText=d.games_played; document.getElementById('stat-turnover').innerText=d.turnover; document.getElementById('stat-wins').innerText=d.wins; document.getElementById('stat-wr').innerText=Math.round((d.wins/d.games_played)*100 || 0)+'%'; } }); }
-        function loadUserGamesHistory() { fetch(`${BACKEND_URL}/api/user-games-history`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { document.getElementById('games-history-list').innerHTML = d.map(g => `<div class="history-item"><span>${g.game_name}</span><span class="${g.profit>=0?'history-win':'history-loss'}">${g.profit}⭐</span></div>`).join(''); }); }
-        function loadUserFinance() { fetch(`${BACKEND_URL}/api/user-finance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { document.getElementById('fin-deposited').innerText=d.deposited; document.getElementById('fin-withdrawn').innerText=d.withdrawn; document.getElementById('fin-diff').innerText=d.deposited-d.withdrawn; document.getElementById('fin-balance').innerText=user.stars; }); }
-        function loadUserReferrals() { fetch(`${BACKEND_URL}/api/user-referrals`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { document.getElementById('ref-count').innerText=d.count; document.getElementById('ref-earned').innerText=d.earned; document.getElementById('ref-link').value=`https://t.me/dadtonbot?start=ref_${user.telegram_id}`; }); }
-        function submitWithdraw() { let asset=document.getElementById('withdraw-asset').value, amt=parseInt(document.getElementById('withdraw-amount').value), w=document.getElementById('withdraw-wallet').value, tu=document.getElementById('withdraw-tg-username').value; fetch(`${BACKEND_URL}/api/withdraw-request`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, name: user.name, username: user.username, amount: amt, asset: asset, wallet: asset==='Stars'?tu:w }) }).then(r => r.json()).then(d => { if(d.success) { showToast('Заявка отправлена!'); closeModal('withdraw-modal'); updateBalance(); } else showToast(d.msg); }); }
-        function loadLeaderboard() { fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(d => { document.getElementById('leaderboard-list').innerHTML = d.map((u, i) => `<div class="leaderboard-row"><div class="leaderboard-rank">#${i+1}</div><div class="leaderboard-name">${u.name}</div><div class="leaderboard-stars">${u.turnover}⭐</div></div>`).join(''); }); }
-        function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if(d.success) tg.openInvoice(d.invoice_link, (status) => { if(status==='paid') { closeModal('deposit-modal'); updateBalance(); } }); }); }
-        function copyRefLink() { navigator.clipboard.writeText(document.getElementById('ref-link').value); showToast('Скопировано!'); }
+        function loadUserStats() { 
+            fetch(`${BACKEND_URL}/api/user-stats`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { 
+                if(d.success) { 
+                    document.getElementById('stat-games').innerText = d.games_played || 0; 
+                    document.getElementById('stat-turnover').innerText = d.turnover || 0; 
+                    document.getElementById('stat-wins').innerText = d.wins || 0; 
+                    let wr = d.games_played > 0 ? Math.round((d.wins / d.games_played) * 100) : 0;
+                    document.getElementById('stat-wr').innerText = wr + '%'; 
+                } 
+            }); 
+        }
+        
+        function loadUserGamesHistory() { 
+            fetch(`${BACKEND_URL}/api/user-games-history`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { 
+                const container = document.getElementById('games-history-list');
+                if(container) container.innerHTML = d.map(g => `<div class="history-item"><span>${g.game_name}</span><span class="${g.profit>=0?'history-win':'history-loss'}">${g.profit>=0?'+':''}${g.profit}⭐</span></div>`).join('') || '<div style="text-align:center; color:#888;">Нет игр</div>';
+            }); 
+        }
+        
+        function loadUserFinance() { 
+            fetch(`${BACKEND_URL}/api/user-finance`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { 
+                document.getElementById('fin-deposited').innerText = d.deposited || 0; 
+                document.getElementById('fin-withdrawn').innerText = d.withdrawn || 0; 
+                document.getElementById('fin-diff').innerText = (d.deposited||0) - (d.withdrawn||0); 
+                document.getElementById('fin-balance').innerText = user.stars || 0; 
+            }); 
+        }
+        
+        function loadUserReferrals() { 
+            fetch(`${BACKEND_URL}/api/user-referrals`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id }) 
+            }).then(r => r.json()).then(d => { 
+                document.getElementById('ref-count').innerText = d.count || 0; 
+                document.getElementById('ref-earned').innerText = d.earned || 0; 
+                document.getElementById('ref-link').value = `https://t.me/dadtonbot?start=ref_${user.telegram_id}`;
+                const container = document.getElementById('referrals-list');
+                if(container) container.innerHTML = (d.referrals||[]).map(r => `<div class="referral-item"><span>${r.name}</span><span style="color:#00cc66;">+${r.earned}⭐</span></div>`).join('') || '<div style="text-align:center; color:#888;">Нет рефералов</div>';
+            }); 
+        }
+        
+        function submitWithdraw() { 
+            let asset=document.getElementById('withdraw-asset').value, 
+                amt=parseInt(document.getElementById('withdraw-amount').value), 
+                w=document.getElementById('withdraw-wallet').value, 
+                tu=document.getElementById('withdraw-tg-username').value; 
+            if(!amt || amt<100) return showToast('Мин. сумма вывода 100⭐');
+            if(amt > user.stars) return showToast('Недостаточно средств');
+            fetch(`${BACKEND_URL}/api/withdraw-request`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ telegram_id: user.telegram_id, name: user.name, username: user.username, amount: amt, asset: asset, wallet: asset==='Stars'?tu:w }) 
+            }).then(r => r.json()).then(d => { 
+                if(d.success) { 
+                    showToast('✅ Заявка отправлена!'); 
+                    closeModal('withdraw-modal'); 
+                    updateBalance(); 
+                    loadUserFinance();
+                } else showToast(d.msg); 
+            }); 
+        }
+        
+        function loadLeaderboard() { 
+            fetch(`${BACKEND_URL}/api/leaderboard`).then(r => r.json()).then(data => {
+                const podium = document.getElementById('leaderboard-podium');
+                const list = document.getElementById('leaderboard-list');
+                if(!podium || !list) return;
+                
+                const top3 = data.slice(0,3);
+                while(top3.length < 3) top3.push({ name: '?', avatar: null, turnover: 0 });
+                
+                podium.innerHTML = `
+                    <div class="podium-item podium-2">
+                        <div class="podium-avatar">${top3[1] && top3[1].avatar ? `<img src="${top3[1].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[1].name || '?').charAt(0)}'">` : (top3[1] ? (top3[1].name || '?').charAt(0) : '?')}</div>
+                        <div class="podium-name">${top3[1] ? (top3[1].name || '?').substring(0,12) : '-'}</div>
+                        <div class="podium-stars">${top3[1] ? (top3[1].turnover || 0) : 0}⭐</div>
+                        <div class="podium-rank">🥈 2 место</div>
+                        <div class="podium-base"></div>
+                    </div>
+                    <div class="podium-item podium-1">
+                        <div class="podium-avatar">${top3[0] && top3[0].avatar ? `<img src="${top3[0].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[0].name || '?').charAt(0)}'">` : (top3[0] ? (top3[0].name || '?').charAt(0) : '?')}</div>
+                        <div class="podium-name">${top3[0] ? (top3[0].name || '?').substring(0,12) : '-'}</div>
+                        <div class="podium-stars">${top3[0] ? (top3[0].turnover || 0) : 0}⭐</div>
+                        <div class="podium-rank">🥇 1 место</div>
+                        <div class="podium-base"></div>
+                    </div>
+                    <div class="podium-item podium-3">
+                        <div class="podium-avatar">${top3[2] && top3[2].avatar ? `<img src="${top3[2].avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(top3[2].name || '?').charAt(0)}'">` : (top3[2] ? (top3[2].name || '?').charAt(0) : '?')}</div>
+                        <div class="podium-name">${top3[2] ? (top3[2].name || '?').substring(0,12) : '-'}</div>
+                        <div class="podium-stars">${top3[2] ? (top3[2].turnover || 0) : 0}⭐</div>
+                        <div class="podium-rank">🥉 3 место</div>
+                        <div class="podium-base"></div>
+                    </div>
+                `;
+                
+                list.innerHTML = data.slice(3).map((u, idx) => `
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#${idx+4}</div>
+                        <div class="leaderboard-avatar">${u.avatar ? `<img src="${u.avatar}" onerror="this.style.display='none';this.parentElement.innerText='${(u.name || '?').charAt(0)}'">` : (u.name || '?').charAt(0)}</div>
+                        <div class="leaderboard-name">${(u.name || 'Игрок').substring(0,20)}</div>
+                        <div class="leaderboard-stars">${u.turnover || 0}⭐</div>
+                    </div>
+                `).join('');
+                if(data.length <= 3) list.innerHTML = '<div style="text-align:center; color:#888;">Нет других игроков</div>';
+            }).catch(() => {});
+        }
+        
+        function processStarsDeposit() { 
+            let amt = document.getElementById('dep-stars-amount').value; 
+            fetch(`${BACKEND_URL}/api/create-invoice`, { 
+                method: 'POST', headers: {'content-type':'application/json'}, 
+                body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) 
+            }).then(r => r.json()).then(d => { 
+                if(d.success) tg.openInvoice(d.invoice_link, (status) => { 
+                    if(status==='paid') { 
+                        showToast('🎉 Зачисление прошло!'); 
+                        closeModal('deposit-modal'); 
+                        updateBalance(); 
+                        loadUserStats();
+                        loadUserFinance();
+                    } 
+                }); 
+            }); 
+        }
+        
+        function copyRefLink() { 
+            navigator.clipboard.writeText(document.getElementById('ref-link').value); 
+            showToast('✅ Реферальная ссылка скопирована!'); 
+        }
 
         // АДМИН ПАНЕЛЬ (FRONTEND)
-        function adminAddStars() { fetch(`${BACKEND_URL}/api/admin/add-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-target-id').value, amount: parseInt(document.getElementById('admin-add-amount').value) }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Успешно'); }); }
-        function adminRemoveStars() { fetch(`${BACKEND_URL}/api/admin/remove-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-target-id').value, amount: parseInt(document.getElementById('admin-add-amount').value) }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Успешно'); }); }
-        function adminBanUser() { fetch(`${BACKEND_URL}/api/admin/ban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-ban-id').value }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Забанен'); }); }
-        function adminUnbanUser() { fetch(`${BACKEND_URL}/api/admin/unban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: document.getElementById('admin-ban-id').value }) }).then(r=>r.json()).then(d=>{ if(d.success) showToast('Разбанен'); }); }
-        function adminPauseBot() { fetch(`${BACKEND_URL}/api/admin/pause-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }); }
-        function adminResumeBot() { fetch(`${BACKEND_URL}/api/admin/resume-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }); }
-        function adminLoadWithdraws() { fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r=>r.json()).then(res=>{ document.getElementById('admin-withdraws-list').innerHTML = res.map(x=>`<div>${x.name} | ${x.amount}⭐ <button onclick="adminApproveWithdraw(${x.id})">✅</button></div>`).join(''); }); }
-        function adminApproveWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(()=>adminLoadWithdraws()); }
-        function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r=>r.json()).then(res=>{ document.getElementById('admin-users-list').innerHTML = res.map(u=>`<div>${u.name} (ID: ${u.telegram_id}) - ⭐ ${u.stars}</div>`).join(''); }); }
-        function resetAllBalances() { if(confirm('Сбросить всё?')) fetch(`${BACKEND_URL}/api/admin/reset-all`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(()=>location.reload()); }
+        function adminAddStars() { 
+            let targetId = document.getElementById('admin-target-id').value;
+            let amount = parseInt(document.getElementById('admin-add-amount').value);
+            if(!targetId || !amount) return showToast('Заполните поля');
+            fetch(`${BACKEND_URL}/api/admin/add-stars`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) 
+            }).then(r=>r.json()).then(d=>{ if(d.success) showToast('✅ Начислено!'); else showToast('❌ Ошибка'); }); 
+        }
+        
+        function adminRemoveStars() { 
+            let targetId = document.getElementById('admin-target-id').value;
+            let amount = parseInt(document.getElementById('admin-add-amount').value);
+            if(!targetId || !amount) return showToast('Заполните поля');
+            fetch(`${BACKEND_URL}/api/admin/remove-stars`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) 
+            }).then(r=>r.json()).then(d=>{ if(d.success) showToast('✅ Списано!'); else showToast('❌ Ошибка'); }); 
+        }
+        
+        function adminBanUser() { 
+            let targetId = document.getElementById('admin-ban-id').value;
+            if(!targetId) return showToast('Введите ID');
+            fetch(`${BACKEND_URL}/api/admin/ban-user`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) 
+            }).then(r=>r.json()).then(d=>{ if(d.success) showToast('🔨 Пользователь забанен'); else showToast('❌ Ошибка'); }); 
+        }
+        
+        function adminUnbanUser() { 
+            let targetId = document.getElementById('admin-ban-id').value;
+            if(!targetId) return showToast('Введите ID');
+            fetch(`${BACKEND_URL}/api/admin/unban-user`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) 
+            }).then(r=>r.json()).then(d=>{ if(d.success) showToast('🔓 Пользователь разбанен'); else showToast('❌ Ошибка'); }); 
+        }
+        
+        function adminPauseBot() { 
+            fetch(`${BACKEND_URL}/api/admin/pause-bot`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id }) 
+            }).then(()=>showToast('⏸️ Бот на паузе')); 
+        }
+        
+        function adminResumeBot() { 
+            fetch(`${BACKEND_URL}/api/admin/resume-bot`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id }) 
+            }).then(()=>showToast('▶️ Бот запущен')); 
+        }
+        
+        function adminLoadWithdraws() { 
+            fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id }) 
+            }).then(r=>r.json()).then(res=>{ 
+                document.getElementById('admin-withdraws-list').innerHTML = res.map(x=>`<div class="admin-withdraw-item"><div><b>${x.name}</b> | ${x.amount}⭐ | ${x.asset}</div><div style="font-size:11px; color:#888;">${x.wallet}</div><div class="admin-input-group" style="margin-top:8px;"><button class="admin-btn admin-btn-green" onclick="adminApproveWithdraw(${x.id})">✅ Одобрить</button><button class="admin-btn admin-btn-red" onclick="adminRejectWithdraw(${x.id})">❌ Отказать</button></div></div>`).join('') || 'Нет заявок'; 
+            }); 
+        }
+        
+        function adminApproveWithdraw(id) { 
+            fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) 
+            }).then(()=>{ showToast('✅ Заявка одобрена'); adminLoadWithdraws(); }); 
+        }
+        
+        function adminRejectWithdraw(id) { 
+            fetch(`${BACKEND_URL}/api/admin/reject-withdraw`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) 
+            }).then(()=>{ showToast('❌ Заявка отклонена'); adminLoadWithdraws(); }); 
+        }
+        
+        function adminLoadUsers() { 
+            fetch(`${BACKEND_URL}/api/admin/get-users`, { 
+                method: 'POST', headers: { 'content-type': 'application/json' }, 
+                body: JSON.stringify({ admin_id: user.telegram_id }) 
+            }).then(r=>r.json()).then(res=>{ 
+                document.getElementById('admin-users-list').innerHTML = res.map(u=>`<div class="admin-user-item"><div><span class="admin-user-name">${u.name}</span><br><span style="font-size:11px; color:#888;">ID: ${u.telegram_id}</span><br>⭐ ${u.stars}</div><div><span class="admin-badge ${u.banned ? 'admin-badge-banned' : 'admin-badge-active'}">${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</span></div></div>`).join('') || 'Нет пользователей'; 
+            }); 
+        }
+        
+        function resetAllBalances() { 
+            if(confirm('⚠️ ВНИМАНИЕ! Это действие сбросит ВСЕ балансы пользователей до 0. Вы уверены?')) 
+                fetch(`${BACKEND_URL}/api/admin/reset-all`, { 
+                    method: 'POST', headers: { 'content-type': 'application/json' }, 
+                    body: JSON.stringify({ admin_id: user.telegram_id }) 
+                }).then(()=>{ showToast('✅ Все балансы сброшены'); updateBalance(); loadUserStats(); }); 
+        }
     </script>
     <div id="ton-connect-btn-container" style="display: none;"></div>
+    <style>
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #FFD700; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: 800; z-index: 1000; animation: fadeOut 2s forwards; }
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    </style>
 </body>
 </html>
