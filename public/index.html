@@ -207,7 +207,7 @@
         
         <div class="panel">
             <div class="input-group">
-                <input type="number" id="rocket-bet-amount" value="10" min="10" max="10000">
+                <input type="number" id="rocket-bet-amount" value="10" min="10" step="1">
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'min')">MIN</button>
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'max')">MAX</button>
@@ -236,7 +236,7 @@
     <div id="page-mines" class="page">
         <div class="panel">
             <div class="input-group">
-                <input type="number" id="mines-bet-amount" value="20" min="10" max="10000">
+                <input type="number" id="mines-bet-amount" value="20" min="10" step="1">
                 <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'half')">½</button>
                 <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'double')">×2</button>
                 <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'max')">MAX</button>
@@ -264,7 +264,7 @@
 
         <div class="panel">
             <div class="input-group">
-                <input type="number" id="roulette-bet-amount" value="10" min="10" max="10000">
+                <input type="number" id="roulette-bet-amount" value="10" min="10" step="1">
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'min')">MIN</button>
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 10)">+10</button>
                 <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'max')">MAX</button>
@@ -400,6 +400,12 @@
                 <div id="admin-users-list" style="margin-top: 12px; max-height: 250px; overflow-y: auto;"></div>
             </div>
 
+            <!-- НОВАЯ КНОПКА СБРОСА БАЛАНСОВ -->
+            <div class="admin-section">
+                <div class="admin-section-title">⚠️ ОПАСНАЯ ЗОНА</div>
+                <button class="admin-btn admin-btn-red" style="width:100%;" onclick="resetAllBalances()">💣 СБРОСИТЬ ВСЕ БАЛАНСЫ ДО 0</button>
+            </div>
+
             <button class="admin-btn admin-btn-gray" style="width:100%; padding:12px; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
         </div>
     </div>
@@ -476,6 +482,7 @@
 
         const BACKEND_URL = "https://dadton-full.onrender.com";
         const WS_URL = "wss://dadton-full.onrender.com";
+        const MIN_BET = 10;
         let ws = null;
         let currentMinesGameStatus = 'idle';
         let rocketHasBet = false;
@@ -524,6 +531,18 @@
 
         function showToast(msg) { let toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000); }
 
+        // Функция для обновления лимитов ставок
+        function updateBetLimits() {
+            const maxBet = user.stars || MIN_BET;
+            const rocketInput = document.getElementById('rocket-bet-amount');
+            const minesInput = document.getElementById('mines-bet-amount');
+            const rouletteInput = document.getElementById('roulette-bet-amount');
+            
+            if (rocketInput) rocketInput.max = maxBet;
+            if (minesInput) minesInput.max = maxBet;
+            if (rouletteInput) rouletteInput.max = maxBet;
+        }
+
         // Регистрация
         fetch(`${BACKEND_URL}/api/register`, {
             method: 'POST', headers: { 'content-type': 'application/json' },
@@ -533,6 +552,7 @@
                 user = data.user; updateUI(); initWebSocket(); loadRocketHistory();
                 if (user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display = 'block';
                 loadUserStats();
+                updateBetLimits();
             }
             document.getElementById('loading-screen').style.display = 'none';
         }).catch(() => { document.getElementById('loading-screen').style.display = 'none'; showToast('Ошибка подключения'); });
@@ -582,7 +602,7 @@
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'balance_update') { document.getElementById('global-balance').innerText = data.stars; user.stars = data.stars; }
+                    if (data.type === 'balance_update') { document.getElementById('global-balance').innerText = data.stars; user.stars = data.stars; updateBetLimits(); }
                     if (data.type === 'rocket_tick') {
                         document.getElementById('rocket-overlay').style.display = 'flex'; document.getElementById('rocket-overlay').innerHTML = `ДО ВЗЛЕТА: ${data.timer}с`; document.getElementById('rocket-mult').style.display = 'none';
                         updateRocketPlayers(data.bets);
@@ -608,10 +628,10 @@
 
         function updateBalance() { 
             fetch(`${BACKEND_URL}/api/get-balance`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) })
-            .then(r => r.json()).then(d => { if (d.stars !== undefined) { document.getElementById('global-balance').innerText = d.stars; user.stars = d.stars; } }); 
+            .then(r => r.json()).then(d => { if (d.stars !== undefined) { document.getElementById('global-balance').innerText = d.stars; user.stars = d.stars; updateBetLimits(); } }); 
         }
 
-        function updateUI() { document.getElementById('global-balance').innerText = user.stars || 0; document.getElementById('profile-name').innerText = user.name; document.getElementById('profile-username').innerText = user.username ? '@' + user.username : ''; if (user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`; else document.getElementById('user-avatar-container').innerText = user.name.charAt(0); }
+        function updateUI() { document.getElementById('global-balance').innerText = user.stars || 0; document.getElementById('profile-name').innerText = user.name; document.getElementById('profile-username').innerText = user.username ? '@' + user.username : ''; if (user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`; else document.getElementById('user-avatar-container').innerText = user.name.charAt(0); updateBetLimits(); }
 
         function loadUserStats() { fetch(`${BACKEND_URL}/api/user-stats`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(data => { if (data.success) { document.getElementById('stat-games').innerText = data.games_played || 0; document.getElementById('stat-turnover').innerText = data.turnover || 0; document.getElementById('stat-wins').innerText = data.wins || 0; document.getElementById('stat-wr').innerText = (data.games_played > 0 ? Math.round((data.wins / data.games_played) * 100) : 0) + '%'; } }); }
 
@@ -619,12 +639,49 @@
 
         function switchProfileTab(tab) { document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active')); if (tab === 'stats') { document.querySelectorAll('.profile-tab')[0].classList.add('active'); document.getElementById('profile-tab-stats').classList.add('active'); } else if (tab === 'games') { document.querySelectorAll('.profile-tab')[1].classList.add('active'); document.getElementById('profile-tab-games').classList.add('active'); loadUserGamesHistory(); } else if (tab === 'finance') { document.querySelectorAll('.profile-tab')[2].classList.add('active'); document.getElementById('profile-tab-finance').classList.add('active'); loadUserFinance(); } else if (tab === 'referrals') { document.querySelectorAll('.profile-tab')[3].classList.add('active'); document.getElementById('profile-tab-referrals').classList.add('active'); loadUserReferrals(); } }
 
-        function adjustBet(inputId, action) { let el = document.getElementById(inputId); let val = parseFloat(el.value) || 10; let maxVal = parseInt(user.stars) || 10000; if (action === 'min') val = 10; else if (action === 'max') val = Math.min(maxVal, 10000); else if (action === 'half') val = Math.max(10, Math.floor(val / 2)); else if (action === 'double') val = Math.min(val * 2, maxVal); else if (typeof action === 'number') val = Math.min(val + action, maxVal); el.value = Math.max(10, Math.min(val, maxVal)); }
+        function adjustBet(inputId, action) { 
+            let el = document.getElementById(inputId); 
+            let val = parseFloat(el.value) || MIN_BET; 
+            let maxVal = user.stars || MIN_BET; 
+            
+            if (action === 'min') { 
+                val = MIN_BET; 
+            } else if (action === 'max') { 
+                val = maxVal; 
+            } else if (action === 'half') { 
+                val = Math.max(MIN_BET, Math.floor(val / 2)); 
+            } else if (action === 'double') { 
+                val = Math.min(val * 2, maxVal); 
+            } else if (typeof action === 'number') { 
+                val = Math.min(val + action, maxVal); 
+            } 
+            
+            el.value = Math.max(MIN_BET, Math.min(val, maxVal)); 
+        }
 
         let currentRocketBtnState = 'bet';
         function setRocketButtonState(state) { const btn = document.getElementById('rocket-action-btn'); currentRocketBtnState = state; if (state === 'bet') { btn.className = "btn-main btn-gold"; btn.innerText = "💰 Сделать ставку"; btn.disabled = false; } else if (state === 'waiting_with_bet') { btn.className = "btn-main btn-gray"; btn.innerText = "⏳ Ожидание старта"; btn.disabled = true; } else if (state === 'flying') { btn.className = "btn-main btn-green"; btn.innerText = "💸 Забрать"; btn.disabled = false; } else { btn.className = "btn-main btn-gray"; btn.innerText = "⏳ Ожидание"; btn.disabled = true; } }
 
-        function handleRocketAction() { if (currentRocketBtnState === 'bet') { let amt = parseInt(document.getElementById('rocket-bet-amount').value); if (amt > (user.stars || 0)) { showToast('❌ Недостаточно средств!'); return; } let auto = document.getElementById('rocket-auto-check').checked; let autoVal = parseFloat(document.getElementById('rocket-auto-val').value); ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: autoVal })); setRocketButtonState('waiting_with_bet'); } else if (currentRocketBtnState === 'flying') { ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); } }
+        function handleRocketAction() { 
+            if (currentRocketBtnState === 'bet') { 
+                let amt = parseInt(document.getElementById('rocket-bet-amount').value); 
+                if (amt > user.stars) { 
+                    showToast(`❌ Максимальная ставка: ${user.stars}⭐`); 
+                    document.getElementById('rocket-bet-amount').value = user.stars; 
+                    return; 
+                } 
+                if (amt < MIN_BET) { 
+                    showToast(`❌ Минимальная ставка: ${MIN_BET}⭐`); 
+                    return; 
+                } 
+                let auto = document.getElementById('rocket-auto-check').checked; 
+                let autoVal = parseFloat(document.getElementById('rocket-auto-val').value); 
+                ws.send(JSON.stringify({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt, autoCashout: auto, autoCashoutValue: autoVal })); 
+                setRocketButtonState('waiting_with_bet'); 
+            } else if (currentRocketBtnState === 'flying') { 
+                ws.send(JSON.stringify({ type: 'rocket_cashout', telegram_id: user.telegram_id })); 
+            } 
+        }
 
         function cancelRocketBet() { fetch(`${BACKEND_URL}/api/cancel-rocket-bet`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) ws.send(JSON.stringify({ type: 'cancel_rocket_bet', telegram_id: user.telegram_id })); else showToast(d.msg || 'Нельзя отменить ставку'); }); }
 
@@ -634,13 +691,31 @@
 
         function buildMinesBoard() { const board = document.getElementById('mines-grid-board'); if (!board) return; board.innerHTML = ''; for (let i = 0; i < 25; i++) board.innerHTML += `<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; }
 
-        function handleMinesAction() { const btn = document.getElementById('mines-action-btn'); if (currentMinesGameStatus === 'idle') { let amt = parseInt(document.getElementById('mines-bet-amount').value); let count = document.getElementById('mines-count-select').value; if (amt > (user.stars || 0)) { showToast('❌ Недостаточно средств!'); return; } fetch(`${BACKEND_URL}/api/games/mines/start`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: count }) }).then(r => r.json()).then(d => { if (d.success) { currentMinesGameStatus = 'playing'; btn.className = "btn-main btn-green"; btn.innerText = "💰 Забрать (0x)"; document.getElementById('mines-status-text').innerHTML = "Игра началась! Открывайте клетки."; buildMinesBoard(); updateBalance(); } else showToast(d.msg || 'Ошибка'); }); } else if (currentMinesGameStatus === 'playing') { fetch(`${BACKEND_URL}/api/games/mines/cashout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) { tg.HapticFeedback.notificationOccurred('success'); showToast(`🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`); document.getElementById('mines-status-text').innerHTML = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } }); } }
+        function handleMinesAction() { 
+            const btn = document.getElementById('mines-action-btn'); 
+            if (currentMinesGameStatus === 'idle') { 
+                let amt = parseInt(document.getElementById('mines-bet-amount').value); 
+                if (amt > user.stars) { 
+                    showToast(`❌ Максимальная ставка: ${user.stars}⭐`); 
+                    document.getElementById('mines-bet-amount').value = user.stars; 
+                    return; 
+                } 
+                if (amt < MIN_BET) { 
+                    showToast(`❌ Минимальная ставка: ${MIN_BET}⭐`); 
+                    return; 
+                } 
+                let count = document.getElementById('mines-count-select').value; 
+                fetch(`${BACKEND_URL}/api/games/mines/start`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: count }) }).then(r => r.json()).then(d => { if (d.success) { currentMinesGameStatus = 'playing'; btn.className = "btn-main btn-green"; btn.innerText = "💰 Забрать (0x)"; document.getElementById('mines-status-text').innerHTML = "Игра началась! Открывайте клетки."; buildMinesBoard(); updateBalance(); } else showToast(d.msg || 'Ошибка'); }); 
+            } else if (currentMinesGameStatus === 'playing') { 
+                fetch(`${BACKEND_URL}/api/games/mines/cashout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) { tg.HapticFeedback.notificationOccurred('success'); showToast(`🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`); document.getElementById('mines-status-text').innerHTML = `🎉 Выигрыш: ${d.winAmount}⭐ (${d.multiplier}x)`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } }); 
+            } 
+        }
 
         function clickMineTile(idx) { if (currentMinesGameStatus !== 'playing') return; fetch(`${BACKEND_URL}/api/games/mines/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, index: idx }) }).then(r => r.json()).then(d => { if (!d.success) return; let tile = document.getElementById(`mine-${idx}`); if (d.hitMine) { tg.HapticFeedback.notificationOccurred('error'); tile.classList.add('blown'); tile.innerText = '💣'; document.getElementById('mines-status-text').innerHTML = "💥 Взрыв! Ставка проиграна."; if (d.board) d.board.forEach((isMine, i) => { let t = document.getElementById(`mine-${i}`); if (isMine && t) { t.classList.add('blown'); t.innerText = '💣'; } }); resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } else { tg.HapticFeedback.impactOccurred('light'); tile.classList.add('safe'); tile.innerText = '⭐'; document.getElementById('mines-action-btn').innerHTML = `💰 Забрать (${d.multiplier}x)`; if (d.win) { showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`); document.getElementById('mines-status-text').innerHTML = `🎉 ПОБЕДА! Очищено всё поле: ${d.winAmount}⭐`; resetMinesButtons(); updateBalance(); loadUserStats(); loadUserGamesHistory(); } } }); }
 
         function resetMinesButtons() { currentMinesGameStatus = 'idle'; const btn = document.getElementById('mines-action-btn'); btn.className = "btn-main btn-gold"; btn.innerText = "💣 Новая игра"; }
 
-        function handleRouletteBet() { let amt = parseInt(document.getElementById('roulette-bet-amount').value); if (amt > (user.stars || 0)) { showToast('❌ Недостаточно средств!'); return; } ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt })); }
+        function handleRouletteBet() { let amt = parseInt(document.getElementById('roulette-bet-amount').value); if (amt > user.stars) { showToast(`❌ Максимальная ставка: ${user.stars}⭐`); document.getElementById('roulette-bet-amount').value = user.stars; return; } if (amt < MIN_BET) { showToast(`❌ Минимальная ставка: ${MIN_BET}⭐`); return; } ws.send(JSON.stringify({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.name, avatar: user.avatar, amount: amt })); }
 
         function updateRoulettePlayers(bets) { const container = document.getElementById('roulette-players-list'); if (!container) return; container.innerHTML = bets.length ? bets.map(b => `<div class="list-row" style="border-left: 4px solid ${b.color || '#FFD700'}; padding-left: 6px;"><div class="list-user-info">${b.avatar ? `<img src="${b.avatar}" class="mini-avatar" onerror="this.style.display='none'">` : `<div class="mini-avatar" style="background:#444; text-align:center; font-size:10px; line-height:20px;">${(b.name || '?').charAt(0)}</div>`}<span>${b.name || 'Игрок'}</span></div><div><b>${b.amount}⭐</b></div></div>`).join('') : '<div style="text-align:center; color:#888;">Нет участников</div>'; }
 
@@ -659,7 +734,7 @@
         // ПОПОЛНЕНИЕ STARS
         function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; if (amt < 1) return showToast('Минимальная сумма 1 звезда'); fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if (d.success && d.invoice_link) { tg.openInvoice(d.invoice_link, function(status) { if (status === 'paid') { showToast('🎉 Зачисление прошло успешно!'); closeModal('deposit-modal'); updateBalance(); loadUserStats(); loadUserFinance(); } }); } else showToast('Ошибка создания счёта'); }); }
 
-        // ПОПОЛНЕНИЕ КРИПТОЙ - ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ
+        // ПОПОЛНЕНИЕ КРИПТОЙ
         async function processCryptoDeposit() {
             if (!tonConnectUI) {
                 tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
@@ -680,134 +755,86 @@
             }
             
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
-            
-            // Генерируем уникальный ID заказа
             const orderId = `${user.telegram_id}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
             
-            // 1. Сохраняем pending платеж
             try {
                 const pendingRes = await fetch(`${BACKEND_URL}/api/pending-payment`, {
-                    method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: user.telegram_id,
-                        amount: tonAmount,
-                        order_id: orderId,
-                        payload: `deposit:${user.telegram_id}:${Date.now()}`
-                    })
+                    method: 'POST', headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: user.telegram_id, amount: tonAmount, order_id: orderId, payload: `deposit:${user.telegram_id}:${Date.now()}` })
                 });
-                
                 const pendingData = await pendingRes.json();
-                if (!pendingData.success) {
-                    showToast('❌ Ошибка создания заказа: ' + (pendingData.error || 'Неизвестная ошибка'));
-                    return;
-                }
-                console.log('✅ Pending payment saved');
-            } catch (err) {
-                console.error('Save pending error:', err);
-                showToast('❌ Ошибка соединения с сервером');
-                return;
-            }
+                if (!pendingData.success) { showToast('❌ Ошибка создания заказа'); return; }
+            } catch (err) { showToast('❌ Ошибка соединения с сервером'); return; }
             
-            // 2. Создаём транзакцию (без payload - работает 100%)
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 600,
-                messages: [{
-                    address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP",
-                    amount: nanoAmount
-                }]
-            };
+            const transaction = { validUntil: Math.floor(Date.now() / 1000) + 600, messages: [{ address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP", amount: nanoAmount }] };
             
-            // 3. Отправляем транзакцию
             try {
-                const result = await tonConnectUI.sendTransaction(transaction);
-                console.log('✅ Transaction sent:', result);
-                
-                // Показываем лоадер
+                await tonConnectUI.sendTransaction(transaction);
                 const loader = document.getElementById('deposit-loader');
                 loader.classList.add('active');
                 closeModal('deposit-modal');
                 
-                // 4. Начинаем проверку статуса (каждые 3 секунды)
                 if (statusCheckInterval) clearInterval(statusCheckInterval);
-                
                 statusCheckInterval = setInterval(async () => {
                     try {
-                        const statusRes = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
-                            method: 'POST',
-                            headers: { 'content-type': 'application/json' },
-                            body: JSON.stringify({ order_id: orderId })
-                        });
+                        const statusRes = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: orderId }) });
                         const statusData = await statusRes.json();
-                        
                         if (statusData.status === 'completed') {
                             clearInterval(statusCheckInterval);
-                            statusCheckInterval = null;
                             loader.classList.remove('active');
-                            
                             showToast(`🎉 Баланс пополнен на ${tonAmount} TON (${statusData.stars}⭐)!`);
                             tg.HapticFeedback.notificationOccurred('success');
                             updateBalance();
                             loadUserStats();
                             loadUserFinance();
-                            
                         } else if (statusData.status === 'failed') {
                             clearInterval(statusCheckInterval);
-                            statusCheckInterval = null;
                             loader.classList.remove('active');
-                            showToast('❌ Платеж не подтверждён. Попробуйте снова.');
+                            showToast('❌ Платеж не подтверждён');
                         }
-                    } catch (err) {
-                        console.error('Status check error:', err);
-                    }
+                    } catch (err) { console.error('Status check error:', err); }
                 }, 3000);
                 
-                // Таймаут на 5 минут
                 setTimeout(() => {
-                    if (statusCheckInterval) {
-                        clearInterval(statusCheckInterval);
-                        statusCheckInterval = null;
-                        const loader = document.getElementById('deposit-loader');
-                        if (loader) loader.classList.remove('active');
-                        showToast('⏰ Время ожидания истекло. Если средства списались, обратитесь в поддержку.');
-                    }
+                    if (statusCheckInterval) { clearInterval(statusCheckInterval); const l = document.getElementById('deposit-loader'); if(l) l.classList.remove('active'); showToast('⏰ Время ожидания истекло'); }
                 }, 300000);
-                
-            } catch (e) {
-                console.error('❌ Transaction error:', e);
-                const errorMsg = e.message || 'Неизвестная ошибка';
-                
-                if (errorMsg.toLowerCase().includes('cancel') || errorMsg.toLowerCase().includes('reject')) {
-                    showToast('❌ Операция отменена пользователем');
-                } else {
-                    showToast('❌ Ошибка: ' + errorMsg.substring(0, 100));
-                }
-            }
+            } catch (e) { showToast('❌ Ошибка: ' + (e.message?.substring(0, 100) || 'Неизвестная ошибка')); }
         }
 
         function submitWithdraw() { let asset = document.getElementById('withdraw-asset').value; let amt = parseInt(document.getElementById('withdraw-amount').value); let wallet = document.getElementById('withdraw-wallet').value; let targetUsername = document.getElementById('withdraw-tg-username').value; if (!amt || amt < 100) return showToast("Минимальная сумма для вывода — 100⭐"); if (amt > (user.stars || 0)) return showToast("Недостаточно средств"); if (asset !== 'Stars' && (!wallet || wallet.length < 10)) return showToast("Введите корректный адрес кошелька"); if (asset === 'Stars' && !targetUsername) return showToast("Укажите ваш @юзернейм для перевода звёзд"); let finalWalletText = (asset === 'Stars') ? `На аккаунт: ${targetUsername}` : wallet; fetch(`${BACKEND_URL}/api/withdraw-request`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ telegram_id: user.telegram_id, name: user.name, username: user.username || targetUsername, amount: amt, asset: asset, wallet: finalWalletText }) }).then(r => r.json()).then(d => { if (d.success) { showToast(`✅ Заявка на вывод ${amt}⭐ успешно создана!`); closeModal('withdraw-modal'); updateBalance(); loadUserFinance(); } else showToast(`Ошибка: ${d.msg}`); }); }
 
         function copyRefLink() { let link = document.getElementById('ref-link').value; navigator.clipboard.writeText(link).then(() => showToast("Реферальная ссылка скопирована!")); }
 
+        // НОВАЯ ФУНКЦИЯ ДЛЯ СБРОСА ВСЕХ БАЛАНСОВ
+        function resetAllBalances() {
+            if (confirm('⚠️ ВНИМАНИЕ! Это действие сбросит ВСЕ балансы пользователей до 0. Вы уверены?')) {
+                fetch(`${BACKEND_URL}/api/admin/reset-all`, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ admin_id: user.telegram_id })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        showToast('✅ Все балансы сброшены до 0');
+                        updateBalance();
+                        loadUserStats();
+                        loadUserFinance();
+                    } else {
+                        showToast('❌ Ошибка: ' + (d.error || 'Неизвестная ошибка'));
+                    }
+                }).catch(err => showToast('❌ Ошибка соединения'));
+            }
+        }
+
         // ========== АДМИН-ФУНКЦИИ ==========
         function adminAddStars() { let targetId = document.getElementById('admin-target-id').value; let amount = parseInt(document.getElementById('admin-add-amount').value); if (!targetId || !amount) return showToast('Заполните поля'); fetch(`${BACKEND_URL}/api/admin/add-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Начислено!'); updateBalance(); } else showToast('❌ Ошибка'); }); }
-        
         function adminRemoveStars() { let targetId = document.getElementById('admin-target-id').value; let amount = parseInt(document.getElementById('admin-add-amount').value); if (!targetId || !amount) return showToast('Заполните поля'); fetch(`${BACKEND_URL}/api/admin/remove-stars`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId, amount: amount }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Списано!'); updateBalance(); } else showToast('❌ Ошибка'); }); }
-        
         function adminBanUser() { let targetId = document.getElementById('admin-ban-id').value; if (!targetId) return showToast('Введите ID'); fetch(`${BACKEND_URL}/api/admin/ban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) }).then(r => r.json()).then(d => { if (d.success) showToast('🔨 Пользователь забанен'); else showToast('❌ Ошибка'); }); }
-        
         function adminUnbanUser() { let targetId = document.getElementById('admin-ban-id').value; if (!targetId) return showToast('Введите ID'); fetch(`${BACKEND_URL}/api/admin/unban-user`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, target_id: targetId }) }).then(r => r.json()).then(d => { if (d.success) showToast('🔓 Пользователь разбанен'); else showToast('❌ Ошибка'); }); }
-        
         function adminPauseBot() { fetch(`${BACKEND_URL}/api/admin/pause-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) showToast('⏸️ Бот на паузе'); }); }
-        
         function adminResumeBot() { fetch(`${BACKEND_URL}/api/admin/resume-bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(d => { if (d.success) showToast('▶️ Бот запущен'); }); }
-        
         function adminLoadWithdraws() { fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(requests => { let html = ''; requests.forEach(r => { html += `<div class="admin-withdraw-item"><div><b>${r.name}</b> | ${r.amount}⭐ | ${r.asset}</div><div style="font-size:11px; color:#888;">${r.wallet}</div><div class="admin-input-group" style="margin-top:8px;"><button class="admin-btn admin-btn-green" style="padding:6px 12px;" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button><button class="admin-btn admin-btn-red" style="padding:6px 12px;" onclick="adminRejectWithdraw(${r.id})">❌ Отказать</button></div></div>`; }); document.getElementById('admin-withdraws-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет заявок</div>'; }); }
-        
         function adminApproveWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/approve-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(r => r.json()).then(d => { if (d.success) { showToast('✅ Заявка одобрена'); adminLoadWithdraws(); } else showToast('❌ Ошибка'); }); }
-        
         function adminRejectWithdraw(id) { fetch(`${BACKEND_URL}/api/admin/reject-withdraw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id, request_id: id }) }).then(r => r.json()).then(d => { if (d.success) { showToast('❌ Заявка отклонена'); adminLoadWithdraws(); } else showToast('❌ Ошибка'); }); }
-        
         function adminLoadUsers() { fetch(`${BACKEND_URL}/api/admin/get-users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ admin_id: user.telegram_id }) }).then(r => r.json()).then(users => { let html = ''; users.slice(0, 20).forEach(u => { html += `<div class="admin-user-item"><div><span class="admin-user-name">${u.name}</span><br><span style="font-size:11px; color:#888;">ID: ${u.telegram_id}</span><br><span style="font-size:12px;">⭐ ${u.stars} | 🎮 ${u.games_played || 0} | 🏆 ${u.wins || 0}</span></div><div><span class="admin-badge ${u.banned ? 'admin-badge-banned' : 'admin-badge-active'}">${u.banned ? '🔴 ЗАБАНЕН' : '🟢 АКТИВЕН'}</span></div></div>`; }); document.getElementById('admin-users-list').innerHTML = html || '<div style="text-align:center; color:#888;">Нет пользователей</div>'; }); }
     </script>
 </body>
