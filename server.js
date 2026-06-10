@@ -33,6 +33,7 @@ const pool = new Pool({
 async function initDatabase() {
     const client = await pool.connect();
     try {
+        // Users table
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -49,6 +50,8 @@ async function initDatabase() {
                 banned INTEGER DEFAULT 0
             )
         `);
+
+        // Rocket history
         await client.query(`
             CREATE TABLE IF NOT EXISTS rocket_history (
                 id SERIAL PRIMARY KEY,
@@ -56,6 +59,8 @@ async function initDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // User finance
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_finance (
                 id SERIAL PRIMARY KEY,
@@ -66,6 +71,8 @@ async function initDatabase() {
                 admin_removed INTEGER DEFAULT 0
             )
         `);
+
+        // Withdraw requests
         await client.query(`
             CREATE TABLE IF NOT EXISTS withdraw_requests (
                 id SERIAL PRIMARY KEY,
@@ -79,6 +86,8 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Referrals log
         await client.query(`
             CREATE TABLE IF NOT EXISTS referrals_log (
                 id SERIAL PRIMARY KEY,
@@ -90,20 +99,8 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS pending_payments (
-                id SERIAL PRIMARY KEY,
-                telegram_id TEXT,
-                order_id TEXT UNIQUE,
-                amount REAL,
-                stars_amount INTEGER,
-                payload TEXT,
-                status TEXT DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-                tx_hash TEXT
-            )
-        `);
+
+        // Games history
         await client.query(`
             CREATE TABLE IF NOT EXISTS games_history (
                 id SERIAL PRIMARY KEY,
@@ -117,7 +114,25 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('✅ Таблицы PostgreSQL созданы/проверены');
+
+        // Pending payments - ПРАВИЛЬНАЯ СТРУКТУРА (пересоздаём для гарантии)
+        await client.query(`DROP TABLE IF EXISTS pending_payments CASCADE`);
+        await client.query(`
+            CREATE TABLE pending_payments (
+                id SERIAL PRIMARY KEY,
+                telegram_id TEXT NOT NULL,
+                order_id TEXT UNIQUE NOT NULL,
+                amount REAL NOT NULL,
+                stars_amount INTEGER NOT NULL,
+                payload TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                tx_hash TEXT
+            )
+        `);
+
+        console.log('✅ Все таблицы PostgreSQL созданы/обновлены');
     } catch (err) {
         console.error('Ошибка инициализации БД:', err);
     } finally {
@@ -125,6 +140,7 @@ async function initDatabase() {
     }
 }
 
+// Запускаем инициализацию
 initDatabase();
 
 // ========== TON CONNECT MANIFEST ==========
@@ -440,15 +456,19 @@ app.post('/api/pending-payment', async (req, res) => {
     const { telegram_id, amount, order_id, payload } = req.body;
     const starsAmount = Math.floor(amount * 100);
     
+    console.log('📝 Creating pending payment:', { telegram_id, amount, order_id, starsAmount });
+    
     try {
-        await pool.query(
+        const result = await pool.query(
             `INSERT INTO pending_payments (telegram_id, order_id, amount, stars_amount, payload) 
-             VALUES ($1, $2, $3, $4, $5)`,
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING *`,
             [telegram_id, order_id, amount, starsAmount, payload]
         );
+        console.log('✅ Pending payment created:', result.rows[0]);
         res.json({ success: true, order_id });
     } catch (err) {
-        console.error('Pending payment error:', err);
+        console.error('❌ Pending payment error:', err.message);
         res.json({ success: false, error: err.message });
     }
 });
