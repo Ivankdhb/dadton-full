@@ -471,6 +471,23 @@
         let rocketHasBet = false;
         let reconnectAttempts = 0;
 
+        // Импорт @ton/core для правильного payload
+        let beginCell;
+        
+        function loadTonCore() {
+            return import('https://unpkg.com/@ton/core@0.56.0/dist/index.js')
+                .then(module => {
+                    beginCell = module.beginCell;
+                    console.log('✅ @ton/core загружен');
+                })
+                .catch(err => {
+                    console.error('❌ Ошибка загрузки @ton/core:', err);
+                });
+        }
+        
+        // Загружаем @ton/core
+        loadTonCore();
+
         // ========== TON CONNECT ==========
         let tonConnectUI = null;
         let isWalletConnected = false;
@@ -648,7 +665,7 @@
         // ПОПОЛНЕНИЕ STARS
         function processStarsDeposit() { let amt = document.getElementById('dep-stars-amount').value; if (amt < 1) return showToast('Минимальная сумма 1 звезда'); fetch(`${BACKEND_URL}/api/create-invoice`, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt }) }).then(r => r.json()).then(d => { if (d.success && d.invoice_link) { tg.openInvoice(d.invoice_link, function(status) { if (status === 'paid') { showToast('🎉 Зачисление прошло успешно!'); closeModal('deposit-modal'); updateBalance(); loadUserStats(); loadUserFinance(); } }); } else showToast('Ошибка создания счёта'); }); }
 
-        // ПОПОЛНЕНИЕ КРИПТОЙ - РАБОЧАЯ ВЕРСИЯ (ПУСТОЙ PAYLOAD)
+        // ПОПОЛНЕНИЕ КРИПТОЙ - ПРАВИЛЬНЫЙ BOC PAYLOAD (с @ton/core)
         async function processCryptoDeposit() {
             if (!tonConnectUI) {
                 tg.showAlert('❌ TON Connect не загружен. Обновите страницу.');
@@ -670,13 +687,29 @@
             
             const nanoAmount = Math.floor(tonAmount * 1000000000).toString();
             
-            // ПУСТОЙ PAYLOAD - РАБОТАЕТ ВСЕГДА!
+            // Ждём загрузки @ton/core
+            if (!beginCell) {
+                showToast('⏳ Подождите, загрузка библиотеки...');
+                await loadTonCore();
+            }
+            
+            // Создаём правильный payload в формате BOC
+            const comment = `deposit_${user.telegram_id}_${Date.now()}`;
+            const payloadCell = beginCell()
+                .storeUint(0, 32)  // префикс 0x00000000 для текстового сообщения
+                .storeStringTail(comment)
+                .endCell();
+            const payloadBase64 = payloadCell.toBoc().toString('base64');
+            
+            console.log('📝 Comment:', comment);
+            console.log('🔐 Payload Base64:', payloadBase64);
+            
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
                 messages: [{
                     address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP",
                     amount: nanoAmount,
-                    payload: ""  // Пустой payload - не вызывает ошибок
+                    payload: payloadBase64
                 }]
             };
             
@@ -687,7 +720,6 @@
                 showToast('✅ Транзакция отправлена! Уведомите админа о пополнении.');
                 closeModal('deposit-modal');
                 
-                // Отправляем уведомление админу
                 fetch(`${BACKEND_URL}/api/check-payment`, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
@@ -700,13 +732,7 @@
                 
             } catch (e) {
                 console.error('❌ Transaction error:', e);
-                let errorMsg = e.message || 'Неизвестная ошибка';
-                
-                if (errorMsg.toLowerCase().includes('cancel') || errorMsg.toLowerCase().includes('reject')) {
-                    showToast('❌ Операция отменена пользователем');
-                } else {
-                    showToast('❌ Ошибка: ' + errorMsg.substring(0, 100));
-                }
+                showToast('❌ Ошибка: ' + (e.message?.substring(0, 100) || 'Неизвестная ошибка'));
             }
         }
 
