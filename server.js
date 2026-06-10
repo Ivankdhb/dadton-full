@@ -386,7 +386,7 @@ app.post('/api/register', async (req, res) => {
             [telegram_id, name, avatar, username, refId]
         );
         await pool.query("INSERT INTO user_finance (telegram_id) VALUES ($1)", [telegram_id]);
-        res.json({ success: true, user: { telegram_id, name, avatar, username, stars: 1000 } });
+        res.json({ success: true, user: { telegram_id, name, avatar, username, stars: 0 } });
     }
 });
 
