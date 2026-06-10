@@ -625,6 +625,18 @@ app.post('/api/gifts/buy', async (req, res) => {
 });
 
 // ========== АДМИН-ПАНЕЛЬ ==========
+
+app.post('/api/admin/reset-leaderboard', async (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
+    try {
+        await pool.query("UPDATE users SET turnover=0");
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Reset leaderboard error:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/admin/get-users', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
     const r = await pool.query("SELECT id, telegram_id, name, stars, banned FROM users LIMIT 50");
