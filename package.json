@@ -1,7 +1,7 @@
 {
   "name": "dadton-platform",
   "version": "4.0.0",
-  "description": "DadTon WebApp Casino Platform with PVP Roulette, NFT Marketplace and Mini Games",
+  "description": "DadTon WebApp Casino Platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -18,14 +18,5 @@
   },
   "engines": {
     "node": "20.x"
-  },
-  "keywords": [
-    "ton",
-    "telegram",
-    "casino",
-    "nft",
-    "webapp"
-  ],
-  "author": "DadTon",
-  "license": "MIT"
+  }
 }
