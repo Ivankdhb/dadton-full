@@ -1,6 +1,6 @@
 const express = require('express');
 const http = require('http');
-const WebSocket = require('ws');
+const socketIo = require('socket.io');
 const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
@@ -13,7 +13,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // ========== КОНФИГУРАЦИЯ ==========
 const BOT_TOKEN = process.env.BOT_TOKEN || '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0';
@@ -30,6 +35,8 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/dadton',
     ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
+
+pool.on('error', (err) => console.error('❌ Database error:', err));
 
 // ========== ИНИЦИАЛИЗАЦИЯ ТАБЛИЦ ==========
 async function initDatabase() {
@@ -48,6 +55,7 @@ async function initDatabase() {
         await client.query(`CREATE TABLE IF NOT EXISTS nft_items (id SERIAL PRIMARY KEY, nft_id TEXT UNIQUE, name TEXT, description TEXT, image_url TEXT, rarity TEXT DEFAULT 'COMMON', price_stars INTEGER DEFAULT 100, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await client.query(`CREATE TABLE IF NOT EXISTS user_inventory (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, nft_id TEXT REFERENCES nft_items(nft_id), purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, is_withdrawn BOOLEAN DEFAULT false, withdrawn_at TIMESTAMP, UNIQUE(user_id, nft_id))`);
         await client.query(`CREATE TABLE IF NOT EXISTS market_lots (id SERIAL PRIMARY KEY, nft_id TEXT REFERENCES nft_items(nft_id), seller_id INTEGER REFERENCES users(id), price INTEGER NOT NULL, status TEXT DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, sold_at TIMESTAMP)`);
+        await client.query(`CREATE TABLE IF NOT EXISTS pvp_roulette_history (id SERIAL PRIMARY KEY, winner_id TEXT, winner_name TEXT, red_bet INTEGER, green_bet INTEGER, blue_bet INTEGER, total_bet INTEGER, payout INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         console.log('✅ Database ready');
     } catch (err) { console.error(err); } finally { client.release(); }
 }
@@ -58,19 +66,22 @@ async function sendTelegramMessage(chatId, text) {
     try { await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: chatId, text, parse_mode: 'HTML' }); } catch(e) { console.error(e.message); }
 }
 
-function broadcast(data) { 
-    wss.clients.forEach(c => { 
-        if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(data)); 
-    }); 
+async function broadcastToAllUsers(message) {
+    const users = await pool.query("SELECT telegram_id FROM users");
+    for (const user of users.rows) {
+        await sendTelegramMessage(user.telegram_id, message);
+        await new Promise(r => setTimeout(r, 50));
+    }
+}
+
+function broadcastToRoom(room, event, data) {
+    io.to(room).emit(event, data);
 }
 
 async function sendUserBalance(tgId) {
     const r = await pool.query("SELECT stars FROM users WHERE telegram_id = $1", [tgId]);
     if (r.rows[0]) {
-        wss.clients.forEach(c => { 
-            if (c.readyState === WebSocket.OPEN && c.telegram_id === tgId) 
-                c.send(JSON.stringify({ type: 'balance_update', stars: r.rows[0].stars })); 
-        });
+        io.to(`user_${tgId}`).emit('balance_update', { stars: r.rows[0].stars });
     }
 }
 
@@ -96,20 +107,20 @@ function runRocketLoop() {
     if (rocketState.status === 'waiting') {
         if (rocketState.timer > 0) {
             rocketState.timer--;
-            broadcast({ type: 'rocket_tick', timer: rocketState.timer, bets: rocketState.bets });
+            io.emit('rocket_tick', { timer: rocketState.timer, bets: rocketState.bets });
             setTimeout(runRocketLoop, 1000);
         } else {
             rocketState.status = 'flying';
             rocketState.multiplier = 1.00;
             rocketState.crashPoint = generateCrashPoint();
-            broadcast({ type: 'rocket_start', crashPoint: rocketState.crashPoint });
+            io.emit('rocket_start', { crashPoint: rocketState.crashPoint });
             setTimeout(runRocketLoop, 100);
         }
     } else if (rocketState.status === 'flying') {
         if (rocketState.multiplier >= rocketState.crashPoint) {
             rocketState.status = 'crashed';
             pool.query("INSERT INTO rocket_history (multiplier) VALUES ($1)", [rocketState.crashPoint]);
-            broadcast({ type: 'rocket_crash', multiplier: rocketState.crashPoint });
+            io.emit('rocket_crash', { multiplier: rocketState.crashPoint });
             rocketState.bets.forEach(async b => {
                 if (!b.cashedOut) {
                     await pool.query("UPDATE users SET turnover=turnover+$1, games_played=games_played+1 WHERE telegram_id=$2", [b.amount, b.telegram_id]);
@@ -132,7 +143,7 @@ function runRocketLoop() {
                     handleRocketCashout(b.telegram_id, b.autoCashoutValue);
                 }
             });
-            broadcast({ type: 'rocket_fly', multiplier: rocketState.multiplier });
+            io.emit('rocket_fly', { multiplier: rocketState.multiplier });
             setTimeout(runRocketLoop, 100);
         }
     }
@@ -147,25 +158,94 @@ async function handleRocketCashout(tgId, forceMult = null) {
     await pool.query("UPDATE users SET stars=stars+$1, turnover=turnover+$2, games_played=games_played+1, wins=wins+1 WHERE telegram_id=$3", [win, b.amount, tgId]);
     await saveGameHistory(tgId, 'rocket', 'Ракета', b.amount, win, win - b.amount, b.multiplier);
     sendUserBalance(tgId);
-    broadcast({ type: 'rocket_cashout_success', telegram_id: tgId, multiplier: b.multiplier, winAmount: win });
+    io.emit('rocket_cashout_success', { telegram_id: tgId, multiplier: b.multiplier, winAmount: win });
+}
+
+// ========== РУЛЕТКА ==========
+let rouletteState = { status: 'waiting', timer: 15, bets: [], totalBank: 0, winner: null, hasActiveBet: {} };
+
+function runRouletteLoop() {
+    if (botPaused || botUnderMaintenance) return setTimeout(runRouletteLoop, 1000);
+    if (rouletteState.status === 'waiting') {
+        if (rouletteState.bets.length >= 2) {
+            if (rouletteState.timer > 0) {
+                rouletteState.timer--;
+                io.emit('roulette_tick', { timer: rouletteState.timer, bets: rouletteState.bets, total: rouletteState.totalBank });
+                setTimeout(runRouletteLoop, 1000);
+            } else { executeRouletteRoll(); }
+        } else { 
+            io.emit('roulette_wait_players', { bets: rouletteState.bets }); 
+            setTimeout(runRouletteLoop, 2000); 
+        }
+    }
+}
+
+async function executeRouletteRoll() {
+    rouletteState.status = 'rolling';
+    let rand = Math.random() * rouletteState.totalBank, w = 0;
+    let winner = rouletteState.bets[0];
+    for (let b of rouletteState.bets) { 
+        w += b.amount; 
+        if (rand <= w) { winner = b; break; } 
+    }
+    if (!winner) winner = rouletteState.bets[0];
+    
+    const totalBank = rouletteState.totalBank, fee = Math.floor(totalBank * ROULETTE_FEE), prize = totalBank - fee;
+    rouletteState.winner = winner;
+    io.emit('roulette_roll', { winner, bets: rouletteState.bets, prize, fee });
+    
+    setTimeout(async () => {
+        await pool.query("UPDATE users SET stars=stars+$1, wins=wins+1, games_played=games_played+1, turnover=turnover+$2 WHERE telegram_id=$3", [prize, winner.amount, winner.telegram_id]);
+        await saveGameHistory(winner.telegram_id, 'roulette', 'Рулетка', winner.amount, prize, prize - winner.amount, prize / winner.amount);
+        await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [fee, ADMIN_ID]);
+        for (let b of rouletteState.bets) {
+            if (b.telegram_id !== winner.telegram_id) {
+                await pool.query("UPDATE users SET games_played=games_played+1, turnover=turnover+$1 WHERE telegram_id=$2", [b.amount, b.telegram_id]);
+                await saveGameHistory(b.telegram_id, 'roulette', 'Рулетка', b.amount, 0, -b.amount, 0);
+            }
+            sendUserBalance(b.telegram_id);
+        }
+        rouletteState = { status: 'waiting', timer: 15, bets: [], totalBank: 0, winner: null, hasActiveBet: {} };
+        runRouletteLoop();
+    }, 4000);
 }
 
 // ========== МИНЫ ==========
 let activeMineGames = {};
 
 app.post('/api/games/mines/start', async (req, res) => {
+    if (botUnderMaintenance) return res.json({ success: false, msg: 'Бот на техническом обслуживании' });
     const { telegram_id, amount, minesCount } = req.body;
     const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [telegram_id]);
-    if (!u.rows[0] || u.rows[0].stars < amount) return res.json({ success: false, msg: 'Недостаточно баланса' });
+    if (!u.rows[0] || u.rows[0].stars < amount) return res.json({ success: false, msg: `Недостаточно баланса` });
+    
+    // Рассчитываем начальный множитель
+    let baseMultiplier = 1.0;
+    if (minesCount === 3) baseMultiplier = 1.5;
+    else if (minesCount === 5) baseMultiplier = 2.0;
+    else if (minesCount === 10) baseMultiplier = 3.5;
+    else if (minesCount === 15) baseMultiplier = 5.0;
+    else if (minesCount === 20) baseMultiplier = 8.0;
+    else if (minesCount === 24) baseMultiplier = 12.0;
+    
     let board = Array(25).fill(false), p = 0;
     while (p < minesCount) { let i = Math.floor(Math.random()*25); if(!board[i]) { board[i]=true; p++; } }
     await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [amount, telegram_id]);
-    activeMineGames[telegram_id] = { bet: amount, minesCount: parseInt(minesCount), board, revealed: [], status: 'active' };
-    sendUserBalance(telegram_id); res.json({ success: true });
+    activeMineGames[telegram_id] = { 
+        bet: amount, 
+        minesCount: parseInt(minesCount), 
+        board, 
+        revealed: [], 
+        status: 'active',
+        baseMultiplier: baseMultiplier
+    };
+    sendUserBalance(telegram_id); 
+    res.json({ success: true });
 });
 
 app.post('/api/games/mines/reveal', async (req, res) => {
-    let g = activeMineGames[req.body.telegram_id]; if(!g || g.status !== 'active') return res.json({ success: false });
+    let g = activeMineGames[req.body.telegram_id]; 
+    if(!g || g.status !== 'active') return res.json({ success: false });
     if (g.board[req.body.index]) {
         g.status = 'lost'; 
         await pool.query("UPDATE users SET games_played=games_played+1, turnover=turnover+$1 WHERE telegram_id=$2", [g.bet, req.body.telegram_id]);
@@ -175,8 +255,7 @@ app.post('/api/games/mines/reveal', async (req, res) => {
         return res.json({ success: true, hitMine: true, board: g.board });
     }
     if(!g.revealed.includes(req.body.index)) g.revealed.push(req.body.index);
-    let base = g.minesCount === 5 ? 1.04 : g.minesCount === 10 ? 1.12 : 1.30;
-    let mult = parseFloat(Math.pow(base, g.revealed.length).toFixed(2));
+    let mult = parseFloat(Math.pow(g.baseMultiplier, g.revealed.length).toFixed(2));
     if (g.revealed.length === (25 - g.minesCount)) {
         let win = Math.floor(g.bet * mult);
         await pool.query("UPDATE users SET stars=stars+$1, wins=wins+1, games_played=games_played+1, turnover=turnover+$2 WHERE telegram_id=$3", [win, g.bet, req.body.telegram_id]);
@@ -189,15 +268,154 @@ app.post('/api/games/mines/reveal', async (req, res) => {
 });
 
 app.post('/api/games/mines/cashout', async (req, res) => {
-    let g = activeMineGames[req.body.telegram_id]; if(!g || g.revealed.length===0) return res.json({ success: false });
-    let base = g.minesCount === 5 ? 1.04 : g.minesCount === 10 ? 1.12 : 1.30;
-    let mult = parseFloat(Math.pow(base, g.revealed.length).toFixed(2)), win = Math.floor(g.bet * mult);
+    let g = activeMineGames[req.body.telegram_id]; 
+    if(!g || g.revealed.length===0) return res.json({ success: false });
+    let mult = parseFloat(Math.pow(g.baseMultiplier, g.revealed.length).toFixed(2));
+    let win = Math.floor(g.bet * mult);
     await pool.query("UPDATE users SET stars=stars+$1, wins=wins+1, games_played=games_played+1, turnover=turnover+$2 WHERE telegram_id=$3", [win, g.bet, req.body.telegram_id]);
     await saveGameHistory(req.body.telegram_id, 'mines', `Мины ${g.minesCount}`, g.bet, win, win-g.bet, mult);
     delete activeMineGames[req.body.telegram_id]; 
     sendUserBalance(req.body.telegram_id); 
     res.json({ success: true, winAmount: win });
 });
+
+// ========== PVP РУЛЕТКА ==========
+let pvpGames = new Map();
+let pvpQueue = [];
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getWinnerSide(bets) {
+    const rand = Math.random() * (bets.red + bets.green + bets.blue);
+    let sum = 0;
+    if (rand < bets.red) return 'red';
+    sum += bets.red;
+    if (rand < sum + bets.green) return 'green';
+    return 'blue';
+}
+
+function getOdds(side, total, bets) {
+    if (side === 'blue') return 14.0;
+    if (total === 0) return 2.0;
+    if (side === 'red') return (total / (bets.red || 1)).toFixed(2);
+    if (side === 'green') return (total / (bets.green || 1)).toFixed(2);
+    return 2.0;
+}
+
+async function startPvpGame() {
+    if (pvpQueue.length < 2) {
+        io.emit('pvp:update', { timer: 'Поиск соперника...', bets: { red: 0, green: 0, blue: 0 } });
+        return;
+    }
+    
+    const player1 = pvpQueue.shift();
+    const player2 = pvpQueue.shift();
+    const gameId = Date.now().toString();
+    
+    const game = {
+        id: gameId,
+        players: [player1, player2],
+        bets: { red: 0, green: 0, blue: 0 },
+        playerBets: {},
+        timer: 15,
+        status: 'waiting'
+    };
+    
+    pvpGames.set(gameId, game);
+    
+    // Присоединяем игроков к комнате
+    player1.socket.join(`pvp_${gameId}`);
+    player2.socket.join(`pvp_${gameId}`);
+    
+    // Уведомляем игроков
+    io.to(`pvp_${gameId}`).emit('pvp:update', {
+        timer: game.timer,
+        bets: game.bets,
+        myBet: null
+    });
+    
+    // Таймер ставок
+    const timerInterval = setInterval(async () => {
+        const currentGame = pvpGames.get(gameId);
+        if (!currentGame || currentGame.status !== 'waiting') {
+            clearInterval(timerInterval);
+            return;
+        }
+        
+        currentGame.timer--;
+        
+        if (currentGame.timer <= 0) {
+            clearInterval(timerInterval);
+            await executePvpGame(gameId);
+        } else {
+            io.to(`pvp_${gameId}`).emit('pvp:update', {
+                timer: currentGame.timer,
+                bets: currentGame.bets,
+                myBet: currentGame.playerBets[player1.id] || currentGame.playerBets[player2.id] || null
+            });
+        }
+    }, 1000);
+}
+
+async function executePvpGame(gameId) {
+    const game = pvpGames.get(gameId);
+    if (!game || game.status !== 'waiting') return;
+    
+    game.status = 'rolling';
+    
+    const totalBet = game.bets.red + game.bets.green + game.bets.blue;
+    const winnerSide = getWinnerSide(game.bets);
+    
+    let winnerPlayer = null;
+    let payout = 0;
+    const odds = getOdds(winnerSide, totalBet, game.bets);
+    
+    for (const player of game.players) {
+        const playerBet = game.playerBets[player.id];
+        if (playerBet && playerBet.side === winnerSide) {
+            winnerPlayer = player;
+            payout = Math.floor(playerBet.amount * odds);
+        }
+    }
+    
+    if (winnerPlayer) {
+        await pool.query("UPDATE users SET stars=stars+$1, wins=wins+1, games_played=games_played+1, turnover=turnover+$2 WHERE telegram_id=$3", 
+            [payout, winnerPlayer.betAmount || 0, winnerPlayer.id]);
+        await saveGameHistory(winnerPlayer.id, 'pvp_roulette', 'PVP Рулетка', winnerPlayer.betAmount || 0, payout, payout - (winnerPlayer.betAmount || 0), odds);
+        sendUserBalance(winnerPlayer.id);
+        
+        await pool.query(`INSERT INTO pvp_roulette_history (winner_id, winner_name, red_bet, green_bet, blue_bet, total_bet, payout) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [winnerPlayer.id, winnerPlayer.name, game.bets.red, game.bets.green, game.bets.blue, totalBet, payout]);
+    }
+    
+    // Проигравшим списываем ставки
+    for (const player of game.players) {
+        const playerBet = game.playerBets[player.id];
+        if (playerBet && (!winnerPlayer || player.id !== winnerPlayer.id)) {
+            await pool.query("UPDATE users SET games_played=games_played+1, turnover=turnover+$1 WHERE telegram_id=$2", 
+                [playerBet.amount, player.id]);
+            await saveGameHistory(player.id, 'pvp_roulette', 'PVP Рулетка', playerBet.amount, 0, -playerBet.amount, 0);
+            sendUserBalance(player.id);
+        }
+    }
+    
+    const result = {
+        winner: winnerPlayer ? winnerPlayer.name : 'Ничья',
+        winnerId: winnerPlayer ? winnerPlayer.id : null,
+        side: winnerSide,
+        payout: payout,
+        bets: game.bets
+    };
+    
+    io.to(`pvp_${gameId}`).emit('pvp:result', result);
+    
+    // Очищаем игру через 5 секунд
+    setTimeout(() => {
+        pvpGames.delete(gameId);
+    }, 5000);
+}
 
 // ========== API ==========
 app.post('/api/register', async (req, res) => {
@@ -260,6 +478,7 @@ app.post('/api/withdraw-request', async (req, res) => {
     await pool.query("INSERT INTO withdraw_requests (telegram_id, name, username, amount, asset, wallet) VALUES ($1,$2,$3,$4,$5,$6)", [telegram_id, name, username, amount, asset, wallet]);
     await pool.query("UPDATE user_finance SET withdrawn=withdrawn+$1 WHERE telegram_id=$2", [amount, telegram_id]);
     sendUserBalance(telegram_id);
+    await sendTelegramMessage(ADMIN_ID, `📤 НОВАЯ ЗАЯВКА НА ВЫВОД\n👤 ${name}\n💰 ${amount} ${asset}\n📱 @${username || 'нет'}\n💳 ${wallet}`);
     res.json({ success: true });
 });
 
@@ -278,7 +497,7 @@ app.post('/api/check-payment-status', async (req, res) => {
 app.post('/api/create-invoice', async (req, res) => {
     try {
         const r = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-            title: 'DadTon Popolnenie', description: `${req.body.amount} zvezd`,
+            title: 'DadTon Пополнение', description: `${req.body.amount} звезд`,
             payload: `stars_${req.body.telegram_id}_${Date.now()}`, provider_token: "", currency: "XTR",
             prices: [{ label: `${req.body.amount} Stars`, amount: parseInt(req.body.amount) }]
         });
@@ -294,7 +513,22 @@ app.post('/api/cancel-rocket-bet', async (req, res) => {
         const bet = rocketState.bets[betIndex];
         await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [bet.amount, telegram_id]);
         rocketState.bets.splice(betIndex, 1);
-        broadcast({ type: 'rocket_bets_update', bets: rocketState.bets });
+        io.emit('rocket_bets_update', { bets: rocketState.bets });
+        sendUserBalance(telegram_id);
+        res.json({ success: true });
+    } else res.json({ success: false });
+});
+
+app.post('/api/cancel-roulette-bet', async (req, res) => {
+    const { telegram_id } = req.body;
+    const betIndex = rouletteState.bets.findIndex(b => b.telegram_id === telegram_id);
+    if (betIndex !== -1 && rouletteState.status === 'waiting') {
+        const bet = rouletteState.bets[betIndex];
+        await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [bet.amount, telegram_id]);
+        rouletteState.totalBank -= bet.amount;
+        rouletteState.bets.splice(betIndex, 1);
+        delete rouletteState.hasActiveBet[telegram_id];
+        io.emit('roulette_bets_update', { bets: rouletteState.bets, total: rouletteState.totalBank });
         sendUserBalance(telegram_id);
         res.json({ success: true });
     } else res.json({ success: false });
@@ -385,13 +619,13 @@ app.post('/api/admin/add-nft', async (req, res) => {
 // ========== АДМИН ==========
 app.post('/api/admin/get-users', async (req, res) => { 
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); 
-    const r = await pool.query("SELECT id, telegram_id, name, stars, banned FROM users LIMIT 50"); 
+    const r = await pool.query("SELECT id, telegram_id, name, stars, banned, games_played, wins FROM users LIMIT 50"); 
     res.json(r.rows); 
 });
 
 app.post('/api/admin/get-withdraw-requests', async (req, res) => { 
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); 
-    const r = await pool.query("SELECT * FROM withdraw_requests WHERE status='pending'"); 
+    const r = await pool.query("SELECT * FROM withdraw_requests WHERE status='pending' ORDER BY created_at DESC"); 
     res.json(r.rows); 
 });
 
@@ -438,28 +672,6 @@ app.post('/api/admin/unban-user', async (req, res) => {
     res.json({ success: true }); 
 });
 
-app.post('/api/admin/reset-all', async (req, res) => { 
-    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); 
-    await pool.query("UPDATE users SET stars=0, turnover=0, games_played=0, wins=0"); 
-    await pool.query("DELETE FROM pending_payments"); 
-    await pool.query("DELETE FROM games_history"); 
-    res.json({ success: true }); 
-});
-
-app.post('/api/admin/reset-leaderboard', async (req, res) => { 
-    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); 
-    await pool.query("UPDATE users SET turnover=0"); 
-    res.json({ success: true }); 
-});
-
-app.post('/api/admin/pause-bot', (req, res) => { 
-    if (req.body.admin_id === ADMIN_ID) { botPaused = true; res.json({ success: true }); } 
-});
-
-app.post('/api/admin/resume-bot', (req, res) => { 
-    if (req.body.admin_id === ADMIN_ID) { botPaused = false; res.json({ success: true }); } 
-});
-
 app.post('/api/admin/message-user', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
     await sendTelegramMessage(req.body.target_id, `📩 АДМИН:\n${req.body.message}`);
@@ -473,14 +685,15 @@ app.post('/api/admin/broadcast', async (req, res) => {
     for (const user of users.rows) {
         await sendTelegramMessage(user.telegram_id, `📢 РАССЫЛКА:\n${req.body.message}`);
         sent++;
+        await new Promise(r => setTimeout(r, 50));
     }
     res.json({ success: true, sent });
 });
 
-app.post('/api/admin/maintenance', async (req, res) => {
+app.post('/api/admin/toggle-pause', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
-    botUnderMaintenance = !botUnderMaintenance;
-    res.json({ success: true, maintenance: botUnderMaintenance });
+    botPaused = !botPaused;
+    res.json({ success: true, paused: botPaused });
 });
 
 app.post('/api/admin/reset-user-balance', async (req, res) => {
@@ -496,6 +709,12 @@ app.post('/api/admin/reset-user-turnover', async (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/admin/reset-leaderboard', async (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
+    await pool.query("UPDATE users SET turnover=0");
+    res.json({ success: true });
+});
+
 app.post('/api/admin/clear-wallets', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
     await pool.query("UPDATE users SET wallet_address=NULL");
@@ -508,10 +727,19 @@ app.post('/api/admin/clear-all-balances', async (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/admin/maintenance', async (req, res) => {
+    if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
+    botUnderMaintenance = !botUnderMaintenance;
+    const status = botUnderMaintenance ? '🔧 Бот на техническом обслуживании' : '✅ Бот работает';
+    await broadcastToAllUsers(status);
+    res.json({ success: true, maintenance: botUnderMaintenance });
+});
+
 app.post('/api/admin/reset-admin-stats', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
     await pool.query("UPDATE users SET stars=0, turnover=0, games_played=0, wins=0 WHERE telegram_id=$1", [ADMIN_ID]);
     await pool.query("DELETE FROM games_history WHERE telegram_id=$1", [ADMIN_ID]);
+    await pool.query("UPDATE user_finance SET deposited=0, withdrawn=0, admin_added=0, admin_removed=0 WHERE telegram_id=$1", [ADMIN_ID]);
     res.json({ success: true });
 });
 
@@ -524,8 +752,162 @@ app.post('/api/admin/clear-all-data', async (req, res) => {
     await pool.query("DELETE FROM rocket_history");
     await pool.query("DELETE FROM market_lots");
     await pool.query("DELETE FROM user_inventory");
+    await pool.query("DELETE FROM pvp_roulette_history");
     await pool.query("UPDATE users SET stars=0, turnover=0, games_played=0, wins=0, referrer_id=NULL, wallet_address=NULL WHERE telegram_id=$1", [ADMIN_ID]);
     res.json({ success: true });
+});
+
+// Webhook для Telegram
+app.post('/webhook/telegram', async (req, res) => {
+    const update = req.body;
+    if (update.pre_checkout_query) {
+        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, { pre_checkout_query_id: update.pre_checkout_query.id, ok: true });
+        return res.sendStatus(200);
+    }
+    if (update.message?.successful_payment) {
+        const p = update.message.successful_payment, parts = p.invoice_payload.split('_'), tgId = parts[1];
+        await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [p.total_amount, tgId]);
+        await pool.query("UPDATE user_finance SET deposited=deposited+$1 WHERE telegram_id=$2", [p.total_amount, tgId]);
+        sendUserBalance(tgId);
+    }
+    res.sendStatus(200);
+});
+
+// Manifest
+app.get('/tonconnect-manifest.json', (req, res) => { 
+    res.json({ url: "https://dadton-full.onrender.com", name: "DadTon", iconUrl: "https://dadton-full.onrender.com/icon.png" }); 
+});
+
+app.get('/icon.png', (req, res) => { 
+    res.setHeader('Content-Type', 'image/svg+xml'); 
+    res.send('<svg width="256" height="256"><rect width="256" height="256" fill="#0a0a0a" rx="40"/><circle cx="128" cy="128" r="80" fill="#FFD700"/><text x="128" y="150" font-size="64" text-anchor="middle" fill="#000" font-weight="900">D</text></svg>'); 
+});
+
+// ========== WEBSOCKET (Socket.IO) ==========
+io.on('connection', (socket) => {
+    let currentUser = null;
+    
+    socket.on('auth', async (data) => {
+        currentUser = data;
+        socket.join(`user_${data.telegram_id}`);
+        socket.data = { telegram_id: data.telegram_id, name: data.name, avatar: data.avatar };
+        
+        const user = await pool.query("SELECT stars FROM users WHERE telegram_id = $1", [data.telegram_id]);
+        if (user.rows[0]) {
+            socket.emit('balance_update', { stars: user.rows[0].stars });
+        }
+    });
+    
+    // Ракета
+    socket.on('rocket_bet', async (data) => {
+        if (botPaused || botUnderMaintenance) return;
+        if (rocketState.status !== 'waiting') return;
+        
+        const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [data.telegram_id]);
+        if (!u.rows[0] || u.rows[0].stars < data.amount) return;
+        
+        await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [data.amount, data.telegram_id]);
+        rocketState.bets.push({ 
+            telegram_id: data.telegram_id, 
+            name: data.name, 
+            avatar: data.avatar, 
+            amount: data.amount, 
+            autoCashout: data.autoCashout, 
+            autoCashoutValue: parseFloat(data.autoCashoutValue), 
+            cashedOut: false 
+        });
+        sendUserBalance(data.telegram_id);
+        io.emit('rocket_bets_update', { bets: rocketState.bets });
+    });
+    
+    socket.on('rocket_cashout', async (data) => {
+        await handleRocketCashout(data.telegram_id);
+    });
+    
+    socket.on('cancel_rocket_bet', async (data) => {
+        let idx = rocketState.bets.findIndex(b => b.telegram_id === data.telegram_id && !b.cashedOut);
+        if (idx !== -1 && rocketState.status === 'waiting') {
+            let bet = rocketState.bets[idx];
+            await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [bet.amount, data.telegram_id]);
+            rocketState.bets.splice(idx, 1);
+            io.emit('rocket_bets_update', { bets: rocketState.bets });
+            sendUserBalance(data.telegram_id);
+        }
+    });
+    
+    // Рулетка
+    socket.on('roulette_bet', async (data) => {
+        if (botPaused || botUnderMaintenance) return;
+        if (rouletteState.status !== 'waiting') return;
+        if (rouletteState.hasActiveBet[data.telegram_id]) return;
+        
+        const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [data.telegram_id]);
+        if (!u.rows[0] || u.rows[0].stars < data.amount) return;
+        
+        await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [data.amount, data.telegram_id]);
+        const colors = ['#ff4444', '#3B82F6', '#FFD700', '#00cc66', '#A855F7'];
+        rouletteState.bets.push({ 
+            telegram_id: data.telegram_id, 
+            name: data.name, 
+            avatar: data.avatar, 
+            amount: data.amount, 
+            color: colors[rouletteState.bets.length % colors.length] 
+        });
+        rouletteState.hasActiveBet[data.telegram_id] = true;
+        rouletteState.totalBank += data.amount;
+        sendUserBalance(data.telegram_id);
+        io.emit('roulette_bets_update', { bets: rouletteState.bets, total: rouletteState.totalBank });
+    });
+    
+    socket.on('cancel_roulette_bet', async (data) => {
+        let idx = rouletteState.bets.findIndex(b => b.telegram_id === data.telegram_id);
+        if (idx !== -1 && rouletteState.status === 'waiting') {
+            let bet = rouletteState.bets[idx];
+            await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [bet.amount, data.telegram_id]);
+            rouletteState.totalBank -= bet.amount;
+            rouletteState.bets.splice(idx, 1);
+            delete rouletteState.hasActiveBet[data.telegram_id];
+            io.emit('roulette_bets_update', { bets: rouletteState.bets, total: rouletteState.totalBank });
+            sendUserBalance(data.telegram_id);
+        }
+    });
+    
+    // PVP Рулетка
+    socket.on('pvp:join', async (data) => {
+        if (botPaused || botUnderMaintenance) return;
+        const { side, amount } = data;
+        
+        const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [socket.data.telegram_id]);
+        if (!u.rows[0] || u.rows[0].stars < amount) {
+            socket.emit('err', 'Недостаточно средств');
+            return;
+        }
+        
+        await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [amount, socket.data.telegram_id]);
+        sendUserBalance(socket.data.telegram_id);
+        
+        // Добавляем в очередь
+        pvpQueue.push({
+            id: socket.data.telegram_id,
+            name: socket.data.name,
+            socket: socket,
+            betAmount: amount,
+            side: side
+        });
+        
+        socket.emit('pvp:queued', { message: 'Вы в очереди...' });
+        
+        // Запускаем игру если есть 2 игрока
+        if (pvpQueue.length >= 2) {
+            await startPvpGame();
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        // Удаляем из очереди при отключении
+        const index = pvpQueue.findIndex(p => p.id === socket.data?.telegram_id);
+        if (index !== -1) pvpQueue.splice(index, 1);
+    });
 });
 
 // ========== TON API ==========
@@ -547,7 +929,10 @@ async function checkPendingPayments() {
     try {
         const pending = await pool.query("SELECT * FROM pending_payments WHERE status='pending'");
         if (pending.rows.length === 0) return;
-        const txs = await axios.get(`https://toncenter.com/api/v2/getTransactions`, { params: { address: MERCHANT_WALLET, limit: 30, include_msg_data: true, api_key: TON_API_KEY }, timeout: 10000 });
+        const txs = await axios.get(`https://toncenter.com/api/v2/getTransactions`, { 
+            params: { address: MERCHANT_WALLET, limit: 30, include_msg_data: true, api_key: TON_API_KEY }, 
+            timeout: 10000 
+        });
         if (!txs.data?.ok) return;
         for (const pay of pending.rows) {
             const match = txs.data.result.find(t => { 
@@ -569,55 +954,9 @@ async function checkPendingPayments() {
 
 setInterval(checkPendingPayments, 15000);
 
-// ========== MANIFEST ==========
-app.get('/tonconnect-manifest.json', (req, res) => { 
-    res.json({ url: "https://dadton-full.onrender.com", name: "DadTon Casino", iconUrl: "https://dadton-full.onrender.com/icon.png" }); 
-});
-
-app.get('/icon.png', (req, res) => { 
-    res.setHeader('Content-Type', 'image/svg+xml'); 
-    res.send('<svg width="256" height="256"><rect width="256" height="256" fill="#0a0a0a" rx="40"/><circle cx="128" cy="128" r="80" fill="#FFD700"/><text x="128" y="150" font-size="64" text-anchor="middle" fill="#000" font-weight="900">D</text></svg>'); 
-});
-
-// ========== WEBSOCKET ==========
-wss.on('connection', ws => {
-    ws.on('message', async msg => {
-        if (botUnderMaintenance) return;
-        try {
-            const data = JSON.parse(msg);
-            if (data.type === 'auth') ws.telegram_id = data.telegram_id;
-            if (data.type === 'rocket_bet') {
-                if (rocketState.status !== 'waiting') return;
-                const u = await pool.query("SELECT stars FROM users WHERE telegram_id=$1", [data.telegram_id]);
-                if (!u.rows[0] || u.rows[0].stars < data.amount) return;
-                await pool.query("UPDATE users SET stars=stars-$1 WHERE telegram_id=$2", [data.amount, data.telegram_id]);
-                rocketState.bets.push({ telegram_id: data.telegram_id, name: data.name, avatar: data.avatar, amount: data.amount, autoCashout: data.autoCashout, autoCashoutValue: parseFloat(data.autoCashoutValue), cashedOut: false });
-                sendUserBalance(data.telegram_id);
-                broadcast({ type: 'rocket_bets_update', bets: rocketState.bets });
-            }
-            if (data.type === 'rocket_cashout') handleRocketCashout(data.telegram_id);
-            if (data.type === 'cancel_rocket_bet') {
-                let idx = rocketState.bets.findIndex(b => b.telegram_id === data.telegram_id && !b.cashedOut);
-                if (idx !== -1 && rocketState.status === 'waiting') {
-                    let bet = rocketState.bets[idx];
-                    await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [bet.amount, data.telegram_id]);
-                    rocketState.bets.splice(idx, 1);
-                    broadcast({ type: 'rocket_bets_update', bets: rocketState.bets });
-                    sendUserBalance(data.telegram_id);
-                }
-            }
-        } catch (e) { console.error(e); }
-    });
-    
-    ws.on('close', () => {
-        if (rocketState.status === 'waiting') {
-            rocketState.bets = rocketState.bets.filter(b => b.telegram_id !== ws.telegram_id);
-            broadcast({ type: 'rocket_bets_update', bets: rocketState.bets });
-        }
-    });
-});
-
+// ========== ЗАПУСК ==========
 runRocketLoop();
+runRouletteLoop();
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Сервер запущен на порту ${PORT}`));
