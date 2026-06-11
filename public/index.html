@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DadTonGame</title>
+    <title>DadTon Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-user-select: none; }
         body { background: #0a0a0a; color: #fff; overflow-x: hidden; padding-bottom: 75px; }
@@ -159,13 +160,16 @@
             .podium-item { width: 75px; }
             .nft-grid { grid-template-columns: 1fr; }
         }
+        
+        .error-message { color: #ff4444; text-align: center; padding: 20px; }
+        .retry-btn { background: #FFD700; color: #000; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="loading-screen">
     <div class="spinner"></div>
-    <div style="color: #FFD700; font-weight:900; margin-top:15px;">ЗАГРУЗКА</div>
+    <div style="color: #FFD700; font-weight:900; margin-top:15px;">ЗАГРУЗКА...</div>
 </div>
 
 <div id="deposit-loader" class="deposit-loader">
@@ -186,7 +190,7 @@
     </div>
 </header>
 
-<!-- ГЛАВНАЯ - ТОЛЬКО ИГРЫ -->
+<!-- ГЛАВНАЯ -->
 <div id="page-home" class="page active">
     <div class="game-card" onclick="switchPage('rocket')"><div class="game-info"><h3>🚀 Ракета</h3><p>Краш-игра • Успей забрать</p></div><div class="game-icon">🚀</div></div>
     <div class="game-card" onclick="switchPage('mines')"><div class="game-info"><h3>💣 Мины</h3><p>5x5 • Найди безопасные клетки</p></div><div class="game-icon">💣</div></div>
@@ -250,7 +254,7 @@
     <div id="mines-multiplier" style="text-align:center; font-size:14px; color:#666; margin-top:8px;"></div>
 </div>
 
-<!-- РУЛЕТКА МУЛЬТИПЛЕЕР (крутится среди игроков) -->
+<!-- РУЛЕТКА МУЛЬТИПЛЕЕР -->
 <div id="page-roulette" class="page">
     <div class="roulette-wrapper">
         <div class="roulette-arrow"></div>
@@ -277,7 +281,7 @@
     </div>
 </div>
 
-<!-- PVP РУЛЕТКА (1v1 сражение) -->
+<!-- PVP РУЛЕТКА -->
 <div id="page-pvp-roulette" class="page">
     <div class="panel">
         <div class="pvp-timer" id="pvp-timer" style="text-align:center; font-size:24px; font-weight:800; color:#FFD700; margin-bottom:12px;">Поиск соперника...</div>
@@ -470,8 +474,6 @@ let currentMinesGameStatus = 'idle', rocketHasBet = false, rouletteHasBet = fals
 let tonConnectUI = null, isWalletConnected = false, walletAddress = '';
 
 // PVP состояние
-let pvpCurrentGame = null;
-let pvpMyBet = null;
 let pvpBets = { red: 0, green: 0, blue: 0 };
 
 // NFT состояние
@@ -554,20 +556,36 @@ async function disconnectWallet() {
     }
 }
 
-// Инициализация Socket.IO
+// Socket.IO подключение с обработкой ошибок
 function initSocket() {
-    socket = io(BACKEND_URL);
-    
+    socket = io(BACKEND_URL, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000
+    });
+
     socket.on('connect', () => {
+        console.log('🔌 Socket connected');
         socket.emit('auth', { telegram_id: user.telegram_id, name: user.name, avatar: user.avatar });
     });
-    
+
+    socket.on('connect_error', (error) => {
+        console.error('❌ Socket connection error:', error);
+        showToast('⚠️ Проблема с соединением. Переподключаемся...');
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('🔌 Socket disconnected:', reason);
+    });
+
     socket.on('balance_update', (data) => {
         user.stars = data.stars;
         document.getElementById('global-balance').innerText = data.stars;
         updateBetLimits();
     });
-    
+
     // Ракета события
     socket.on('rocket_tick', (data) => {
         document.getElementById('rocket-overlay').style.display='flex';
@@ -578,25 +596,25 @@ function initSocket() {
         setRocketButtonState(rocketHasBet?'waiting_with_bet':'bet');
         document.getElementById('rocket-cancel-btn').style.display=rocketHasBet?'block':'none';
     });
-    
+
     socket.on('rocket_start', () => {
         document.getElementById('rocket-overlay').style.display='none';
         document.getElementById('rocket-mult').style.display='block';
         document.getElementById('rocket-mult').innerHTML='1.00x';
         setRocketButtonState(rocketHasBet?'flying':'waiting');
     });
-    
+
     socket.on('rocket_fly', (data) => {
         document.getElementById('rocket-mult').innerHTML = `${data.multiplier}x`;
     });
-    
+
     socket.on('rocket_crash', (data) => {
         document.getElementById('rocket-mult').innerHTML = `💥 ВЗРЫВ: ${data.multiplier}x`;
         setRocketButtonState('waiting');
         updateBalance();
         loadRocketHistory();
     });
-    
+
     socket.on('rocket_cashout_success', (data) => {
         if (data.telegram_id === user.telegram_id) {
             showToast(`🎉 Выиграли: ${data.winAmount}⭐ (${data.multiplier}x)`);
@@ -604,11 +622,11 @@ function initSocket() {
             updateBalance();
         }
     });
-    
+
     socket.on('rocket_bets_update', (data) => {
         updateRocketPlayers(data.bets);
     });
-    
+
     // Рулетка мультиплеер события
     socket.on('roulette_tick', (data) => {
         document.getElementById('roulette-timer-text').innerHTML = `Прокрутка через: ${data.timer}с`;
@@ -616,37 +634,37 @@ function initSocket() {
         updateRoulettePlayers(data.bets||[]);
         drawRoulette(data.bets||[],0);
     });
-    
+
     socket.on('roulette_bets_update', (data) => {
         document.getElementById('roulette-total-bank').innerHTML = `Банк: ${data.total||0}⭐`;
         updateRoulettePlayers(data.bets||[]);
         drawRoulette(data.bets||[],0);
     });
-    
+
     socket.on('roulette_roll', (data) => {
         animateRoulette(data.bets, data.winner, data.prize);
     });
-    
+
     // PVP рулетка события
     socket.on('pvp:queued', (data) => {
         document.getElementById('pvp-timer').innerHTML = 'В очереди...';
     });
-    
+
     socket.on('pvp:update', (game) => {
-        if (game.timer) {
+        if (game && game.timer) {
             document.getElementById('pvp-timer').innerHTML = `До закрытия ставок: ${game.timer}s`;
         } else {
             document.getElementById('pvp-timer').innerHTML = 'Поиск соперника...';
         }
         
-        if (game.bets) {
+        if (game && game.bets) {
             pvpBets = game.bets;
             document.getElementById('red-bet').innerHTML = `Ставка: ${pvpBets.red}⭐`;
             document.getElementById('green-bet').innerHTML = `Ставка: ${pvpBets.green}⭐`;
             document.getElementById('blue-bet').innerHTML = `Ставка: ${pvpBets.blue}⭐`;
         }
     });
-    
+
     socket.on('pvp:result', (result) => {
         const container = document.getElementById('pvp-history');
         const item = document.createElement('div');
@@ -656,7 +674,7 @@ function initSocket() {
         item.style.padding = '8px';
         item.style.borderBottom = '1px solid #1a1a1a';
         item.style.fontSize = '12px';
-        item.innerHTML = `<span>${new Date().toLocaleTimeString()}</span><span>${result.side.toUpperCase()}</span><span>${result.winner === user.name ? '🏆 ПОБЕДА' : (result.winner === 'Ничья' ? '🤝 НИЧЬЯ' : '❌ ПОРАЖЕНИЕ')}</span><span>${result.payout ? '+' + result.payout + '⭐' : '-'}</span>`;
+        item.innerHTML = `<span>${new Date().toLocaleTimeString()}</span><span>${result.side?.toUpperCase() || '?'}</span><span>${result.winner === user.name ? '🏆 ПОБЕДА' : (result.winner === 'Ничья' ? '🤝 НИЧЬЯ' : '❌ ПОРАЖЕНИЕ')}</span><span>${result.payout ? '+' + result.payout + '⭐' : '-'}</span>`;
         container.prepend(item);
         if (container.children.length > 20) container.removeChild(container.lastChild);
         
@@ -665,32 +683,53 @@ function initSocket() {
             updateBalance();
         }
     });
-    
+
     socket.on('err', (msg) => showToast(msg));
-    
-    socket.on('disconnect', () => {
-        showToast('Соединение потеряно. Переподключение...');
-        setTimeout(() => socket.connect(), 3000);
-    });
 }
 
-// Регистрация
-fetch(`${BACKEND_URL}/api/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(user) })
-    .then(r=>r.json())
-    .then(d=>{ 
-        if(d.success){ 
-            user = d.user; 
-            updateUI(); 
-            initSocket(); 
-            loadRocketHistory(); 
+// Регистрация с таймаутом
+async function registerUser() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(user),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            user = data.user;
+            updateUI();
+            initSocket();
+            loadRocketHistory();
             loadLeaderboard();
             loadMarketItems();
             loadInventory();
-            if(user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display='block'; 
-            loadUserStats(); 
-        } 
-        document.getElementById('loading-screen').style.display='none'; 
-    });
+            if (user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display = 'block';
+            loadUserStats();
+            document.getElementById('loading-screen').style.display = 'none';
+        } else {
+            throw new Error(data.error || 'Registration failed');
+        }
+    } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('Registration error:', error);
+        document.getElementById('loading-screen').innerHTML = `
+            <div style="text-align:center; padding:20px;">
+                <div style="color:#ff4444; font-size:18px; margin-bottom:10px;">❌ Ошибка подключения</div>
+                <div style="color:#888; margin-bottom:15px;">Не удалось подключиться к серверу</div>
+                <button onclick="location.reload()" class="retry-btn">🔄 Повторить</button>
+            </div>
+        `;
+    }
+}
 
 function updateUI() { 
     document.getElementById('global-balance').innerText = user.stars || 0; 
@@ -1272,6 +1311,9 @@ function adminClearAllData() {
     if(confirmText !== 'RESET') return; 
     fetch(`${BACKEND_URL}/api/admin/clear-all-data`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(()=>{ showToast('💀 База данных очищена'); updateBalance(); loadLeaderboard(); }); 
 }
+
+// Запуск регистрации
+registerUser();
 </script>
 </body>
 </html>
