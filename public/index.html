@@ -2,1318 +2,1749 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DadTon Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DadTon | Premium Casino & NFT Marketplace</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-user-select: none; }
-        body { background: #0a0a0a; color: #fff; overflow-x: hidden; padding-bottom: 75px; }
-        
-        header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0d0d0d; border-bottom: 1px solid #1a1a1a; position: sticky; top: 0; z-index: 100; gap: 8px; flex-wrap: wrap; }
-        .logo-area { font-weight: 900; font-size: 20px; color: #FFD700; display: flex; align-items: center; gap: 8px; cursor: pointer; letter-spacing: 1px; }
-        .header-right { display: flex; align-items: center; gap: 8px; }
-        .balance-plate { background: #111; padding: 6px 12px; border-radius: 8px; border: 1px solid #FFD700; color: #FFD700; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-        
-        .wallet-container { display: flex; align-items: center; gap: 6px; }
-        .wallet-btn { background: #111; padding: 6px 12px; border-radius: 8px; border: 1px solid #1a1a1a; color: #00cc66; font-weight: 600; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-        .wallet-btn.connected { border-color: #00cc66; background: rgba(0,204,102,0.1); }
-        .disconnect-btn { background: #ff4444; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; display: none; }
-
-        #loading-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background:#000; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        .spinner { width: 50px; height: 50px; border: 5px solid #1a1a1a; border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .page { display: none; padding: 12px; max-width: 480px; margin: 0 auto; }
-        .page.active { display: block; }
-        
-        .game-card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
-        .game-card:active { transform: scale(0.98); background: #111; }
-        .game-info h3 { font-size: 18px; font-weight: 800; color: #FFD700; }
-        .game-info p { font-size: 12px; color: #666; margin-top: 2px; }
-        .game-icon { font-size: 32px; }
-
-        .video-container { position: relative; width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid #1a1a1a; }
-        .video-container video { width: 100%; height: 100%; object-fit: cover; }
-        .rocket-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; font-weight:900; font-size:20px; color:#FFD700; }
-        .rocket-timer-bar { width: 200px; height: 4px; background: rgba(255,215,0,0.3); border-radius: 2px; overflow: hidden; }
-        .rocket-timer-fill { height: 100%; width: 100%; background: #FFD700; transition: width 0.1s linear; }
-        .multiplier-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 48px; font-weight: 900; color: #FFD700; font-family: monospace; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
-        
-        .panel { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; padding: 12px; margin-top: 12px; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-        input, select { flex: 1; background: #111; border: 1px solid #1a1a1a; color: #fff; padding: 10px; border-radius: 8px; font-weight: 600; outline: none; }
-        input:focus, select:focus { border-color: #FFD700; }
-        .btn-preset { background: #1a1a1a; border: none; color: #fff; padding: 0 12px; border-radius: 8px; font-weight: 800; cursor: pointer; }
-        
-        .btn-main { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 900; cursor: pointer; transition: 0.2s; }
-        .btn-gold { background: linear-gradient(90deg, #FFD700, #FFA500); color: #000; }
-        .btn-red { background: linear-gradient(90deg, #ff4444, #cc0000); color: #fff; }
-        .btn-green { background: linear-gradient(90deg, #00cc66, #009944); color: #fff; animation: pulse 0.8s infinite alternate; }
-        .btn-gray { background: #1a1a1a; color: #666; cursor: not-allowed; }
-        @keyframes pulse { 0% { box-shadow: 0 0 4px #00cc66; } 100% { box-shadow: 0 0 16px #00cc66; } }
-
-        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0; }
-        .mine-tile { aspect-ratio: 1; background: #111; border: 1px solid #1a1a1a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; cursor: pointer; transition: 0.1s; }
-        .mine-tile.safe { background: rgba(0, 204, 102, 0.15); border-color: #00cc66; color: #00cc66; }
-        .mine-tile.blown { background: rgba(255, 68, 68, 0.15); border-color: #ff4444; color: #ff4444; }
-
-        .roulette-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; margin: 15px 0; }
-        #roulette-canvas { background: #0d0d0d; border-radius: 50%; border: 4px solid #1a1a1a; }
-        .roulette-arrow { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #FFD700; filter: drop-shadow(0 0 5px rgba(255,215,0,0.3)); z-index: 10; }
-
-        .profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
-        .user-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #FFD700; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; overflow: hidden; }
-        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .profile-tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; flex-wrap: wrap; }
-        .profile-tab { flex: 1; text-align: center; padding: 8px; background: none; border: none; color: #666; font-weight: 600; cursor: pointer; }
-        .profile-tab.active { color: #FFD700; border-bottom: 2px solid #FFD700; }
-        .profile-tab-content { display: none; }
-        .profile-tab-content.active { display: block; }
-        
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .stat-box { background: #0d0d0d; border: 1px solid #1a1a1a; padding: 10px; border-radius: 8px; text-align: center; }
-        .stat-box span { font-size: 11px; color: #666; display: block; }
-        .stat-box strong { font-size: 16px; color: #FFD700; font-weight: 800; }
-        
-        .history-item { background: #111; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
-        .history-win { color: #00cc66; }
-        .history-loss { color: #ff4444; }
-        
-        .leaderboard-podium { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin: 30px 0 40px; flex-wrap: wrap; }
-        .podium-item { text-align: center; display: flex; flex-direction: column; align-items: center; width: 100px; }
-        .podium-base { width: 100%; background: linear-gradient(180deg, #1a1a1a, #0d0d0d); border-radius: 8px 8px 0 0; margin-top: 8px; }
-        .podium-1 .podium-base { height: 100px; background: linear-gradient(180deg, #FFD700, #B8860B); }
-        .podium-2 .podium-base { height: 70px; background: linear-gradient(180deg, #C0C0C0, #808080); }
-        .podium-3 .podium-base { height: 50px; background: linear-gradient(180deg, #CD7F32, #8B4513); }
-        .podium-avatar { width: 60px; height: 60px; border-radius: 50%; background: #1a1a1a; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; overflow: hidden; }
-        .podium-1 .podium-avatar { width: 70px; height: 70px; border: 3px solid #FFD700; }
-        .podium-2 .podium-avatar { width: 60px; height: 60px; border: 3px solid #C0C0C0; }
-        .podium-3 .podium-avatar { width: 55px; height: 55px; border: 3px solid #CD7F32; }
-        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .podium-name { font-size: 12px; font-weight: 600; margin-top: 8px; color: #ddd; }
-        .podium-stars { font-size: 10px; color: #FFD700; margin-top: 4px; }
-        
-        .leaderboard-list { max-height: 300px; overflow-y: auto; }
-        .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #1a1a1a; }
-        .leaderboard-rank { width: 40px; font-weight: 800; color: #FFD700; }
-        .leaderboard-avatar { width: 32px; height: 32px; border-radius: 50%; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 14px; overflow: hidden; }
-        .leaderboard-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .leaderboard-name { flex: 1; font-size: 14px; }
-        .leaderboard-stars { color: #FFD700; font-weight: 800; }
-
-        .rocket-history { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-        .crash-badge { background: #111; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #ff4444; border: 1px solid #ff4444; }
-
-        .modal { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:500; align-items:center; justify-content:center; padding:16px; }
-        .modal-content { background:#0d0d0d; border:1px solid #1a1a1a; border-radius:16px; padding:16px; width:100%; max-width:400px; }
-        .modal-tabs { display:flex; gap:8px; margin-bottom:12px; }
-        .tab-btn { flex:1; padding:8px; background:#1a1a1a; border:none; border-radius:6px; color:#fff; font-weight:600; cursor: pointer; }
-        .tab-btn.active { background:#FFD700; color:#000; }
-
-        nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: #0d0d0d; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; text-decoration: none; font-size: 10px; font-weight: 600; cursor: pointer; }
-        .nav-item.active { color: #FFD700; }
-        .nav-item span { font-size: 22px; margin-bottom: 2px; }
-
-        .list-container { max-height: 150px; overflow-y: auto; font-size: 12px; margin-top: 8px; }
-        .list-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
-        .list-user-info { display: flex; align-items: center; gap: 6px; }
-        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 10px; overflow: hidden; }
-        .mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-        .nft-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .nft-card { background: #0d0d0d; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,215,0,0.15); transition: all 0.3s; cursor: pointer; }
-        .nft-card:hover { transform: translateY(-5px); border-color: #FFD700; }
-        .nft-image { width: 100%; height: 140px; object-fit: cover; background: linear-gradient(135deg, #111, #1a1a1a); }
-        .nft-name { font-weight: 800; font-size: 14px; padding: 8px 8px 0; }
-        .nft-price { color: #FFD700; font-weight: 700; font-size: 14px; padding: 0 8px 8px; }
-
-        .admin-modal-content { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 16px; padding: 20px; max-width: 500px; width: 100%; max-height: 85vh; overflow-y: auto; }
-        .admin-title { font-weight: 800; font-size: 20px; text-align: center; margin-bottom: 20px; color: #FFD700; }
-        .admin-section { background: #0d0d0d; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #1a1a1a; }
-        .admin-section-title { font-weight: 700; font-size: 14px; color: #FFD700; margin-bottom: 12px; border-left: 3px solid #FFD700; padding-left: 10px; }
-        .admin-input-group { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-        .admin-input { flex: 1; background: #111; border: 1px solid #1a1a1a; color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; outline: none; }
-        .admin-input:focus { border-color: #FFD700; }
-        .admin-btn { padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; }
-        .admin-btn-gold { background: #FFD700; color: #000; }
-        .admin-btn-red { background: #ff4444; color: #fff; }
-        .admin-btn-green { background: #00cc66; color: #fff; }
-        .admin-btn-gray { background: #1a1a1a; color: #888; }
-        .admin-withdraw-item, .admin-user-item { background: #111; border-radius: 8px; padding: 10px; margin-bottom: 8px; border-left: 3px solid #FFD700; cursor: pointer; }
-        .admin-user-item:hover { background: #1a1a1a; }
-        
-        .deposit-loader { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:600; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
-        .deposit-loader.active { display: flex; }
-        
-        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #FFD700; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: 800; z-index: 1000; animation: fadeOut 2s forwards; }
-        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-        
-        textarea { background: #111; border: 1px solid #1a1a1a; color: #fff; padding: 8px; border-radius: 8px; font-size: 13px; resize: vertical; width: 100%; }
-        
-        @media (max-width: 480px) {
-            .leaderboard-podium { gap: 8px; }
-            .podium-item { width: 75px; }
-            .nft-grid { grid-template-columns: 1fr; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
-        
-        .error-message { color: #ff4444; text-align: center; padding: 20px; }
-        .retry-btn { background: #FFD700; color: #000; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 10px; cursor: pointer; }
+
+        body {
+            background: radial-gradient(circle at 20% 20%, #0a0a0a, #050505);
+            color: #fff;
+            overflow-x: hidden;
+            padding-bottom: 75px;
+            min-height: 100vh;
+        }
+
+        /* ========== АНИМАЦИИ ========== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes glowPulse {
+            0% { box-shadow: 0 0 5px rgba(255,215,0,0.3); }
+            50% { box-shadow: 0 0 30px rgba(255,215,0,0.6); }
+            100% { box-shadow: 0 0 5px rgba(255,215,0,0.3); }
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 900;
+            animation: float 3s ease-in-out infinite;
+        }
+        .logo-text {
+            font-size: 20px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .balance-card {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 16px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .balance-card:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: scale(1.02);
+        }
+        .balance-icon {
+            font-size: 18px;
+        }
+        .balance-value {
+            font-weight: 800;
+            color: #FFD700;
+            font-size: 16px;
+        }
+        .wallet-btn {
+            background: rgba(0, 204, 102, 0.1);
+            border: 1px solid rgba(0, 204, 102, 0.3);
+            border-radius: 16px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #00cc66;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wallet-btn:hover {
+            background: rgba(0, 204, 102, 0.2);
+            transform: scale(1.02);
+        }
+        .wallet-btn.connected {
+            border-color: #00cc66;
+            background: rgba(0, 204, 102, 0.2);
+        }
+
+        /* ========== НАВИГАЦИЯ ========== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0 20px;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 16px;
+            transition: all 0.3s;
+            color: #666;
+        }
+        .nav-item:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+        .nav-item.active {
+            color: #FFD700;
+            background: rgba(255, 215, 0, 0.15);
+        }
+        .nav-icon {
+            font-size: 22px;
+        }
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        /* ========== СТРАНИЦЫ ========== */
+        .page {
+            display: none;
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+            animation: fadeIn 0.4s ease;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* ========== КАРТОЧКИ ИГР ========== */
+        .games-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .game-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 24px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        .game-card:hover::before {
+            left: 100%;
+        }
+        .game-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .game-info h3 {
+            font-size: 18px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .game-info p {
+            font-size: 11px;
+            color: #888;
+        }
+        .game-icon {
+            font-size: 44px;
+        }
+
+        /* ========== ПАНЕЛИ ========== */
+        .panel {
+            background: rgba(17, 17, 17, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+        .panel-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #FFD700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        input, select, textarea {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 14px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+        .btn-preset {
+            background: rgba(42, 42, 42, 0.95);
+            border: none;
+            border-radius: 14px;
+            padding: 0 18px;
+            color: #FFD700;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-preset:hover {
+            background: #FFD700;
+            color: #000;
+            transform: scale(1.02);
+        }
+        .btn-main {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-gold {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            color: #000;
+        }
+        .btn-gold:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+        .btn-green {
+            background: linear-gradient(90deg, #00cc66, #009944);
+            color: #fff;
+            animation: glowPulse 1.5s infinite;
+        }
+        .btn-red {
+            background: linear-gradient(90deg, #ff4444, #cc0000);
+            color: #fff;
+        }
+        .btn-gray {
+            background: #2a2a2a;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        /* ========== РАКЕТА ========== */
+        .rocket-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(180deg, #000, #1a1a1a);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .rocket-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .rocket-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-weight: 900;
+            color: #FFD700;
+        }
+        .rocket-timer-bar {
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .rocket-timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            transition: width 0.1s linear;
+        }
+        .rocket-multiplier {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 64px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            font-family: monospace;
+        }
+        .crash-history {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .crash-badge {
+            background: rgba(255, 68, 68, 0.15);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ff4444;
+        }
+
+        /* ========== МИНЫ ========== */
+        .mines-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 16px 0;
+        }
+        .mine-cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mine-cell:hover {
+            transform: scale(1.05);
+            border-color: #FFD700;
+        }
+        .mine-cell.safe {
+            background: rgba(0, 204, 102, 0.2);
+            border-color: #00cc66;
+            color: #00cc66;
+        }
+        .mine-cell.bomb {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+
+        /* ========== NFT КАРТОЧКИ ========== */
+        .nft-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+        .nft-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .nft-card:hover {
+            transform: translateY(-5px);
+            border-color: #FFD700;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        .nft-card.common { border-top: 3px solid #808080; }
+        .nft-card.rare { border-top: 3px solid #3B82F6; }
+        .nft-card.epic { border-top: 3px solid #A855F7; }
+        .nft-card.legendary { border-top: 3px solid #FFD700; animation: glowPulse 2s infinite; }
+        .nft-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+        }
+        .nft-name {
+            font-weight: 800;
+            font-size: 14px;
+            padding: 12px 12px 4px;
+        }
+        .nft-price {
+            color: #FFD700;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 0 12px 12px;
+        }
+        .nft-buttons {
+            display: flex;
+            gap: 8px;
+            padding: 0 12px 12px;
+        }
+
+        /* ========== РУЛЕТКА ========== */
+        .roulette-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .roulette-canvas {
+            background: #111;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
+        }
+        .roulette-arrow {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #FFD700;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+            z-index: 10;
+        }
+
+        /* ========== ЛИДЕРБОРД ========== */
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 20px;
+            margin: 30px 0 20px;
+        }
+        .podium-item {
+            text-align: center;
+            width: 100px;
+        }
+        .podium-avatar {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 10px;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 800;
+        }
+        .podium-1 .podium-avatar {
+            width: 85px;
+            height: 85px;
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 20px #FFD700;
+        }
+        .podium-2 .podium-avatar {
+            border: 3px solid #C0C0C0;
+        }
+        .podium-3 .podium-avatar {
+            border: 3px solid #CD7F32;
+        }
+        .podium-name {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .podium-stars {
+            font-size: 11px;
+            color: #FFD700;
+        }
+        .podium-base {
+            margin-top: 10px;
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+            border-radius: 8px 8px 0 0;
+        }
+        .podium-1 .podium-base { height: 110px; background: linear-gradient(180deg, #FFD700, #B8860B); }
+        .podium-2 .podium-base { height: 80px; background: linear-gradient(180deg, #C0C0C0, #808080); }
+        .podium-3 .podium-base { height: 60px; background: linear-gradient(180deg, #CD7F32, #8B4513); }
+
+        /* ========== ПРОФИЛЬ ========== */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 800;
+        }
+        .profile-info {
+            flex: 1;
+        }
+        .profile-name {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .profile-username {
+            font-size: 13px;
+            color: #888;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(17, 17, 17, 0.95);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 20px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .stat-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: #FFD700;
+        }
+        .profile-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            padding-bottom: 8px;
+        }
+        .profile-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            color: #888;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+        .profile-tab:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+        .profile-tab.active {
+            color: #FFD700;
+            background: rgba(255, 215, 0, 0.15);
+        }
+
+        /* ========== МОДАЛКИ ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #111, #0a0a0a);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 28px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            animation: slideUp 0.3s ease;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #FFD700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        /* ========== ТОСТ ========== */
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #FFD700;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: 800;
+            z-index: 1100;
+            animation: slideUp 0.3s, fadeOut 2s 1.7s forwards;
+            white-space: nowrap;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+
+        /* ========== АДАПТИВ ========== */
+        @media (max-width: 480px) {
+            .page { padding: 12px; }
+            .nft-grid { grid-template-columns: 1fr; }
+            .podium { gap: 10px; }
+            .podium-item { width: 85px; }
+            .toast { white-space: normal; text-align: center; max-width: 80%; }
+        }
     </style>
 </head>
 <body>
 
-<div id="loading-screen">
-    <div class="spinner"></div>
-    <div style="color: #FFD700; font-weight:900; margin-top:15px;">ЗАГРУЗКА...</div>
+<!-- ЗАГРУЗКА -->
+<div id="loading" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+    <div style="width:60px;height:60px;border:4px solid rgba(255,215,0,0.2);border-top:4px solid #FFD700;border-radius:50%;animation:rotate 0.8s linear infinite;"></div>
+    <div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ЗАГРУЗКА</div>
 </div>
 
-<div id="deposit-loader" class="deposit-loader">
-    <div class="spinner"></div>
-    <p>Ожидание оплаты...</p>
-</div>
-
-<header>
-    <div class="logo-area" onclick="switchPage('home')">DADTON</div>
+<!-- HEADER -->
+<div class="header">
+    <div class="logo">
+        <div class="logo-icon">🎲</div>
+        <div class="logo-text">DadTon</div>
+    </div>
     <div class="header-right">
-        <div class="wallet-container">
-            <div id="wallet-status" class="wallet-btn" onclick="connectWallet()">Connect Wallet</div>
-            <button id="disconnect-wallet-btn" class="disconnect-btn" onclick="disconnectWallet()">✕</button>
-        </div>
-        <div class="balance-plate" onclick="openModal('deposit-modal')">
-            <span>★</span><span id="global-balance">0</span>
+        <div class="wallet-btn" id="walletBtn" onclick="connectWallet()">💎 Подключить</div>
+        <div class="balance-card" onclick="openModal('deposit')">
+            <span class="balance-icon">⭐</span>
+            <span class="balance-value" id="balance">0</span>
         </div>
     </div>
-</header>
+</div>
 
 <!-- ГЛАВНАЯ -->
 <div id="page-home" class="page active">
-    <div class="game-card" onclick="switchPage('rocket')"><div class="game-info"><h3>🚀 Ракета</h3><p>Краш-игра • Успей забрать</p></div><div class="game-icon">🚀</div></div>
-    <div class="game-card" onclick="switchPage('mines')"><div class="game-info"><h3>💣 Мины</h3><p>5x5 • Найди безопасные клетки</p></div><div class="game-icon">💣</div></div>
-    <div class="game-card" onclick="switchPage('roulette')"><div class="game-info"><h3>🎡 Рулетка</h3><p>Мультиплеер • Ставь на цвет</p></div><div class="game-icon">🎡</div></div>
-    <div class="game-card" onclick="switchPage('pvp-roulette')"><div class="game-info"><h3>⚔️ PVP Рулетка</h3><p>1v1 • Сражение на ставках</p></div><div class="game-icon">⚔️</div></div>
+    <div class="games-grid">
+        <div class="game-card" onclick="switchPage('rocket')">
+            <div class="game-info"><h3>🚀 Ракета</h3><p>Краш-игра • Успей забрать</p></div>
+            <div class="game-icon">🚀</div>
+        </div>
+        <div class="game-card" onclick="switchPage('mines')">
+            <div class="game-info"><h3>💣 Мины</h3><p>5x5 • Найди безопасные клетки</p></div>
+            <div class="game-icon">💣</div>
+        </div>
+        <div class="game-card" onclick="switchPage('roulette')">
+            <div class="game-info"><h3>🎡 Рулетка</h3><p>Мультиплеер • Ставь на цвет</p></div>
+            <div class="game-icon">🎡</div>
+        </div>
+        <div class="game-card" onclick="switchPage('shop')">
+            <div class="game-info"><h3>🎁 Магазин</h3><p>Купи уникальный подарок</p></div>
+            <div class="game-icon">🎁</div>
+        </div>
+        <div class="game-card" onclick="switchPage('inventory')">
+            <div class="game-info"><h3>📦 Инвентарь</h3><p>Мои подарки и NFT</p></div>
+            <div class="game-icon">📦</div>
+        </div>
+    </div>
 </div>
 
 <!-- РАКЕТА -->
 <div id="page-rocket" class="page">
-    <div class="video-container">
-        <video id="rocket-video" loop muted playsinline autoplay>
+    <div class="rocket-container">
+        <video id="rocketVideo" class="rocket-video" loop muted playsinline>
             <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4">
         </video>
-        <div id="rocket-overlay" class="rocket-overlay">
-            <div>ОЖИДАНИЕ</div>
-            <div class="rocket-timer-bar"><div id="rocket-timer-fill" class="rocket-timer-fill"></div></div>
+        <div id="rocketOverlay" class="rocket-overlay">
+            <div>ДО СТАРТА</div>
+            <div class="rocket-timer-bar"><div id="rocketTimerFill" class="rocket-timer-fill" style="width:100%"></div></div>
+            <div id="rocketTimerText">10с</div>
         </div>
-        <div id="rocket-mult" class="multiplier-text" style="display:none;">1.00x</div>
+        <div id="rocketMult" class="rocket-multiplier" style="display:none;">1.00x</div>
     </div>
+    
     <div class="panel">
         <div class="input-group">
-            <input type="number" id="rocket-bet-amount" value="10" min="10" step="1">
-            <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'min')">MIN</button>
-            <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 10)">+10</button>
-            <button class="btn-preset" onclick="adjustBet('rocket-bet-amount', 'max')">MAX</button>
+            <input type="number" id="rocketBet" value="10" min="10" step="1">
+            <button class="btn-preset" onclick="adjustBet('rocketBet', 10)">+10</button>
+            <button class="btn-preset" onclick="adjustBet('rocketBet', 50)">+50</button>
+            <button class="btn-preset" onclick="adjustBet('rocketBet', 'max')">MAX</button>
         </div>
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:#666;">
-            <input type="checkbox" id="rocket-auto-check"> Автовывод
-            <input type="number" id="rocket-auto-val" value="1.5" step="0.1" min="1.1" max="100" style="padding:4px; max-width:80px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                <input type="checkbox" id="rocketAuto"> Автовывод
+            </label>
+            <input type="number" id="rocketAutoVal" value="1.5" step="0.1" min="1.1" max="100" style="width:80px; padding:8px;">
         </div>
-        <div style="display:flex; gap:8px;">
-            <button id="rocket-action-btn" class="btn-main btn-gold" style="flex:2;" onclick="handleRocketAction()">💰 Сделать ставку</button>
-            <button id="rocket-cancel-btn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRocketBet()">❌ Отмена</button>
+        <div style="display:flex; gap:10px;">
+            <button id="rocketActionBtn" class="btn-main btn-gold" style="flex:2;" onclick="rocketAction()">💰 Сделать ставку</button>
+            <button id="rocketCancelBtn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRocketBet()">❌</button>
         </div>
     </div>
-    <div class="panel"><div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">📊 История крашей</div><div id="rocket-history-list" class="rocket-history">Загрузка...</div></div>
-    <div class="panel"><div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">👥 Участники</div><div id="rocket-players-list" class="list-container"></div></div>
+    
+    <div class="panel">
+        <div class="panel-title">📊 История крашей</div>
+        <div id="rocketHistory" class="crash-history">Загрузка...</div>
+    </div>
+    
+    <div class="panel">
+        <div class="panel-title">👥 Участники</div>
+        <div id="rocketPlayers" class="list-container"></div>
+    </div>
 </div>
 
 <!-- МИНЫ -->
 <div id="page-mines" class="page">
     <div class="panel">
         <div class="input-group">
-            <input type="number" id="mines-bet-amount" value="20" min="10" step="1">
-            <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'half')">½</button>
-            <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'double')">×2</button>
-            <button class="btn-preset" onclick="adjustBet('mines-bet-amount', 'max')">MAX</button>
+            <input type="number" id="minesBet" value="20" min="10" step="1">
+            <button class="btn-preset" onclick="adjustBet('minesBet', 'half')">½</button>
+            <button class="btn-preset" onclick="adjustBet('minesBet', 'double')">×2</button>
+            <button class="btn-preset" onclick="adjustBet('minesBet', 'max')">MAX</button>
         </div>
-        <select id="mines-count-select">
-            <option value="3">3 мины (x1.5)</option>
-            <option value="5">5 мин (x2.0)</option>
-            <option value="10">10 мин (x3.5)</option>
-            <option value="15">15 мин (x5.0)</option>
-            <option value="20">20 мин (x8.0)</option>
-            <option value="24">24 мины (x12.0)</option>
+        <select id="minesCount">
+            <option value="3">3 мины (легко)</option>
+            <option value="5">5 мин (средне)</option>
+            <option value="10">10 мин (сложно)</option>
+            <option value="15">15 мин (экстрим)</option>
+            <option value="20">20 мин (безумие)</option>
         </select>
     </div>
-    <div class="mines-grid" id="mines-grid-board"></div>
-    <button id="mines-action-btn" class="btn-main btn-gold" onclick="handleMinesAction()">💣 Новая игра</button>
-    <div id="mines-status-text" style="text-align:center; font-weight:800; margin-top:8px; color:#FFD700;"></div>
-    <div id="mines-multiplier" style="text-align:center; font-size:14px; color:#666; margin-top:8px;"></div>
+    
+    <div class="mines-grid" id="minesBoard"></div>
+    
+    <button id="minesActionBtn" class="btn-main btn-gold" onclick="minesAction()">💣 Новая игра</button>
+    <div id="minesStatus" style="text-align:center; margin-top:12px; color:#FFD700; font-weight:800;"></div>
 </div>
 
-<!-- РУЛЕТКА МУЛЬТИПЛЕЕР -->
+<!-- РУЛЕТКА -->
 <div id="page-roulette" class="page">
     <div class="roulette-wrapper">
         <div class="roulette-arrow"></div>
-        <canvas id="roulette-canvas" width="260" height="260"></canvas>
-        <div id="roulette-timer-text" style="margin-top:10px; font-weight:800; color:#FFD700;">Ожидание игроков</div>
+        <canvas id="rouletteCanvas" class="roulette-canvas" width="280" height="280"></canvas>
+        <div id="rouletteTimer" style="margin-top:12px; font-weight:800; color:#FFD700;">Ожидание игроков</div>
     </div>
+    
     <div class="panel">
         <div class="input-group">
-            <input type="number" id="roulette-bet-amount" value="10" min="10" step="1">
-            <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'min')">MIN</button>
-            <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 10)">+10</button>
-            <button class="btn-preset" onclick="adjustBet('roulette-bet-amount', 'max')">MAX</button>
+            <input type="number" id="rouletteBet" value="10" min="10" step="1">
+            <button class="btn-preset" onclick="adjustBet('rouletteBet', 10)">+10</button>
+            <button class="btn-preset" onclick="adjustBet('rouletteBet', 50)">+50</button>
+            <button class="btn-preset" onclick="adjustBet('rouletteBet', 'max')">MAX</button>
         </div>
-        <div style="display:flex; gap:8px;">
-            <button id="roulette-action-btn" class="btn-main btn-gold" style="flex:2;" onclick="handleRouletteBet()">📥 Сделать ставку</button>
-            <button id="roulette-cancel-btn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRouletteBet()">❌ Отмена</button>
-        </div>
-    </div>
-    <div class="panel">
-        <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800; color:#FFD700; margin-bottom:6px;">
-            <span>👥 Участники</span><span id="roulette-total-bank">Банк: 0⭐</span>
-        </div>
-        <div id="roulette-players-list" class="list-container"></div>
-    </div>
-</div>
-
-<!-- PVP РУЛЕТКА -->
-<div id="page-pvp-roulette" class="page">
-    <div class="panel">
-        <div class="pvp-timer" id="pvp-timer" style="text-align:center; font-size:24px; font-weight:800; color:#FFD700; margin-bottom:12px;">Поиск соперника...</div>
-        <div class="pvp-container" style="display: flex; gap: 12px; margin-bottom: 12px;">
-            <div class="pvp-side" data-side="red" style="flex:1; background:#0d0d0d; border:1px solid #1a1a1a; border-top:3px solid #ff4444; border-radius:12px; padding:12px; text-align:center;">
-                <div style="font-weight:800;">🔴 КРАСНЫЙ</div>
-                <div class="pvp-odds" id="red-odds" style="font-size:12px; color:#666; margin-top:4px;">x2.0</div>
-                <div class="pvp-bet" id="red-bet" style="font-size:14px; color:#FFD700; margin-top:6px;">Ставка: 0⭐</div>
-                <button class="btn-main btn-gold" style="margin-top:8px; padding:8px;" onclick="placePvpBet('red')">Ставка</button>
-            </div>
-            <div class="pvp-side" data-side="green" style="flex:1; background:#0d0d0d; border:1px solid #1a1a1a; border-top:3px solid #00cc66; border-radius:12px; padding:12px; text-align:center;">
-                <div style="font-weight:800;">🟢 ЗЕЛЕНЫЙ</div>
-                <div class="pvp-odds" id="green-odds" style="font-size:12px; color:#666; margin-top:4px;">x2.0</div>
-                <div class="pvp-bet" id="green-bet" style="font-size:14px; color:#FFD700; margin-top:6px;">Ставка: 0⭐</div>
-                <button class="btn-main btn-gold" style="margin-top:8px; padding:8px;" onclick="placePvpBet('green')">Ставка</button>
-            </div>
-            <div class="pvp-side" data-side="blue" style="flex:1; background:#0d0d0d; border:1px solid #1a1a1a; border-top:3px solid #3B82F6; border-radius:12px; padding:12px; text-align:center;">
-                <div style="font-weight:800;">🔵 СИНИЙ</div>
-                <div class="pvp-odds" id="blue-odds" style="font-size:12px; color:#666; margin-top:4px;">x14.0</div>
-                <div class="pvp-bet" id="blue-bet" style="font-size:14px; color:#FFD700; margin-top:6px;">Ставка: 0⭐</div>
-                <button class="btn-main btn-gold" style="margin-top:8px; padding:8px;" onclick="placePvpBet('blue')">Ставка</button>
-            </div>
-        </div>
-        <div class="input-group" style="margin-top:12px;">
-            <input type="number" id="pvp-bet-amount" value="10" min="10" step="1">
-            <button class="btn-preset" onclick="adjustBet('pvp-bet-amount', 'min')">MIN</button>
-            <button class="btn-preset" onclick="adjustBet('pvp-bet-amount', 10)">+10</button>
-            <button class="btn-preset" onclick="adjustBet('pvp-bet-amount', 'max')">MAX</button>
+        <div style="display:flex; gap:10px;">
+            <button id="rouletteActionBtn" class="btn-main btn-gold" style="flex:2;" onclick="rouletteBetAction()">📥 Сделать ставку</button>
+            <button id="rouletteCancelBtn" class="btn-main btn-gray" style="flex:1; display:none;" onclick="cancelRouletteBet()">❌</button>
         </div>
     </div>
+    
     <div class="panel">
-        <div style="font-weight:800; color:#FFD700; margin-bottom:6px;">📊 История игр</div>
-        <div id="pvp-history" class="pvp-history" style="max-height:200px; overflow-y:auto;"></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span class="panel-title">👥 Участники</span>
+            <span id="rouletteTotal" style="color:#FFD700;">Банк: 0⭐</span>
+        </div>
+        <div id="roulettePlayers" class="list-container"></div>
     </div>
 </div>
 
-<!-- NFT МАРКЕТ -->
-<div id="page-nft-market" class="page">
+<!-- МАГАЗИН -->
+<div id="page-shop" class="page">
     <div class="panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <div style="font-weight:800; color:#FFD700;">🛒 Маркет подарков</div>
-            <button class="btn-preset" onclick="loadMarketItems()">🔄 Обновить</button>
-        </div>
-        <div id="market-list" class="nft-grid"></div>
-        <div id="empty-market" style="display:none; text-align:center; color:#666; padding:20px;">Нет активных лотов</div>
+        <div class="panel-title">🎁 Маркет подарков</div>
+        <div id="shopGrid" class="nft-grid"></div>
+        <div id="shopEmpty" style="text-align:center; color:#888; padding:20px; display:none;">🏪 Нет активных лотов</div>
     </div>
 </div>
 
 <!-- ИНВЕНТАРЬ -->
 <div id="page-inventory" class="page">
     <div class="panel">
-        <div style="font-weight:800; color:#FFD700; margin-bottom:12px;">📦 Мой инвентарь</div>
-        <div id="inventory-list" class="nft-grid"></div>
-        <div id="empty-inventory" style="display:none; text-align:center; color:#666; padding:20px;">У вас пока нет подарков</div>
+        <div class="panel-title">📦 Мой инвентарь</div>
+        <div id="inventoryGrid" class="nft-grid"></div>
+        <div id="inventoryEmpty" style="text-align:center; color:#888; padding:20px; display:none;">📭 У вас пока нет подарков</div>
     </div>
 </div>
 
 <!-- ЛИДЕРБОРД -->
 <div id="page-leaderboard" class="page">
-    <div class="leaderboard-podium" id="leaderboard-podium"></div>
-    <div class="panel"><div style="font-weight:800; color:#FFD700; margin-bottom:8px;">🏆 Топ игроков по обороту</div><div id="leaderboard-list" class="leaderboard-list"></div></div>
+    <div id="podium" class="podium"></div>
+    <div class="panel">
+        <div class="panel-title">🏆 Топ игроков по обороту</div>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+    </div>
 </div>
 
 <!-- ПРОФИЛЬ -->
 <div id="page-profile" class="page">
     <div class="profile-header">
-        <div id="user-avatar-container" class="user-avatar">?</div>
-        <div><div id="profile-name" style="font-weight:800; font-size:18px;">Игрок</div><div id="profile-username" style="font-size:12px; color:#666;">@username</div></div>
+        <div id="profileAvatar" class="profile-avatar">👤</div>
+        <div class="profile-info">
+            <div id="profileName" class="profile-name">Игрок</div>
+            <div id="profileUsername" class="profile-username">@username</div>
+        </div>
     </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">🎮 Игр</div><div class="stat-value" id="statGames">0</div></div>
+        <div class="stat-card"><div class="stat-label">🏆 Побед</div><div class="stat-value" id="statWins">0</div></div>
+        <div class="stat-card"><div class="stat-label">⭐ Оборот</div><div class="stat-value" id="statTurnover">0</div></div>
+        <div class="stat-card"><div class="stat-label">📈 Винрейт</div><div class="stat-value" id="statWR">0%</div></div>
+    </div>
+    
     <div class="profile-tabs">
-        <button class="profile-tab active" onclick="switchProfileTab('stats', event)">📊 Статистика</button>
-        <button class="profile-tab" onclick="switchProfileTab('games', event)">🎮 Мои игры</button>
-        <button class="profile-tab" onclick="switchProfileTab('finance', event)">💰 Финансы</button>
-        <button class="profile-tab" onclick="switchProfileTab('inventory', event)">📦 Инвентарь</button>
+        <button class="profile-tab active" onclick="switchProfileTab('finance')">💰 Финансы</button>
+        <button class="profile-tab" onclick="switchProfileTab('games')">🎮 История</button>
+        <button class="profile-tab" onclick="switchProfileTab('bank')">🏦 Банк</button>
     </div>
-    <div id="profile-tab-stats" class="profile-tab-content active">
+    
+    <div id="profileFinance" class="profile-tab-content" style="display:block;">
         <div class="stats-grid">
-            <div class="stat-box"><span>🎮 Игр</span><strong id="stat-games">0</strong></div>
-            <div class="stat-box"><span>⭐ Оборот</span><strong id="stat-turnover">0</strong></div>
-            <div class="stat-box"><span>🏆 Побед</span><strong id="stat-wins">0</strong></div>
-            <div class="stat-box"><span>📈 Винрейт</span><strong id="stat-wr">0%</strong></div>
+            <div class="stat-card"><div class="stat-label">💰 Пополнено</div><div class="stat-value" id="financeDeposited">0</div></div>
+            <div class="stat-card"><div class="stat-label">💸 Выведено</div><div class="stat-value" id="financeWithdrawn">0</div></div>
         </div>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button class="btn-main btn-gold" style="padding:10px; font-size:14px;" onclick="openModal('deposit-modal')">💎 Пополнить</button>
-            <button class="btn-main btn-gold" style="padding:10px; font-size:14px; background:#111; color:#fff; border:1px solid #1a1a1a;" onclick="openModal('withdraw-modal')">💸 Вывести</button>
-        </div>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button class="btn-main" style="padding:10px; font-size:14px; background:#111; color:#fff; border:1px solid #1a1a1a;" onclick="switchPage('inventory')">📦 Инвентарь</button>
-            <button class="btn-main" style="padding:10px; font-size:14px; background:#111; color:#fff; border:1px solid #1a1a1a;" onclick="switchPage('nft-market')">🛒 Маркет</button>
-        </div>
-        <button id="admin-panel-btn" class="btn-main" style="margin-top:15px; display:none; background:#111; color:#FFD700; border:1px solid #FFD700;" onclick="openAdminModal()">👑 АДМИН-ПАНЕЛЬ</button>
-    </div>
-    <div id="profile-tab-games" class="profile-tab-content"><div id="games-history-list" style="max-height: 400px; overflow-y: auto;"></div></div>
-    <div id="profile-tab-finance" class="profile-tab-content">
-        <div class="stats-grid">
-            <div class="stat-box"><span>💰 Пополнено</span><strong id="fin-deposited">0</strong></div>
-            <div class="stat-box"><span>💸 Выведено</span><strong id="fin-withdrawn">0</strong></div>
-            <div class="stat-box"><span>📊 Разница</span><strong id="fin-diff">0</strong></div>
-            <div class="stat-box"><span>🎰 Баланс</span><strong id="fin-balance">0</strong></div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button class="btn-main btn-gold" style="flex:1;" onclick="openModal('deposit')">💎 Пополнить</button>
+            <button class="btn-main btn-gold" style="flex:1; background:#2a2a2a;" onclick="openModal('withdraw')">💸 Вывести</button>
         </div>
     </div>
-    <div id="profile-tab-inventory" class="profile-tab-content">
-        <div id="profile-inventory-list" class="nft-grid"></div>
-        <div id="profile-empty-inventory" style="display:none; text-align:center; color:#666; padding:20px;">У вас пока нет подарков</div>
+    
+    <div id="profileGames" class="profile-tab-content" style="display:none;">
+        <div id="gamesHistory" class="list-container" style="max-height:300px;"></div>
+    </div>
+    
+    <div id="profileBank" class="profile-tab-content" style="display:none;">
+        <div class="stat-card" style="margin-bottom:12px;">
+            <div class="stat-label">🏦 Банк-аккаунт</div>
+            <div style="font-size:14px; color:#FFD700;">@BankDadTon</div>
+        </div>
+        <div id="bankHistory" class="list-container" style="max-height:250px;"></div>
     </div>
 </div>
 
 <!-- МОДАЛКИ -->
-<div id="deposit-modal" class="modal"><div class="modal-content"><div class="modal-tabs"><button class="tab-btn active" onclick="switchDepTab('crypto', event)">💎 Крипта</button><button class="tab-btn" onclick="switchDepTab('stars', event)">⭐ Stars</button></div><div id="dep-tab-crypto"><p style="font-size:12px; color:#666;">1 TON = 100⭐</p><input type="number" id="dep-crypto-amount" value="1" min="0.5" step="0.1"><button class="btn-main btn-gold" style="margin-top:10px;" onclick="processCryptoDeposit()">💸 Оплатить</button></div><div id="dep-tab-stars" style="display:none;"><input type="number" id="dep-stars-amount" value="50" min="1"><button class="btn-main btn-gold" style="margin-top:10px;" onclick="processStarsDeposit()">⭐ Оплатить</button></div><button class="btn-main" style="background:none; color:#666; margin-top:8px;" onclick="closeModal('deposit-modal')">Отмена</button></div></div>
-
-<div id="withdraw-modal" class="modal"><div class="modal-content"><div style="font-weight:800; font-size:16px; margin-bottom:12px; color:#FFD700;">Вывод средств</div><select id="withdraw-asset" onchange="toggleWithdrawFields()"><option value="TON">💎 TON</option><option value="USDT">💵 USDT</option><option value="Stars">⭐ Stars</option></select><input type="number" id="withdraw-amount" placeholder="Сумма (мин. 100)" min="100" style="margin-top:8px;"><input type="text" id="withdraw-wallet" placeholder="Адрес кошелька" style="margin-top:8px;"><input type="text" id="withdraw-tg-username" placeholder="@username" style="margin-top:8px; display:none;"><button class="btn-main btn-gold" style="margin-top:12px;" onclick="submitWithdraw()">📤 Отправить</button><button class="btn-main" style="background:none; color:#666; margin-top:6px;" onclick="closeModal('withdraw-modal')">Отмена</button></div></div>
-
-<!-- NFT ПРОДАЖА МОДАЛКА -->
-<div id="sell-nft-modal" class="modal">
+<div id="depositModal" class="modal">
     <div class="modal-content">
-        <div style="font-weight:800; font-size:16px; margin-bottom:12px; color:#FFD700;">Продажа подарка</div>
-        <input type="number" id="sell-price" placeholder="Цена в ⭐ (мин. 10)" min="10">
-        <button class="btn-main btn-gold" style="margin-top:12px;" onclick="confirmSellNft()">💰 Выставить на продажу</button>
-        <button class="btn-main" style="background:none; color:#666; margin-top:6px;" onclick="closeModal('sell-nft-modal')">Отмена</button>
-    </div>
-</div>
-
-<!-- NFT ПОКУПКА МОДАЛКА -->
-<div id="buy-nft-modal" class="modal">
-    <div class="modal-content">
-        <div style="font-weight:800; font-size:16px; margin-bottom:12px; color:#FFD700;">Покупка подарка</div>
-        <p id="buy-nft-name" style="margin-bottom:8px;"></p>
-        <p id="buy-nft-price" style="margin-bottom:12px; color:#FFD700;"></p>
-        <div style="display:flex; gap:8px;">
-            <button class="btn-main btn-gold" style="flex:1;" onclick="confirmBuyNft()">✅ Купить</button>
-            <button class="btn-main" style="flex:1; background:#111;" onclick="closeModal('buy-nft-modal')">Отмена</button>
+        <div class="modal-title">💎 Пополнение</div>
+        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+            <button class="btn-preset" onclick="setStarsAmount(50)">50⭐</button>
+            <button class="btn-preset" onclick="setStarsAmount(100)">100⭐</button>
+            <button class="btn-preset" onclick="setStarsAmount(250)">250⭐</button>
+            <button class="btn-preset" onclick="setStarsAmount(500)">500⭐</button>
+            <button class="btn-preset" onclick="setStarsAmount(1000)">1000⭐</button>
         </div>
+        <input type="number" id="starsAmount" value="50" min="1" style="margin-bottom:16px;">
+        <button class="btn-main btn-gold" onclick="processStarsDeposit()">⭐ Оплатить Stars</button>
+        <button class="btn-main" style="background:none; color:#888; margin-top:10px;" onclick="closeModal('depositModal')">Отмена</button>
     </div>
 </div>
 
-<!-- NFT ВЫВОД МОДАЛКА -->
-<div id="withdraw-nft-modal" class="modal">
+<div id="withdrawModal" class="modal">
     <div class="modal-content">
-        <div style="font-weight:800; font-size:16px; margin-bottom:12px; color:#FFD700;">Вывод подарка</div>
-        <p style="margin-bottom:12px;">Стоимость вывода: 15⭐</p>
-        <div style="display:flex; gap:8px;">
-            <button class="btn-main btn-gold" style="flex:1;" onclick="confirmWithdrawNft()">📤 Вывести</button>
-            <button class="btn-main" style="flex:1; background:#111;" onclick="closeModal('withdraw-nft-modal')">Отмена</button>
-        </div>
+        <div class="modal-title">💸 Вывод средств</div>
+        <select id="withdrawAsset" style="margin-bottom:16px;">
+            <option value="TON">💎 TON</option>
+            <option value="USDT">💵 USDT</option>
+            <option value="Stars">⭐ Stars</option>
+        </select>
+        <input type="number" id="withdrawAmount" placeholder="Сумма (мин. 100)" min="100" style="margin-bottom:16px;">
+        <input type="text" id="withdrawWallet" placeholder="Адрес кошелька" style="margin-bottom:16px;">
+        <input type="text" id="withdrawUsername" placeholder="@username (для Stars)" style="margin-bottom:16px; display:none;">
+        <button class="btn-main btn-gold" onclick="submitWithdraw()">📤 Отправить заявку</button>
+        <button class="btn-main" style="background:none; color:#888; margin-top:10px;" onclick="closeModal('withdrawModal')">Отмена</button>
     </div>
 </div>
 
-<!-- АДМИН ПАНЕЛЬ -->
-<div id="admin-modal" class="modal">
-    <div class="admin-modal-content">
-        <div class="admin-title">👑 АДМИН ПАНЕЛЬ</div>
-        
-        <div class="admin-section"><div class="admin-section-title">💰 Управление балансом</div><input type="text" id="admin-target-id" class="admin-input" placeholder="Telegram ID"><div class="admin-input-group"><input type="number" id="admin-amount" class="admin-input" placeholder="Сумма"><button class="admin-btn admin-btn-gold" onclick="adminAddStars()">➕ Начислить</button><button class="admin-btn admin-btn-red" onclick="adminRemoveStars()">➖ Снять</button></div></div>
-        <div class="admin-section"><div class="admin-section-title">🔨 Блокировка</div><input type="text" id="admin-ban-id" class="admin-input" placeholder="Telegram ID"><div class="admin-input-group"><button class="admin-btn admin-btn-red" onclick="adminBanUser()">🔨 Забанить</button><button class="admin-btn admin-btn-green" onclick="adminUnbanUser()">🔓 Разбанить</button></div></div>
-        <div class="admin-section"><div class="admin-section-title">📩 Написать пользователю</div><input type="text" id="admin-message-id" class="admin-input" placeholder="Telegram ID"><textarea id="admin-message-text" rows="2" placeholder="Текст сообщения"></textarea><button class="admin-btn admin-btn-gold" onclick="adminSendMessage()">📤 Отправить</button></div>
-        <div class="admin-section"><div class="admin-section-title">📢 Рассылка</div><textarea id="admin-broadcast-text" rows="2" placeholder="Текст рассылки"></textarea><button class="admin-btn admin-btn-gold" onclick="adminBroadcast()">📢 Отправить всем</button></div>
-        <div class="admin-section"><div class="admin-section-title">⏸️ Управление ботом</div><div class="admin-input-group"><button class="admin-btn admin-btn-red" onclick="adminTogglePause()">⏸️ Пауза/Возобновить</button><button class="admin-btn admin-btn-gold" onclick="adminToggleMaintenance()">🔧 Техобслуживание</button></div></div>
-        <div class="admin-section"><div class="admin-section-title">🎯 Сброс пользователя</div><input type="text" id="admin-reset-id" class="admin-input" placeholder="Telegram ID"><div class="admin-input-group"><button class="admin-btn admin-btn-red" onclick="adminResetUserBalance()">💰 Сбросить баланс</button><button class="admin-btn admin-btn-red" onclick="adminResetUserTurnover()">📊 Сбросить оборот</button></div></div>
-        <div class="admin-section"><div class="admin-section-title">👥 Список пользователей</div><button class="admin-btn admin-btn-gold" onclick="adminLoadUsers()">🔄 Загрузить</button><div id="admin-users-list" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div></div>
-        <div class="admin-section"><div class="admin-section-title">📋 Заявки на вывод</div><button class="admin-btn admin-btn-gold" onclick="adminLoadWithdraws()">🔄 Загрузить</button><div id="admin-withdraws-list" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div></div>
-        <div class="admin-section"><div class="admin-section-title">🏆 Лидерборд</div><button class="admin-btn admin-btn-red" onclick="adminResetLeaderboard()">🔄 Сбросить лидерборд</button></div>
-        <div class="admin-section"><div class="admin-section-title">💳 Кошельки</div><button class="admin-btn admin-btn-red" onclick="adminClearWallets()">🗑️ Очистить все кошельки</button></div>
-        <div class="admin-section"><div class="admin-section-title">⚠️ ОПАСНАЯ ЗОНА</div><button class="admin-btn admin-btn-red" onclick="adminClearAllBalances()">💣 Очистить все балансы</button><button class="admin-btn admin-btn-red" onclick="adminResetAdminStats()" style="margin-top:8px;">👑 Сбросить статистику админа</button><button class="admin-btn admin-btn-red" onclick="adminClearAllData()" style="margin-top:8px;">💀 ПОЛНЫЙ СБРОС БД</button></div>
-        <button class="admin-btn admin-btn-gray" style="width:100%; margin-top:8px;" onclick="closeModal('admin-modal')">Закрыть</button>
-    </div>
+<!-- НАВИГАЦИЯ -->
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span class="nav-label">Главная</span></div>
+    <div class="nav-item" onclick="switchPage('shop')"><span class="nav-icon">🎁</span><span class="nav-label">Магазин</span></div>
+    <div class="nav-item" onclick="switchPage('inventory')"><span class="nav-icon">📦</span><span class="nav-label">Инвентарь</span></div>
+    <div class="nav-item" onclick="switchPage('leaderboard')"><span class="nav-icon">🏆</span><span class="nav-label">Лидеры</span></div>
+    <div class="nav-item" onclick="switchPage('profile')"><span class="nav-icon">👤</span><span class="nav-label">Профиль</span></div>
 </div>
-
-<nav>
-    <div class="nav-item active" id="nav-home" onclick="switchPage('home')"><span>🏠</span>Главная</div>
-    <div class="nav-item" id="nav-nft-market" onclick="switchPage('nft-market')"><span>🛒</span>Маркет</div>
-    <div class="nav-item" id="nav-leaderboard" onclick="switchPage('leaderboard')"><span>🏆</span>Лидеры</div>
-    <div class="nav-item" id="nav-profile" onclick="switchPage('profile')"><span>👤</span>Профиль</div>
-</nav>
 
 <script>
-const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
-
-let user = { telegram_id: "123456", name: "Тест", avatar: "", username: "", stars: 0 };
-if (tg.initDataUnsafe?.user) {
-    user.telegram_id = tg.initDataUnsafe.user.id.toString();
-    user.name = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
-    user.username = tg.initDataUnsafe.user.username || '';
-    user.avatar = tg.initDataUnsafe.user.photo_url || '';
-}
-
-const BACKEND_URL = "https://dadton-full.onrender.com";
-let socket = null;
-let currentMinesGameStatus = 'idle', rocketHasBet = false, rouletteHasBet = false;
-let tonConnectUI = null, isWalletConnected = false, walletAddress = '';
-
-// PVP состояние
-let pvpBets = { red: 0, green: 0, blue: 0 };
-
-// NFT состояние
-let currentSellItem = null;
-let currentBuyLot = null;
-let currentWithdrawItem = null;
-
-function showToast(msg) { 
-    let t = document.createElement('div'); 
-    t.className = 'toast'; 
-    t.innerText = msg; 
-    document.body.appendChild(t); 
-    setTimeout(() => t.remove(), 2000); 
-}
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text);
-    showToast(`Скопировано: ${text}`);
-}
-
-// TON Connect
-function initTonConnect() {
-    try {
-        if (typeof TonConnectUI !== 'undefined') {
-            tonConnectUI = new TonConnectUI.TonConnectUI({ 
-                manifestUrl: `${BACKEND_URL}/tonconnect-manifest.json`,
-                buttonRootId: 'wallet-status'
-            });
-            tonConnectUI.onStatusChange((wallet) => {
-                const walletBtn = document.getElementById('wallet-status');
-                const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-                if (wallet) {
-                    isWalletConnected = true;
-                    walletAddress = wallet.account.address;
-                    if (walletBtn) { 
-                        walletBtn.innerHTML = `${walletAddress.slice(0,6)}...${walletAddress.slice(-4)}`; 
-                        walletBtn.classList.add('connected'); 
-                    }
-                    if (disconnectBtn) disconnectBtn.style.display = 'block';
-                    fetch(`${BACKEND_URL}/api/save-wallet`, { 
-                        method: 'POST', 
-                        headers: { 'content-type': 'application/json' }, 
-                        body: JSON.stringify({ telegram_id: user.telegram_id, wallet_address: walletAddress }) 
-                    });
-                    showToast('Wallet connected!');
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    
+    let user = {
+        telegram_id: "123456789",
+        name: "Игрок",
+        username: "",
+        avatar: "",
+        stars: 100
+    };
+    
+    if (tg.initDataUnsafe?.user) {
+        user.telegram_id = tg.initDataUnsafe.user.id.toString();
+        user.name = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? " " + tg.initDataUnsafe.user.last_name : "");
+        user.username = tg.initDataUnsafe.user.username || "";
+        user.avatar = tg.initDataUnsafe.user.photo_url || "";
+    }
+    
+    const BACKEND_URL = window.location.origin;
+    const WS_URL = window.location.origin.replace("http", "ws");
+    let ws = null;
+    let rocketHasBet = false;
+    let rocketCurrentState = "waiting";
+    let currentMinesGame = null;
+    let rouletteHasBet = false;
+    
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ==========
+    function showToast(msg) {
+        let t = document.createElement("div");
+        t.className = "toast";
+        t.innerText = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2500);
+    }
+    
+    function updateUI() {
+        document.getElementById("balance").innerText = user.stars || 0;
+        document.getElementById("profileName").innerText = user.name;
+        document.getElementById("profileUsername").innerText = user.username ? "@" + user.username : "";
+        if (user.avatar) {
+            document.getElementById("profileAvatar").innerHTML = `<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+        }
+    }
+    
+    async function updateBalance() {
+        let r = await fetch(`${BACKEND_URL}/api/get-balance`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id })
+        });
+        let d = await r.json();
+        if (d.stars !== undefined) {
+            user.stars = d.stars;
+            document.getElementById("balance").innerText = d.stars;
+        }
+    }
+    
+    function adjustBet(id, val) {
+        let el = document.getElementById(id);
+        let v = parseInt(el.value) || 10;
+        let max = user.stars || 100;
+        if (val === "max") v = max;
+        else if (val === "half") v = Math.max(10, Math.floor(v / 2));
+        else if (val === "double") v = Math.min(v * 2, max);
+        else v = Math.min(v + val, max);
+        el.value = Math.max(10, Math.min(v, max));
+    }
+    
+    function setStarsAmount(amt) {
+        document.getElementById("starsAmount").value = amt;
+    }
+    
+    function openModal(id) {
+        document.getElementById(id + "Modal").style.display = "flex";
+        let asset = document.getElementById("withdrawAsset")?.value;
+        if (asset === "Stars") {
+            document.getElementById("withdrawWallet").style.display = "none";
+            document.getElementById("withdrawUsername").style.display = "block";
+        } else {
+            document.getElementById("withdrawWallet").style.display = "block";
+            document.getElementById("withdrawUsername").style.display = "none";
+        }
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id + "Modal").style.display = "none";
+    }
+    
+    document.getElementById("withdrawAsset")?.addEventListener("change", function() {
+        if (this.value === "Stars") {
+            document.getElementById("withdrawWallet").style.display = "none";
+            document.getElementById("withdrawUsername").style.display = "block";
+        } else {
+            document.getElementById("withdrawWallet").style.display = "block";
+            document.getElementById("withdrawUsername").style.display = "none";
+        }
+    });
+    
+    // ========== РЕГИСТРАЦИЯ ==========
+    fetch(`${BACKEND_URL}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user)
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                user = d.user;
+                updateUI();
+                initWebSocket();
+                loadRocketHistory();
+                loadShop();
+                loadInventory();
+                loadLeaderboard();
+                loadUserStats();
+                loadUserFinance();
+                loadBankHistory();
+                document.getElementById("loading").style.display = "none";
+            }
+        });
+    
+    // ========== ВЕБСОКЕТ ==========
+    function initWebSocket() {
+        ws = new WebSocket(WS_URL);
+        ws.onopen = () => {
+            ws.send(JSON.stringify({ type: "auth", telegram_id: user.telegram_id }));
+        };
+        ws.onmessage = (e) => {
+            let data = JSON.parse(e.data);
+            
+            if (data.type === "balance_update") {
+                user.stars = data.stars;
+                document.getElementById("balance").innerText = data.stars;
+            }
+            
+            // Ракета
+            if (data.type === "rocket_tick") {
+                document.getElementById("rocketOverlay").style.display = "flex";
+                document.getElementById("rocketMult").style.display = "none";
+                document.getElementById("rocketTimerFill").style.width = (data.timer / 10) * 100 + "%";
+                document.getElementById("rocketTimerText").innerHTML = data.timer + "с";
+                updateRocketPlayers(data.bets);
+                rocketHasBet = data.bets.some(b => b.telegram_id === user.telegram_id && !b.cashedOut);
+                let btn = document.getElementById("rocketActionBtn");
+                if (rocketHasBet) {
+                    btn.innerHTML = "⏳ Ожидание";
+                    btn.className = "btn-main btn-gray";
+                    document.getElementById("rocketCancelBtn").style.display = "block";
                 } else {
-                    isWalletConnected = false;
-                    walletAddress = '';
-                    if (walletBtn) { 
-                        walletBtn.innerHTML = 'Connect Wallet'; 
-                        walletBtn.classList.remove('connected'); 
-                    }
-                    if (disconnectBtn) disconnectBtn.style.display = 'none';
+                    btn.innerHTML = "💰 Сделать ставку";
+                    btn.className = "btn-main btn-gold";
+                    document.getElementById("rocketCancelBtn").style.display = "none";
+                }
+            }
+            if (data.type === "rocket_start") {
+                document.getElementById("rocketOverlay").style.display = "none";
+                document.getElementById("rocketMult").style.display = "block";
+                document.getElementById("rocketMult").innerHTML = "1.00x";
+                document.getElementById("rocketVideo").play();
+                if (rocketHasBet) {
+                    document.getElementById("rocketActionBtn").innerHTML = "💸 Забрать";
+                    document.getElementById("rocketActionBtn").className = "btn-main btn-green";
+                }
+                rocketCurrentState = "flying";
+            }
+            if (data.type === "rocket_fly") {
+                document.getElementById("rocketMult").innerHTML = data.multiplier + "x";
+            }
+            if (data.type === "rocket_crash") {
+                document.getElementById("rocketMult").innerHTML = "💥 " + data.multiplier + "x";
+                document.getElementById("rocketVideo").pause();
+                rocketHasBet = false;
+                rocketCurrentState = "waiting";
+                updateBalance();
+                loadRocketHistory();
+            }
+            if (data.type === "rocket_cashout_success" && data.telegram_id === user.telegram_id) {
+                showToast("🎉 Выиграли: " + data.winAmount + "⭐ (" + data.multiplier + "x)");
+                updateBalance();
+                rocketHasBet = false;
+            }
+            
+            // Рулетка
+            if (data.type === "roulette_tick") {
+                document.getElementById("rouletteTimer").innerHTML = "Прокрутка через: " + data.timer + "с";
+                document.getElementById("rouletteTotal").innerHTML = "Банк: " + (data.total || 0) + "⭐";
+                updateRoulettePlayers(data.bets || []);
+                drawRoulette(data.bets || [], 0);
+            }
+            if (data.type === "roulette_bets_update") {
+                document.getElementById("rouletteTotal").innerHTML = "Банк: " + (data.total || 0) + "⭐";
+                updateRoulettePlayers(data.bets || []);
+                drawRoulette(data.bets || [], 0);
+            }
+            if (data.type === "roulette_roll") {
+                animateRoulette(data.bets, data.winner, data.prize);
+            }
+            if (data.type === "roulette_bet_cancelled") {
+                showToast("❌ Ставка отменена");
+                rouletteHasBet = false;
+                document.getElementById("rouletteCancelBtn").style.display = "none";
+                updateBalance();
+            }
+        };
+        ws.onclose = () => setTimeout(initWebSocket, 3000);
+    }
+    
+    // ========== РАКЕТА ==========
+    function rocketAction() {
+        if (rocketCurrentState === "flying" && rocketHasBet) {
+            ws.send(JSON.stringify({ type: "rocket_cashout", telegram_id: user.telegram_id }));
+        } else if (!rocketHasBet) {
+            let amt = parseInt(document.getElementById("rocketBet").value);
+            if (amt > user.stars) {
+                showToast("❌ Недостаточно баланса");
+                return;
+            }
+            ws.send(JSON.stringify({
+                type: "rocket_bet",
+                telegram_id: user.telegram_id,
+                name: user.name,
+                avatar: user.avatar,
+                amount: amt,
+                autoCashout: document.getElementById("rocketAuto").checked,
+                autoCashoutValue: parseFloat(document.getElementById("rocketAutoVal").value)
+            }));
+        }
+    }
+    
+    function cancelRocketBet() {
+        ws.send(JSON.stringify({ type: "cancel_rocket_bet", telegram_id: user.telegram_id }));
+    }
+    
+    function updateRocketPlayers(bets) {
+        let container = document.getElementById("rocketPlayers");
+        if (!container) return;
+        if (bets.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#888;">Нет участников</div>';
+            return;
+        }
+        container.innerHTML = bets.map(b => `
+            <div class="list-row">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:28px;height:28px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">${(b.name || "?").charAt(0)}</div>
+                    <span>${b.name}</span>
+                </div>
+                <div>${b.amount}⭐ ${b.cashedOut ? `<span style="color:#00cc66;">(${b.multiplier}x)</span>` : "⏳"}</div>
+            </div>
+        `).join("");
+    }
+    
+    async function loadRocketHistory() {
+        let r = await fetch(`${BACKEND_URL}/api/rocket-history`);
+        let d = await r.json();
+        let container = document.getElementById("rocketHistory");
+        if (container) {
+            container.innerHTML = d.map(m => `<span class="crash-badge">${m}x</span>`).join("");
+        }
+    }
+    
+    // ========== МИНЫ ==========
+    function buildMinesBoard() {
+        let board = document.getElementById("minesBoard");
+        board.innerHTML = "";
+        for (let i = 0; i < 25; i++) {
+            board.innerHTML += `<div class="mine-cell" id="mine_${i}" onclick="clickMine(${i})">?</div>`;
+        }
+    }
+    
+    async function minesAction() {
+        let btn = document.getElementById("minesActionBtn");
+        if (!currentMinesGame) {
+            let amt = parseInt(document.getElementById("minesBet").value);
+            if (amt > user.stars) {
+                showToast("❌ Недостаточно баланса");
+                return;
+            }
+            let minesCount = parseInt(document.getElementById("minesCount").value);
+            let r = await fetch(`${BACKEND_URL}/api/games/mines/start`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ telegram_id: user.telegram_id, amount: amt, minesCount: minesCount })
+            });
+            let d = await r.json();
+            if (d.success) {
+                currentMinesGame = { bet: amt, minesCount: minesCount };
+                btn.innerHTML = "💰 Забрать (0x)";
+                btn.className = "btn-main btn-green";
+                buildMinesBoard();
+                document.getElementById("minesStatus").innerHTML = "";
+                updateBalance();
+            }
+        } else {
+            let r = await fetch(`${BACKEND_URL}/api/games/mines/cashout`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ telegram_id: user.telegram_id })
+            });
+            let d = await r.json();
+            if (d.success) {
+                showToast("🎉 Выиграли: " + d.winAmount + "⭐");
+                currentMinesGame = null;
+                btn.innerHTML = "💣 Новая игра";
+                btn.className = "btn-main btn-gold";
+                updateBalance();
+            }
+        }
+    }
+    
+    async function clickMine(index) {
+        if (!currentMinesGame) return;
+        let r = await fetch(`${BACKEND_URL}/api/games/mines/reveal`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id, index: index })
+        });
+        let d = await r.json();
+        let cell = document.getElementById(`mine_${index}`);
+        if (d.hitMine) {
+            cell.classList.add("bomb");
+            cell.innerHTML = "💣";
+            currentMinesGame = null;
+            document.getElementById("minesActionBtn").innerHTML = "💣 Новая игра";
+            document.getElementById("minesActionBtn").className = "btn-main btn-gold";
+            document.getElementById("minesStatus").innerHTML = "💥 Вы наткнулись на мину!";
+            updateBalance();
+        } else {
+            cell.classList.add("safe");
+            cell.innerHTML = "⭐";
+            document.getElementById("minesActionBtn").innerHTML = `💰 Забрать (${d.multiplier}x)`;
+            if (d.win) {
+                showToast("🎉 ПОБЕДА! +" + d.winAmount + "⭐");
+                currentMinesGame = null;
+                document.getElementById("minesActionBtn").innerHTML = "💣 Новая игра";
+                document.getElementById("minesActionBtn").className = "btn-main btn-gold";
+                updateBalance();
+            }
+        }
+    }
+    
+    // ========== РУЛЕТКА ==========
+    function rouletteBetAction() {
+        if (rouletteHasBet) {
+            showToast("❌ Вы уже сделали ставку!");
+            return;
+        }
+        let amt = parseInt(document.getElementById("rouletteBet").value);
+        if (amt > user.stars) {
+            showToast("❌ Недостаточно баланса");
+            return;
+        }
+        ws.send(JSON.stringify({
+            type: "roulette_bet",
+            telegram_id: user.telegram_id,
+            name: user.name,
+            avatar: user.avatar,
+            amount: amt
+        }));
+    }
+    
+    function cancelRouletteBet() {
+        ws.send(JSON.stringify({ type: "cancel_roulette_bet", telegram_id: user.telegram_id }));
+    }
+    
+    function updateRoulettePlayers(bets) {
+        let container = document.getElementById("roulettePlayers");
+        if (!container) return;
+        if (bets.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#888;">Нет участников</div>';
+            return;
+        }
+        container.innerHTML = bets.map(b => `
+            <div class="list-row" style="border-left:3px solid ${b.color || "#FFD700"}; padding-left:10px;">
+                <span>${b.name}</span>
+                <span style="font-weight:800;">${b.amount}⭐</span>
+            </div>
+        `).join("");
+        rouletteHasBet = bets.some(b => b.telegram_id === user.telegram_id);
+        document.getElementById("rouletteCancelBtn").style.display = rouletteHasBet ? "block" : "none";
+    }
+    
+    function drawRoulette(bets, rot = 0) {
+        let canvas = document.getElementById("rouletteCanvas");
+        if (!canvas) return;
+        let ctx = canvas.getContext("2d");
+        let w = 280, h = 280;
+        ctx.clearRect(0, 0, w, h);
+        if (!bets || bets.length === 0) {
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, 130, 0, 2 * Math.PI);
+            ctx.fillStyle = "#111";
+            ctx.fill();
+            ctx.strokeStyle = "#2a2a2a";
+            ctx.stroke();
+            return;
+        }
+        let total = bets.reduce((a, b) => a + b.amount, 0);
+        if (total === 0) return;
+        let start = rot;
+        bets.forEach(b => {
+            let angle = (b.amount / total) * 2 * Math.PI;
+            ctx.beginPath();
+            ctx.moveTo(w/2, h/2);
+            ctx.arc(w/2, h/2, 130, start, start + angle);
+            ctx.fillStyle = b.color || "#FFD700";
+            ctx.fill();
+            ctx.stroke();
+            start += angle;
+        });
+    }
+    
+    function animateRoulette(bets, winner, prize) {
+        let startTime = performance.now();
+        let duration = 3000;
+        let totalRot = 10 * Math.PI + Math.random() * 2 * Math.PI;
+        function animate(time) {
+            let elapsed = time - startTime;
+            let progress = Math.min(elapsed / duration, 1);
+            let ease = 1 - Math.pow(1 - progress, 3);
+            drawRoulette(bets, ease * totalRot);
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                document.getElementById("rouletteTimer").innerHTML = `🏆 Победитель: ${winner.name}! +${prize}⭐`;
+                if (winner.telegram_id === user.telegram_id) {
+                    showToast(`🎉 ПОБЕДА! +${prize}⭐`);
+                }
+                updateBalance();
+                rouletteHasBet = false;
+                document.getElementById("rouletteCancelBtn").style.display = "none";
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    
+    // ========== МАГАЗИН ==========
+    async function loadShop() {
+        let r = await fetch(`${BACKEND_URL}/api/gifts/market`);
+        let d = await r.json();
+        let container = document.getElementById("shopGrid");
+        let empty = document.getElementById("shopEmpty");
+        if (d.success && d.lots && d.lots.length > 0) {
+            empty.style.display = "none";
+            container.innerHTML = d.lots.map(lot => {
+                let rarity = (lot.rarity || "COMMON").toLowerCase();
+                return `
+                    <div class="nft-card ${rarity}" onclick="buyGift(${lot.id}, ${lot.price})">
+                        <img src="${lot.image_url || "https://picsum.photos/seed/" + lot.nft_id + "/200/200"}" class="nft-image" onerror="this.src='https://picsum.photos/200/200'">
+                        <div class="nft-name">${lot.name}</div>
+                        <div class="nft-price">⭐ ${lot.price}</div>
+                        <div style="padding:0 12px 8px; font-size:11px; color:#888;">Продавец: ${lot.seller_name}</div>
+                        <button class="btn-main btn-gold" style="margin:0 12px 12px; width:calc(100% - 24px); padding:8px;" onclick="event.stopPropagation(); buyGift(${lot.id}, ${lot.price})">Купить</button>
+                    </div>
+                `;
+            }).join("");
+        } else {
+            empty.style.display = "block";
+            container.innerHTML = "";
+        }
+    }
+    
+    async function buyGift(lotId, price) {
+        if (user.stars < price) {
+            showToast(`❌ Недостаточно звезд. Нужно ${price}⭐`);
+            return;
+        }
+        let r = await fetch(`${BACKEND_URL}/api/gifts/buy`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegramId: user.telegram_id, lotId: lotId })
+        });
+        let d = await r.json();
+        if (d.success) {
+            showToast(`✅ Подарок куплен! -${price}⭐`);
+            updateBalance();
+            loadShop();
+            loadInventory();
+        } else {
+            showToast(`❌ ${d.error}`);
+        }
+    }
+    
+    // ========== ИНВЕНТАРЬ ==========
+    async function loadInventory() {
+        let r = await fetch(`${BACKEND_URL}/api/nft/inventory/${user.telegram_id}`);
+        let d = await r.json();
+        let container = document.getElementById("inventoryGrid");
+        let empty = document.getElementById("inventoryEmpty");
+        if (d.success && d.inventory && d.inventory.length > 0) {
+            empty.style.display = "none";
+            container.innerHTML = d.inventory.map(item => {
+                let rarity = (item.rarity || "COMMON").toLowerCase();
+                return `
+                    <div class="nft-card ${rarity}">
+                        <img src="${item.image_url || "https://picsum.photos/seed/" + item.nft_id + "/200/200"}" class="nft-image" onerror="this.src='https://picsum.photos/200/200'">
+                        <div class="nft-name">${item.name}</div>
+                        <div class="nft-price">⭐ ${item.price_stars}</div>
+                        <div class="nft-buttons">
+                            <button class="btn-preset" style="flex:1; padding:8px;" onclick="sellGift(${item.id}, ${item.price_stars})">💰 Продать</button>
+                            <button class="btn-preset" style="flex:1; padding:8px; background:#ff4444; color:white;" onclick="withdrawToBank(${item.id}, '${item.name.replace(/'/g, "\\'")}')">🏦 В банк (15⭐)</button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        } else {
+            empty.style.display = "block";
+            container.innerHTML = "";
+        }
+    }
+    
+    async function sellGift(inventoryId, defaultPrice) {
+        let price = prompt("Введите цену в ⭐ (мин. 10):", defaultPrice);
+        if (!price) return;
+        price = parseInt(price);
+        if (price < 10) {
+            showToast("❌ Минимальная цена 10⭐");
+            return;
+        }
+        let r = await fetch(`${BACKEND_URL}/api/gifts/sell`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegramId: user.telegram_id, nftId: inventoryId, price: price })
+        });
+        let d = await r.json();
+        if (d.success) {
+            showToast("✅ Подарок выставлен на продажу!");
+            loadInventory();
+            loadShop();
+        } else {
+            showToast(`❌ ${d.error}`);
+        }
+    }
+    
+    async function withdrawToBank(inventoryId, nftName) {
+        if (user.stars < 15) {
+            showToast(`❌ Недостаточно звезд. Нужно 15⭐`);
+            return;
+        }
+        if (!confirm(`Вывести "${nftName}" в банк @BankDadTon?\n\nСписание: 15⭐`)) return;
+        
+        let r = await fetch(`${BACKEND_URL}/api/nft/withdraw-to-bank`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id, inventoryId: inventoryId })
+        });
+        let d = await r.json();
+        if (d.success) {
+            showToast(`✅ ${d.message}`);
+            updateBalance();
+            loadInventory();
+            loadBankHistory();
+        } else {
+            showToast(`❌ ${d.error}`);
+        }
+    }
+    
+    // ========== ЛИДЕРБОРД ==========
+    async function loadLeaderboard() {
+        let r = await fetch(`${BACKEND_URL}/api/leaderboard`);
+        let data = await r.json();
+        let top3 = data.slice(0, 3);
+        while (top3.length < 3) top3.push({ name: "?", turnover: 0 });
+        
+        document.getElementById("podium").innerHTML = `
+            <div class="podium-item podium-2">
+                <div class="podium-avatar">🥈</div>
+                <div class="podium-name">${top3[1]?.name?.substring(0, 12) || "-"}</div>
+                <div class="podium-stars">${top3[1]?.turnover || 0}⭐</div>
+                <div class="podium-base"></div>
+            </div>
+            <div class="podium-item podium-1">
+                <div class="podium-avatar">🥇</div>
+                <div class="podium-name">${top3[0]?.name?.substring(0, 12) || "-"}</div>
+                <div class="podium-stars">${top3[0]?.turnover || 0}⭐</div>
+                <div class="podium-base"></div>
+            </div>
+            <div class="podium-item podium-3">
+                <div class="podium-avatar">🥉</div>
+                <div class="podium-name">${top3[2]?.name?.substring(0, 12) || "-"}</div>
+                <div class="podium-stars">${top3[2]?.turnover || 0}⭐</div>
+                <div class="podium-base"></div>
+            </div>
+        `;
+        
+        let listContainer = document.getElementById("leaderboardList");
+        if (data.length > 3) {
+            listContainer.innerHTML = data.slice(3).map((u, i) => `
+                <div class="leaderboard-row">
+                    <div class="leaderboard-rank">#${i + 4}</div>
+                    <div class="leaderboard-name">${u.name?.substring(0, 20) || "Игрок"}</div>
+                    <div class="leaderboard-stars">${u.turnover || 0}⭐</div>
+                </div>
+            `).join("");
+        } else {
+            listContainer.innerHTML = '<div style="text-align:center; color:#888;">Нет игроков</div>';
+        }
+    }
+    
+    // ========== ПРОФИЛЬ ==========
+    async function loadUserStats() {
+        let r = await fetch(`${BACKEND_URL}/api/user-stats`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id })
+        });
+        let d = await r.json();
+        if (d.success) {
+            document.getElementById("statGames").innerText = d.games_played || 0;
+            document.getElementById("statWins").innerText = d.wins || 0;
+            document.getElementById("statTurnover").innerText = d.turnover || 0;
+            let wr = d.games_played ? Math.round((d.wins / d.games_played) * 100) : 0;
+            document.getElementById("statWR").innerText = wr + "%";
+        }
+    }
+    
+    async function loadUserFinance() {
+        let r = await fetch(`${BACKEND_URL}/api/user-finance`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id })
+        });
+        let d = await r.json();
+        document.getElementById("financeDeposited").innerText = d.deposited || 0;
+        document.getElementById("financeWithdrawn").innerText = d.withdrawn || 0;
+    }
+    
+    async function loadUserGamesHistory() {
+        let r = await fetch(`${BACKEND_URL}/api/user-games-history`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id })
+        });
+        let d = await r.json();
+        let container = document.getElementById("gamesHistory");
+        if (d.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#888;">Нет игр</div>';
+        } else {
+            container.innerHTML = d.map(g => `
+                <div class="list-row">
+                    <span>${g.game_name}</span>
+                    <span style="color:${g.profit >= 0 ? "#00cc66" : "#ff4444"}">${g.profit >= 0 ? "+" : ""}${g.profit}⭐</span>
+                </div>
+            `).join("");
+        }
+    }
+    
+    async function loadBankHistory() {
+        let r = await fetch(`${BACKEND_URL}/api/nft/bank-history`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id })
+        });
+        let d = await r.json();
+        let container = document.getElementById("bankHistory");
+        if (!d.success || !d.history || d.history.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#888;">Нет операций</div>';
+        } else {
+            container.innerHTML = d.history.map(h => `
+                <div class="list-row">
+                    <span>${h.action === "withdraw_to_bank" ? "🏦 Вывод в банк" : "📥 Получение из банка"}</span>
+                    <span>${h.action === "withdraw_to_bank" ? "-" : ""}${h.stars_deducted}⭐</span>
+                </div>
+            `).join("");
+        }
+    }
+    
+    function switchProfileTab(tab) {
+        document.querySelectorAll(".profile-tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".profile-tab-content").forEach(c => c.style.display = "none");
+        if (tab === "finance") {
+            document.querySelector(".profile-tab:first-child").classList.add("active");
+            document.getElementById("profileFinance").style.display = "block";
+            loadUserFinance();
+        } else if (tab === "games") {
+            document.querySelectorAll(".profile-tab")[1].classList.add("active");
+            document.getElementById("profileGames").style.display = "block";
+            loadUserGamesHistory();
+        } else if (tab === "bank") {
+            document.querySelectorAll(".profile-tab")[2].classList.add("active");
+            document.getElementById("profileBank").style.display = "block";
+            loadBankHistory();
+        }
+    }
+    
+    // ========== ПОПОЛНЕНИЕ / ВЫВОД ==========
+    async function processStarsDeposit() {
+        let amount = parseInt(document.getElementById("starsAmount").value);
+        let r = await fetch(`${BACKEND_URL}/api/create-invoice`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegram_id: user.telegram_id, amount: amount })
+        });
+        let d = await r.json();
+        if (d.success) {
+            tg.openInvoice(d.invoice_link, (status) => {
+                if (status === "paid") {
+                    showToast("🎉 Зачисление прошло!");
+                    closeModal("deposit");
+                    updateBalance();
+                    loadUserFinance();
                 }
             });
         }
-    } catch(e) { console.error(e); }
-}
-setTimeout(initTonConnect, 1000);
-
-async function connectWallet() { 
-    if (tonConnectUI) {
-        try { 
-            await tonConnectUI.connectWallet(); 
-        } catch(e) { 
-            showToast('Ошибка подключения'); 
-        }
-    } else {
-        showToast('Загрузка... попробуйте еще раз');
-        initTonConnect();
-        setTimeout(() => connectWallet(), 500);
     }
-}
-async function disconnectWallet() { 
-    if (tonConnectUI) {
-        try { 
-            await tonConnectUI.disconnect(); 
-            showToast('Wallet disconnected'); 
-        } catch(e) {}
-    }
-}
-
-// Socket.IO подключение с обработкой ошибок
-function initSocket() {
-    socket = io(BACKEND_URL, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000
-    });
-
-    socket.on('connect', () => {
-        console.log('🔌 Socket connected');
-        socket.emit('auth', { telegram_id: user.telegram_id, name: user.name, avatar: user.avatar });
-    });
-
-    socket.on('connect_error', (error) => {
-        console.error('❌ Socket connection error:', error);
-        showToast('⚠️ Проблема с соединением. Переподключаемся...');
-    });
-
-    socket.on('disconnect', (reason) => {
-        console.log('🔌 Socket disconnected:', reason);
-    });
-
-    socket.on('balance_update', (data) => {
-        user.stars = data.stars;
-        document.getElementById('global-balance').innerText = data.stars;
-        updateBetLimits();
-    });
-
-    // Ракета события
-    socket.on('rocket_tick', (data) => {
-        document.getElementById('rocket-overlay').style.display='flex';
-        document.getElementById('rocket-overlay').innerHTML = `<div>ДО ВЗЛЕТА: ${data.timer}с</div><div class="rocket-timer-bar"><div class="rocket-timer-fill" style="width:${(data.timer/10)*100}%"></div></div>`;
-        document.getElementById('rocket-mult').style.display='none';
-        updateRocketPlayers(data.bets);
-        rocketHasBet = data.bets.some(x=>x.telegram_id===user.telegram_id && !x.cashedOut);
-        setRocketButtonState(rocketHasBet?'waiting_with_bet':'bet');
-        document.getElementById('rocket-cancel-btn').style.display=rocketHasBet?'block':'none';
-    });
-
-    socket.on('rocket_start', () => {
-        document.getElementById('rocket-overlay').style.display='none';
-        document.getElementById('rocket-mult').style.display='block';
-        document.getElementById('rocket-mult').innerHTML='1.00x';
-        setRocketButtonState(rocketHasBet?'flying':'waiting');
-    });
-
-    socket.on('rocket_fly', (data) => {
-        document.getElementById('rocket-mult').innerHTML = `${data.multiplier}x`;
-    });
-
-    socket.on('rocket_crash', (data) => {
-        document.getElementById('rocket-mult').innerHTML = `💥 ВЗРЫВ: ${data.multiplier}x`;
-        setRocketButtonState('waiting');
-        updateBalance();
-        loadRocketHistory();
-    });
-
-    socket.on('rocket_cashout_success', (data) => {
-        if (data.telegram_id === user.telegram_id) {
-            showToast(`🎉 Выиграли: ${data.winAmount}⭐ (${data.multiplier}x)`);
-            setRocketButtonState('waiting');
-            updateBalance();
-        }
-    });
-
-    socket.on('rocket_bets_update', (data) => {
-        updateRocketPlayers(data.bets);
-    });
-
-    // Рулетка мультиплеер события
-    socket.on('roulette_tick', (data) => {
-        document.getElementById('roulette-timer-text').innerHTML = `Прокрутка через: ${data.timer}с`;
-        document.getElementById('roulette-total-bank').innerHTML = `Банк: ${data.total||0}⭐`;
-        updateRoulettePlayers(data.bets||[]);
-        drawRoulette(data.bets||[],0);
-    });
-
-    socket.on('roulette_bets_update', (data) => {
-        document.getElementById('roulette-total-bank').innerHTML = `Банк: ${data.total||0}⭐`;
-        updateRoulettePlayers(data.bets||[]);
-        drawRoulette(data.bets||[],0);
-    });
-
-    socket.on('roulette_roll', (data) => {
-        animateRoulette(data.bets, data.winner, data.prize);
-    });
-
-    // PVP рулетка события
-    socket.on('pvp:queued', (data) => {
-        document.getElementById('pvp-timer').innerHTML = 'В очереди...';
-    });
-
-    socket.on('pvp:update', (game) => {
-        if (game && game.timer) {
-            document.getElementById('pvp-timer').innerHTML = `До закрытия ставок: ${game.timer}s`;
-        } else {
-            document.getElementById('pvp-timer').innerHTML = 'Поиск соперника...';
-        }
-        
-        if (game && game.bets) {
-            pvpBets = game.bets;
-            document.getElementById('red-bet').innerHTML = `Ставка: ${pvpBets.red}⭐`;
-            document.getElementById('green-bet').innerHTML = `Ставка: ${pvpBets.green}⭐`;
-            document.getElementById('blue-bet').innerHTML = `Ставка: ${pvpBets.blue}⭐`;
-        }
-    });
-
-    socket.on('pvp:result', (result) => {
-        const container = document.getElementById('pvp-history');
-        const item = document.createElement('div');
-        item.className = 'pvp-history-item';
-        item.style.display = 'flex';
-        item.style.justifyContent = 'space-between';
-        item.style.padding = '8px';
-        item.style.borderBottom = '1px solid #1a1a1a';
-        item.style.fontSize = '12px';
-        item.innerHTML = `<span>${new Date().toLocaleTimeString()}</span><span>${result.side?.toUpperCase() || '?'}</span><span>${result.winner === user.name ? '🏆 ПОБЕДА' : (result.winner === 'Ничья' ? '🤝 НИЧЬЯ' : '❌ ПОРАЖЕНИЕ')}</span><span>${result.payout ? '+' + result.payout + '⭐' : '-'}</span>`;
-        container.prepend(item);
-        if (container.children.length > 20) container.removeChild(container.lastChild);
-        
-        if (result.winnerId === user.telegram_id) {
-            showToast(`🎉 ПОБЕДА! +${result.payout}⭐`);
-            updateBalance();
-        }
-    });
-
-    socket.on('err', (msg) => showToast(msg));
-}
-
-// Регистрация с таймаутом
-async function registerUser() {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user),
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        
-        if (data.success) {
-            user = data.user;
-            updateUI();
-            initSocket();
-            loadRocketHistory();
-            loadLeaderboard();
-            loadMarketItems();
-            loadInventory();
-            if (user.telegram_id === "1631627984") document.getElementById('admin-panel-btn').style.display = 'block';
-            loadUserStats();
-            document.getElementById('loading-screen').style.display = 'none';
-        } else {
-            throw new Error(data.error || 'Registration failed');
-        }
-    } catch (error) {
-        clearTimeout(timeoutId);
-        console.error('Registration error:', error);
-        document.getElementById('loading-screen').innerHTML = `
-            <div style="text-align:center; padding:20px;">
-                <div style="color:#ff4444; font-size:18px; margin-bottom:10px;">❌ Ошибка подключения</div>
-                <div style="color:#888; margin-bottom:15px;">Не удалось подключиться к серверу</div>
-                <button onclick="location.reload()" class="retry-btn">🔄 Повторить</button>
-            </div>
-        `;
-    }
-}
-
-function updateUI() { 
-    document.getElementById('global-balance').innerText = user.stars || 0; 
-    document.getElementById('profile-name').innerText = user.name; 
-    document.getElementById('profile-username').innerText = user.username ? '@'+user.username : ''; 
-    if(user.avatar) document.getElementById('user-avatar-container').innerHTML = `<img src="${user.avatar}">`; 
-    updateBetLimits(); 
-}
-
-function updateBetLimits() { 
-    const max = user.stars || 10; 
-    ['rocket','mines','roulette','pvp'].forEach(g => { 
-        let el = document.getElementById(`${g}-bet-amount`); 
-        if(el) el.max = max; 
-    }); 
-}
-
-function updateBalance() { 
-    fetch(`${BACKEND_URL}/api/get-balance`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ telegram_id:user.telegram_id })})
-        .then(r=>r.json()).then(d=>{ if(d.stars!==undefined){ document.getElementById('global-balance').innerText=d.stars; user.stars=d.stars; updateBetLimits(); } }); 
-}
-
-function adjustBet(id, act) { 
-    let el=document.getElementById(id), v=parseInt(el.value)||10, m=user.stars||10; 
-    if(act==='min') v=10; 
-    else if(act==='max') v=m; 
-    else if(act==='half') v=Math.max(10,Math.floor(v/2)); 
-    else if(act==='double') v=Math.min(v*2,m); 
-    else if(typeof act==='number') v=Math.min(v+act,m); 
-    el.value=Math.max(10,Math.min(v,m)); 
-}
-
-function openModal(id) { document.getElementById(id).style.display='flex'; }
-function closeModal(id) { document.getElementById(id).style.display='none'; }
-function openAdminModal() { openModal('admin-modal'); adminLoadWithdraws(); adminLoadUsers(); }
-
-function switchDepTab(tab,e) { 
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); 
-    document.getElementById('dep-tab-crypto').style.display=tab==='crypto'?'block':'none'; 
-    document.getElementById('dep-tab-stars').style.display=tab==='stars'?'block':'none'; 
-    e.target.classList.add('active'); 
-}
-
-function toggleWithdrawFields() { 
-    let a=document.getElementById('withdraw-asset').value; 
-    document.getElementById('withdraw-wallet').style.display=a==='Stars'?'none':'block'; 
-    document.getElementById('withdraw-tg-username').style.display=a==='Stars'?'block':'none'; 
-}
-
-function switchPage(pageId) { 
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); 
-    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
-    document.getElementById(`page-${pageId}`)?.classList.add('active'); 
-    document.getElementById(`nav-${pageId}`)?.classList.add('active'); 
-    if(pageId==='mines') buildMinesBoard(); 
-    if(pageId==='profile') { loadUserStats(); loadUserGamesHistory(); loadUserFinance(); loadInventory(); } 
-    if(pageId==='leaderboard') loadLeaderboard(); 
-    if(pageId==='nft-market') loadMarketItems();
-    if(pageId==='inventory') loadInventory();
-}
-
-function switchProfileTab(tab, e) { 
-    document.querySelectorAll('.profile-tab').forEach(t=>t.classList.remove('active')); 
-    document.querySelectorAll('.profile-tab-content').forEach(c=>c.classList.remove('active')); 
-    e.target.classList.add('active'); 
-    document.getElementById(`profile-tab-${tab}`).classList.add('active'); 
-    if(tab==='games') loadUserGamesHistory(); 
-    if(tab==='finance') loadUserFinance(); 
-    if(tab==='inventory') loadInventory(); 
-}
-
-// ========== ПОПОЛНЕНИЕ ==========
-async function processCryptoDeposit() {
-    if(!tonConnectUI||!isWalletConnected) { showToast('Connect wallet first!'); return; }
-    let tonAmount = parseFloat(document.getElementById('dep-crypto-amount').value);
-    if(isNaN(tonAmount)||tonAmount<0.5) { showToast('Minimum 0.5 TON'); return; }
-    const orderId = `${user.telegram_id}_${Date.now()}`;
-    try {
-        await fetch(`${BACKEND_URL}/api/pending-payment`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ telegram_id:user.telegram_id, amount:tonAmount, order_id:orderId, payload:"" }) });
-        await tonConnectUI.sendTransaction({ 
-            validUntil: Math.floor(Date.now()/1000)+600, 
-            messages: [{ address: "UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP", amount: Math.floor(tonAmount*1000000000).toString(), payload: null }] 
-        });
-        document.getElementById('deposit-loader').classList.add('active'); 
-        closeModal('deposit-modal');
-        let int = setInterval(async () => {
-            let r = await fetch(`${BACKEND_URL}/api/check-payment-status`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ order_id:orderId }) });
-            let d = await r.json();
-            if(d.status==='completed') { clearInterval(int); document.getElementById('deposit-loader').classList.remove('active'); showToast(`🎉 +${d.stars}⭐!`); updateBalance(); loadUserStats(); }
-        }, 4000);
-    } catch(e) { showToast('Cancelled'); }
-}
-
-function processStarsDeposit() { 
-    fetch(`${BACKEND_URL}/api/create-invoice`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ telegram_id:user.telegram_id, amount:document.getElementById('dep-stars-amount').value }) })
-        .then(r=>r.json()).then(d=>{ if(d.success) tg.openInvoice(d.invoice_link, (status)=>{ if(status==='paid') { showToast('Пополнение успешно!'); closeModal('deposit-modal'); updateBalance(); } }); }); 
-}
-
-// ========== NFT МАРКЕТ ==========
-async function loadMarketItems() {
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/gifts/market`);
-        const data = await res.json();
-        const container = document.getElementById('market-list');
-        const empty = document.getElementById('empty-market');
-        
-        const items = data.success ? data.lots : [];
-        
-        if (!items.length) {
-            container.innerHTML = '';
-            empty.style.display = 'block';
+    
+    async function submitWithdraw() {
+        let asset = document.getElementById("withdrawAsset").value;
+        let amount = parseInt(document.getElementById("withdrawAmount").value);
+        if (!amount || amount < 100) {
+            showToast("❌ Минимальная сумма 100⭐");
             return;
         }
-        
-        empty.style.display = 'none';
-        container.innerHTML = items.map(item => {
-            return `
-                <div class="nft-card" onclick="openBuyModal(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.price})">
-                    <img src="${item.image_url || 'https://picsum.photos/seed/'+item.nft_id+'/200/200'}" class="nft-image" onerror="this.src='img/nfttoy.png'">
-                    <div class="nft-name">${item.name}</div>
-                    <div class="nft-price">⭐ ${item.price}</div>
-                    <div style="font-size:10px; color:#666; padding:0 8px 8px;">Продавец: ${item.seller_name}</div>
-                    <button class="btn-main btn-gold" style="margin:8px; width:calc(100% - 16px); padding:8px;" onclick="event.stopPropagation(); openBuyModal(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.price})">Купить</button>
-                </div>
-            `;
-        }).join('');
-    } catch(e) { console.error(e); }
-}
-
-async function loadInventory() {
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/nft/inventory/${user.telegram_id}`);
-        const data = await res.json();
-        const container = document.getElementById('inventory-list');
-        const profileContainer = document.getElementById('profile-inventory-list');
-        const empty = document.getElementById('empty-inventory');
-        const profileEmpty = document.getElementById('profile-empty-inventory');
-        
-        let items = data.success ? data.inventory : [];
-        
-        const html = items.map(item => {
-            return `
-                <div class="nft-card">
-                    <img src="${item.image_url || 'https://picsum.photos/seed/'+item.nft_id+'/200/200'}" class="nft-image" onerror="this.src='img/nfttoy.png'">
-                    <div class="nft-name">${item.name}</div>
-                    <div class="nft-price">⭐ ${item.price_stars}</div>
-                    <div style="display:flex; gap:8px; padding:8px;">
-                        <button class="btn-main" style="background:#111; font-size:12px; padding:8px;" onclick="openSellModal(${item.id})">💰 Продать</button>
-                        <button class="btn-main" style="background:#111; font-size:12px; padding:8px;" onclick="openWithdrawNftModal(${item.id})">📤 Вывести</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        if (container) {
-            if (!items.length) {
-                container.innerHTML = '';
-                if (empty) empty.style.display = 'block';
-            } else {
-                container.innerHTML = html;
-                if (empty) empty.style.display = 'none';
-            }
+        if (amount > user.stars) {
+            showToast("❌ Недостаточно средств");
+            return;
         }
-        
-        if (profileContainer) {
-            if (!items.length) {
-                profileContainer.innerHTML = '';
-                if (profileEmpty) profileEmpty.style.display = 'block';
-            } else {
-                profileContainer.innerHTML = html;
-                if (profileEmpty) profileEmpty.style.display = 'none';
-            }
+        let wallet = asset === "Stars" ? document.getElementById("withdrawUsername").value : document.getElementById("withdrawWallet").value;
+        if (!wallet) {
+            showToast("❌ Введите адрес кошелька");
+            return;
         }
-    } catch(e) { console.error(e); }
-}
-
-function openSellModal(itemId) {
-    currentSellItem = itemId;
-    openModal('sell-nft-modal');
-    document.getElementById('sell-price').value = '';
-}
-
-async function confirmSellNft() {
-    const price = parseInt(document.getElementById('sell-price').value);
-    if (!price || price < 10) {
-        showToast('Минимальная цена 10⭐');
-        return;
-    }
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/gifts/sell`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ telegramId: user.telegram_id, nftId: currentSellItem, price: price })
+        let r = await fetch(`${BACKEND_URL}/api/withdraw-request`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                telegram_id: user.telegram_id,
+                name: user.name,
+                username: user.username,
+                amount: amount,
+                asset: asset,
+                wallet: wallet
+            })
         });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ Подарок выставлен на продажу!');
-            closeModal('sell-nft-modal');
-            loadMarketItems();
-            loadInventory();
-        } else {
-            showToast(data.error || 'Ошибка продажи');
-        }
-    } catch(e) { showToast('Ошибка сети'); }
-}
-
-function openBuyModal(lotId, name, price) {
-    currentBuyLot = { id: lotId, name: name, price: price };
-    document.getElementById('buy-nft-name').innerHTML = `Подарок: ${name}`;
-    document.getElementById('buy-nft-price').innerHTML = `Цена: ${price}⭐`;
-    openModal('buy-nft-modal');
-}
-
-async function confirmBuyNft() {
-    if (user.stars < currentBuyLot.price) {
-        showToast(`❌ Недостаточно звезд. Нужно ${currentBuyLot.price}⭐`);
-        return;
-    }
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/gifts/buy`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ telegramId: user.telegram_id, lotId: currentBuyLot.id })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast(`✅ Подарок куплен! -${currentBuyLot.price}⭐`);
-            closeModal('buy-nft-modal');
+        let d = await r.json();
+        if (d.success) {
+            showToast("✅ Заявка отправлена!");
+            closeModal("withdraw");
             updateBalance();
-            loadMarketItems();
-            loadInventory();
+            loadUserFinance();
         } else {
-            showToast(data.error || 'Ошибка покупки');
+            showToast("❌ Ошибка отправки");
         }
-    } catch(e) { showToast('Ошибка сети'); }
-}
-
-function openWithdrawNftModal(itemId) {
-    currentWithdrawItem = itemId;
-    if (user.stars < 15) {
-        showToast(`❌ Недостаточно звезд для вывода. Нужно 15⭐`);
-        return;
     }
-    openModal('withdraw-nft-modal');
-}
-
-async function confirmWithdrawNft() {
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/nft/withdraw`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ telegramId: user.telegram_id, inventoryId: currentWithdrawItem })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ Подарок выведен на ваш Telegram-аккаунт!');
-            closeModal('withdraw-nft-modal');
-            updateBalance();
-            loadInventory();
-        } else {
-            showToast(data.error || 'Ошибка вывода');
+    
+    // ========== WALLET CONNECT ==========
+    function connectWallet() {
+        showToast("🚧 В разработке");
+    }
+    
+    // ========== ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ ==========
+    function switchPage(page) {
+        document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+        document.getElementById(`page-${page}`).classList.add("active");
+        if (page === "home") document.querySelector(".nav-item:first-child").classList.add("active");
+        else if (page === "shop") document.querySelectorAll(".nav-item")[1].classList.add("active");
+        else if (page === "inventory") document.querySelectorAll(".nav-item")[2].classList.add("active");
+        else if (page === "leaderboard") document.querySelectorAll(".nav-item")[3].classList.add("active");
+        else if (page === "profile") document.querySelectorAll(".nav-item")[4].classList.add("active");
+        
+        if (page === "mines") buildMinesBoard();
+        if (page === "profile") {
+            loadUserStats();
+            loadUserFinance();
         }
-    } catch(e) { showToast('Ошибка сети'); }
-}
-
-// ========== МИНЫ ==========
-function buildMinesBoard() { 
-    let b=document.getElementById('mines-grid-board'); 
-    b.innerHTML=''; 
-    for(let i=0;i<25;i++) b.innerHTML+=`<div class="mine-tile" id="mine-${i}" onclick="clickMineTile(${i})">?</div>`; 
-}
-
-function handleMinesAction() { 
-    let btn=document.getElementById('mines-action-btn'); 
-    if(currentMinesGameStatus==='idle') { 
-        let amt=parseInt(document.getElementById('mines-bet-amount').value); 
-        if(amt>user.stars){ showToast(`❌ Недостаточно баланса. Нужно ${amt-user.stars}⭐`); return; } 
-        let minesCount = parseInt(document.getElementById('mines-count-select').value);
-        fetch(`${BACKEND_URL}/api/games/mines/start`, { 
-            method:'POST', 
-            headers:{'content-type':'application/json'}, 
-            body:JSON.stringify({ telegram_id:user.telegram_id, amount:amt, minesCount:minesCount }) 
-        }).then(r=>r.json()).then(d=>{ 
-            if(d.success){ 
-                currentMinesGameStatus='playing'; 
-                btn.className="btn-main btn-green"; 
-                btn.innerText="💰 Забрать (0x)"; 
-                buildMinesBoard(); 
-                updateBalance(); 
-                document.getElementById('mines-multiplier').innerHTML = '';
-            } 
-        }); 
-    } else { 
-        fetch(`${BACKEND_URL}/api/games/mines/cashout`, { 
-            method:'POST', 
-            headers:{'content-type':'application/json'}, 
-            body:JSON.stringify({ telegram_id:user.telegram_id }) 
-        }).then(r=>r.json()).then(d=>{ 
-            if(d.success){ 
-                showToast(`🎉 +${d.winAmount}⭐`); 
-                currentMinesGameStatus='idle'; 
-                btn.className="btn-main btn-gold"; 
-                btn.innerText="💣 Новая игра"; 
-                updateBalance(); 
-                document.getElementById('mines-multiplier').innerHTML = '';
-            } 
-        }); 
-    } 
-}
-
-function clickMineTile(i) { 
-    if(currentMinesGameStatus!=='playing') return; 
-    fetch(`${BACKEND_URL}/api/games/mines/reveal`, { 
-        method:'POST', 
-        headers:{'content-type':'application/json'}, 
-        body:JSON.stringify({ telegram_id:user.telegram_id, index:i }) 
-    }).then(r=>r.json()).then(d=>{ 
-        let t=document.getElementById(`mine-${i}`); 
-        if(d.hitMine){ 
-            t.classList.add('blown'); 
-            t.innerText='💣'; 
-            currentMinesGameStatus='idle'; 
-            document.getElementById('mines-action-btn').className="btn-main btn-gold"; 
-            document.getElementById('mines-action-btn').innerText="💣 Новая игра"; 
-            updateBalance(); 
-            showToast('💥 Вы наткнулись на мину!');
-            document.getElementById('mines-multiplier').innerHTML = '';
-        } else { 
-            t.classList.add('safe'); 
-            t.innerText='⭐'; 
-            document.getElementById('mines-action-btn').innerHTML=`💰 Забрать (${d.multiplier}x)`;
-            document.getElementById('mines-multiplier').innerHTML = `Текущий множитель: ${d.multiplier}x`;
-            if(d.win){ 
-                showToast(`🎉 ПОБЕДА! +${d.winAmount}⭐`); 
-                currentMinesGameStatus='idle'; 
-                updateBalance(); 
-                document.getElementById('mines-multiplier').innerHTML = '';
-            } 
-        } 
-    }); 
-}
-
-// ========== РАКЕТА ==========
-let currentRocketBtnState = 'bet';
-function setRocketButtonState(s) { 
-    let b = document.getElementById('rocket-action-btn'); 
-    currentRocketBtnState = s; 
-    if(s==='bet') { b.className="btn-main btn-gold"; b.innerText="💰 Сделать ставку"; b.disabled=false; } 
-    else if(s==='waiting_with_bet') { b.className="btn-main btn-gray"; b.innerText="⏳ Ожидание старта"; b.disabled=true; } 
-    else if(s==='flying') { b.className="btn-main btn-green"; b.innerText="💸 Забрать"; b.disabled=false; } 
-    else { b.className="btn-main btn-gray"; b.innerText="⏳ Ожидание"; b.disabled=true; } 
-}
-
-function handleRocketAction() { 
-    if(currentRocketBtnState==='bet') { 
-        let amt=parseInt(document.getElementById('rocket-bet-amount').value); 
-        if(amt>user.stars) { showToast(`❌ Недостаточно баланса. Нужно ${amt-user.stars}⭐`); return; } 
-        socket.emit('rocket_bet', { telegram_id:user.telegram_id, name:user.name, avatar:user.avatar, amount:amt, autoCashout:document.getElementById('rocket-auto-check').checked, autoCashoutValue:parseFloat(document.getElementById('rocket-auto-val').value) }); 
-        setRocketButtonState('waiting_with_bet'); 
-    } else if(currentRocketBtnState==='flying') { 
-        socket.emit('rocket_cashout', { telegram_id:user.telegram_id }); 
-    } 
-}
-
-function cancelRocketBet() { 
-    socket.emit('cancel_rocket_bet', { telegram_id:user.telegram_id }); 
-}
-
-function updateRocketPlayers(bets) { 
-    let c=document.getElementById('rocket-players-list'); 
-    if(c) c.innerHTML=bets.length?bets.map(x=>`<div class="list-row"><div class="list-user-info"><div class="mini-avatar">${x.avatar?`<img src="${x.avatar}">`:x.name?.charAt(0)||'?'}</div><span>${x.name}</span></div><div>${x.amount}⭐ ${x.cashedOut?`<span style="color:#00cc66;">(${x.multiplier}x)</span>`:'⏳'}</div></div>`).join(''):'<div style="text-align:center; color:#666;">Нет участников</div>'; 
-}
-
-function loadRocketHistory() { 
-    fetch(`${BACKEND_URL}/api/rocket-history`).then(r=>r.json()).then(d=>{ 
-        let c=document.getElementById('rocket-history-list'); 
-        if(c) c.innerHTML=d.map(m=>`<span class="crash-badge">${m}x</span>`).join(''); 
-    }); 
-}
-
-// ========== РУЛЕТКА МУЛЬТИПЛЕЕР ==========
-function handleRouletteBet() { 
-    let amt=parseInt(document.getElementById('roulette-bet-amount').value); 
-    if(amt>user.stars){ showToast(`❌ Недостаточно баланса. Нужно ${amt-user.stars}⭐`); return; } 
-    if(rouletteHasBet){ showToast('❌ Вы уже сделали ставку!'); return; }
-    socket.emit('roulette_bet', { telegram_id:user.telegram_id, name:user.name, avatar:user.avatar, amount:amt }); 
-}
-
-function cancelRouletteBet() { 
-    socket.emit('cancel_roulette_bet', { telegram_id:user.telegram_id }); 
-}
-
-function updateRoulettePlayers(bets) { 
-    let c=document.getElementById('roulette-players-list'); 
-    if(c) c.innerHTML=bets.length?bets.map(x=>`<div class="list-row" style="border-left:4px solid ${x.color||'#FFD700'}"><div class="list-user-info"><div class="mini-avatar">${x.avatar?`<img src="${x.avatar}">`:x.name?.charAt(0)||'?'}</div><span>${x.name}</span></div><span><b>${x.amount}⭐</b></span></div>`).join(''):'<div style="text-align:center; color:#666;">Нет участников</div>'; 
-    rouletteHasBet = bets.some(b=>b.telegram_id===user.telegram_id);
-    document.getElementById('roulette-cancel-btn').style.display=rouletteHasBet?'block':'none';
-}
-
-function drawRoulette(bets,rot=0){ 
-    let c=document.getElementById('roulette-canvas'); 
-    if(!c)return; 
-    let ctx=c.getContext('2d'); 
-    ctx.clearRect(0,0,260,260); 
-    if(!bets||bets.length===0){ 
-        ctx.beginPath(); 
-        ctx.arc(130,130,120,0,2*Math.PI); 
-        ctx.fillStyle='#0d0d0d'; 
-        ctx.fill(); 
-        ctx.strokeStyle='#1a1a1a'; 
-        ctx.stroke(); 
-        return; 
-    } 
-    let total=bets.reduce((a,b)=>a+b.amount,0); 
-    if(total===0)return; 
-    let start=rot; 
-    bets.forEach(b=>{ 
-        let angle=(b.amount/total)*2*Math.PI; 
-        ctx.beginPath(); 
-        ctx.moveTo(130,130); 
-        ctx.arc(130,130,120,start,start+angle); 
-        ctx.fillStyle=b.color||'#FFD700'; 
-        ctx.fill(); 
-        ctx.stroke(); 
-        start+=angle; 
-    }); 
-}
-
-function animateRoulette(bets,winner,prize){ 
-    let start=performance.now(),duration=3000,totalRot=10*Math.PI+Math.random()*2*Math.PI; 
-    function animate(time){ 
-        let elapsed=time-start,progress=Math.min(elapsed/duration,1),ease=1-Math.pow(1-progress,3); 
-        drawRoulette(bets,ease*totalRot); 
-        if(progress<1) requestAnimationFrame(animate); 
-        else { 
-            document.getElementById('roulette-timer-text').innerHTML=`🏆 Победитель: ${winner.name}! +${prize}⭐`; 
-            if(winner.telegram_id===user.telegram_id) showToast(`🎉 ПОБЕДА! +${prize}⭐`); 
-            updateBalance(); 
-            rouletteHasBet=false;
-            document.getElementById('roulette-cancel-btn').style.display='none';
-        } 
-    } 
-    requestAnimationFrame(animate); 
-}
-
-// ========== PVP РУЛЕТКА ==========
-async function placePvpBet(side) {
-    const amount = parseInt(document.getElementById('pvp-bet-amount').value);
-    if (amount > user.stars) {
-        showToast(`❌ Недостаточно баланса. Нужно ${amount-user.stars}⭐`);
-        return;
+        if (page === "leaderboard") loadLeaderboard();
+        if (page === "shop") loadShop();
+        if (page === "inventory") loadInventory();
     }
-    if (!socket || socket.disconnected) {
-        showToast('❌ Нет соединения с сервером');
-        return;
-    }
-    socket.emit('pvp:join', { side: side, amount: amount });
-}
-
-// ========== ПРОФИЛЬ ==========
-function loadUserStats() { 
-    fetch(`${BACKEND_URL}/api/user-stats`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ telegram_id:user.telegram_id })})
-        .then(r=>r.json()).then(d=>{ if(d.success){ document.getElementById('stat-games').innerText=d.games_played||0; document.getElementById('stat-turnover').innerText=d.turnover||0; document.getElementById('stat-wins').innerText=d.wins||0; document.getElementById('stat-wr').innerText=Math.round((d.wins/(d.games_played||1))*100)+'%'; } }); 
-}
-
-function loadUserGamesHistory() { 
-    fetch(`${BACKEND_URL}/api/user-games-history`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ telegram_id:user.telegram_id })})
-        .then(r=>r.json()).then(d=>{ document.getElementById('games-history-list').innerHTML=d.map(g=>`<div class="history-item"><span>${g.game_name}</span><span class="${g.profit>=0?'history-win':'history-loss'}">${g.profit>=0?'+':''}${g.profit}⭐</span></div>`).join('')||'<div style="text-align:center; color:#666;">Нет игр</div>'; }); 
-}
-
-function loadUserFinance() { 
-    fetch(`${BACKEND_URL}/api/user-finance`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ telegram_id:user.telegram_id })})
-        .then(r=>r.json()).then(d=>{ document.getElementById('fin-deposited').innerText=d.deposited||0; document.getElementById('fin-withdrawn').innerText=d.withdrawn||0; document.getElementById('fin-diff').innerText=(d.deposited||0)-(d.withdrawn||0); document.getElementById('fin-balance').innerText=user.stars||0; }); 
-}
-
-function submitWithdraw() { 
-    let asset=document.getElementById('withdraw-asset').value, amt=parseInt(document.getElementById('withdraw-amount').value);
-    if(!amt||amt<100) return showToast('Мин. сумма 100⭐');
-    if(amt>user.stars) return showToast('Недостаточно средств');
-    fetch(`${BACKEND_URL}/api/withdraw-request`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ telegram_id:user.telegram_id, name:user.name, username:user.username, amount:amt, asset:asset, wallet:asset==='Stars'?document.getElementById('withdraw-tg-username').value:document.getElementById('withdraw-wallet').value })})
-        .then(r=>r.json()).then(d=>{ if(d.success) { showToast('✅ Заявка отправлена!'); closeModal('withdraw-modal'); updateBalance(); } }); 
-}
-
-function loadLeaderboard() { 
-    fetch(`${BACKEND_URL}/api/leaderboard`).then(r=>r.json()).then(data=>{ 
-        let podium=document.getElementById('leaderboard-podium'), list=document.getElementById('leaderboard-list');
-        let top3=data.slice(0,3);
-        while(top3.length<3) top3.push({name:'?',avatar:null,turnover:0});
-        podium.innerHTML=`<div class="podium-item podium-2"><div class="podium-avatar">${top3[1]?.avatar?`<img src="${top3[1].avatar}">`:top3[1]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[1]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[1]?.turnover||0}⭐</div><div class="podium-base"></div></div><div class="podium-item podium-1"><div class="podium-avatar">${top3[0]?.avatar?`<img src="${top3[0].avatar}">`:top3[0]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[0]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[0]?.turnover||0}⭐</div><div class="podium-base"></div></div><div class="podium-item podium-3"><div class="podium-avatar">${top3[2]?.avatar?`<img src="${top3[2].avatar}">`:top3[2]?.name?.charAt(0)||'?'}</div><div class="podium-name">${top3[2]?.name?.substring(0,12)||'-'}</div><div class="podium-stars">${top3[2]?.turnover||0}⭐</div><div class="podium-base"></div></div>`;
-        list.innerHTML=data.slice(3).map((u,i)=>`<div class="leaderboard-row"><div class="leaderboard-rank">#${i+4}</div><div class="leaderboard-avatar">${u.avatar?`<img src="${u.avatar}">`:u.name?.charAt(0)||'?'}</div><div class="leaderboard-name">${u.name?.substring(0,20)||'Игрок'}</div><div class="leaderboard-stars">${u.turnover||0}⭐</div></div>`).join('')||'<div style="text-align:center; color:#666;">Нет игроков</div>';
-    }); 
-}
-
-// ========== АДМИН ФУНКЦИИ ==========
-function adminAddStars() { 
-    let t=document.getElementById('admin-target-id').value,a=parseInt(document.getElementById('admin-amount').value); 
-    if(!t||!a){showToast('Заполните поля');return;}
-    fetch(`${BACKEND_URL}/api/admin/add-stars`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t, amount:a })}).then(()=>{showToast('✅ Начислено');updateBalance();}); 
-}
-function adminRemoveStars() { 
-    let t=document.getElementById('admin-target-id').value,a=parseInt(document.getElementById('admin-amount').value); 
-    if(!t||!a){showToast('Заполните поля');return;}
-    fetch(`${BACKEND_URL}/api/admin/remove-stars`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t, amount:a })}).then(()=>{showToast('✅ Списано');updateBalance();}); 
-}
-function adminBanUser() { 
-    let t=document.getElementById('admin-ban-id').value; 
-    if(!t){showToast('Введите ID');return;}
-    fetch(`${BACKEND_URL}/api/admin/ban-user`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t })}).then(()=>showToast('🔨 Забанен')); 
-}
-function adminUnbanUser() { 
-    let t=document.getElementById('admin-ban-id').value; 
-    if(!t){showToast('Введите ID');return;}
-    fetch(`${BACKEND_URL}/api/admin/unban-user`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t })}).then(()=>showToast('🔓 Разбанен')); 
-}
-function adminSendMessage() { 
-    let t=document.getElementById('admin-message-id').value; 
-    let m=document.getElementById('admin-message-text').value; 
-    if(!t||!m){showToast('Заполните поля');return;} 
-    fetch(`${BACKEND_URL}/api/admin/message-user`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t, message:m })}).then(()=>showToast('✅ Сообщение отправлено')); 
-}
-function adminBroadcast() { 
-    let m=document.getElementById('admin-broadcast-text').value; 
-    if(!m){showToast('Введите сообщение');return;} 
-    fetch(`${BACKEND_URL}/api/admin/broadcast`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, message:m })}).then(r=>r.json()).then(d=>showToast(`✅ Рассылка отправлена ${d.sent} пользователям`)); 
-}
-function adminTogglePause() { 
-    fetch(`${BACKEND_URL}/api/admin/toggle-pause`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(r=>r.json()).then(d=>showToast(d.paused?'⏸️ Бот на паузе':'▶️ Бот запущен')); 
-}
-function adminToggleMaintenance() { 
-    fetch(`${BACKEND_URL}/api/admin/maintenance`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(r=>r.json()).then(d=>showToast(d.maintenance?'🔧 Режим обслуживания ВКЛ':'✅ Режим обслуживания ВЫКЛ')); 
-}
-function adminResetUserBalance() { 
-    let t=document.getElementById('admin-reset-id').value; 
-    if(!t){showToast('Введите ID');return;} 
-    if(!confirm(`Сбросить баланс пользователю ${t}?`)) return; 
-    fetch(`${BACKEND_URL}/api/admin/reset-user-balance`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t })}).then(()=>{showToast('✅ Баланс сброшен');updateBalance();}); 
-}
-function adminResetUserTurnover() { 
-    let t=document.getElementById('admin-reset-id').value; 
-    if(!t){showToast('Введите ID');return;} 
-    if(!confirm(`Сбросить оборот пользователю ${t}?`)) return; 
-    fetch(`${BACKEND_URL}/api/admin/reset-user-turnover`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, target_id:t })}).then(()=>showToast('✅ Оборот сброшен')); 
-}
-function adminLoadUsers() { 
-    fetch(`${BACKEND_URL}/api/admin/get-users`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(r=>r.json()).then(users=>{ 
-        document.getElementById('admin-users-list').innerHTML = users.map(u => `<div class="admin-user-item" onclick="copyToClipboard('${u.telegram_id}')"><b>${u.name}</b> | ${u.telegram_id} | ⭐${u.stars} | ${u.banned?'🔴 ЗАБАНЕН':'🟢 АКТИВЕН'}<small> 🎮${u.games_played} 🏆${u.wins}</small></div>`).join('') || 'Нет пользователей'; 
-    }); 
-}
-function adminLoadWithdraws() { 
-    fetch(`${BACKEND_URL}/api/admin/get-withdraw-requests`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(r=>r.json()).then(requests=>{ 
-        document.getElementById('admin-withdraws-list').innerHTML = requests.map(r => `<div class="admin-user-item"><b>${r.name}</b> | ${r.amount} ${r.asset}<br>@${r.username || 'нет username'}<br>💳 ${r.wallet || 'N/A'}<div style="margin-top:5px"><button class="admin-btn admin-btn-green" onclick="adminApproveWithdraw(${r.id})">✅ Одобрить</button> <button class="admin-btn admin-btn-red" onclick="adminRejectWithdraw(${r.id})">❌ Отказать</button></div></div>`).join('') || 'Нет заявок'; 
-    }); 
-}
-function adminApproveWithdraw(id) { 
-    fetch(`${BACKEND_URL}/api/admin/approve-withdraw`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, request_id:id })}).then(()=>{ showToast('✅ Одобрено'); adminLoadWithdraws(); }); 
-}
-function adminRejectWithdraw(id) { 
-    fetch(`${BACKEND_URL}/api/admin/reject-withdraw`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id, request_id:id })}).then(()=>{ showToast('❌ Отказано'); adminLoadWithdraws(); updateBalance(); }); 
-}
-function adminResetLeaderboard() { 
-    if(!confirm('Сбросить лидерборд?')) return; 
-    fetch(`${BACKEND_URL}/api/admin/reset-leaderboard`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(()=>{ showToast('✅ Лидерборд сброшен'); loadLeaderboard(); }); 
-}
-function adminClearWallets() { 
-    if(!confirm('Очистить ВСЕ кошельки пользователей?')) return; 
-    fetch(`${BACKEND_URL}/api/admin/clear-wallets`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(()=>showToast('✅ Все кошельки очищены')); 
-}
-function adminClearAllBalances() { 
-    if(!confirm('⚠️ ОЧИСТИТЬ ВСЕ БАЛАНСЫ?')) return; 
-    fetch(`${BACKEND_URL}/api/admin/clear-all-balances`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(()=>{ showToast('💣 Все балансы очищены'); updateBalance(); loadLeaderboard(); }); 
-}
-function adminResetAdminStats() { 
-    if(!confirm('Сбросить ВАШУ статистику?')) return; 
-    fetch(`${BACKEND_URL}/api/admin/reset-admin-stats`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(()=>{ showToast('👑 Статистика админа сброшена'); updateBalance(); loadUserStats(); }); 
-}
-function adminClearAllData() { 
-    if(!confirm('💀 ПОЛНЫЙ СБРОС БАЗЫ ДАННЫХ? Напишите "RESET" для подтверждения')) return; 
-    let confirmText = prompt('Напишите "RESET" для подтверждения:'); 
-    if(confirmText !== 'RESET') return; 
-    fetch(`${BACKEND_URL}/api/admin/clear-all-data`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ admin_id:user.telegram_id })}).then(()=>{ showToast('💀 База данных очищена'); updateBalance(); loadLeaderboard(); }); 
-}
-
-// Запуск регистрации
-registerUser();
+    
+    // Инициализация
+    buildMinesBoard();
 </script>
 </body>
 </html>
