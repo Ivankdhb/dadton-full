@@ -1,7 +1,7 @@
 {
   "name": "dadton-platform",
   "version": "4.0.0",
-  "description": "DadTon WebApp Casino Platform",
+  "description": "DadTon WebApp Casino Platform with NFT Marketplace & Gift System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "socket.io": "^4.7.5",
+    "ws": "^8.16.0",
     "cors": "^2.8.5",
     "axios": "^1.7.2",
     "pg": "^8.12.0",
@@ -17,6 +17,6 @@
     "dotenv": "^16.4.5"
   },
   "engines": {
-    "node": "20.x"
+    "node": "18.x"
   }
 }
