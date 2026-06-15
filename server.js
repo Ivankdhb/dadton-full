@@ -5,7 +5,6 @@ const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
 const { Pool } = require('pg');
-const { Cell } = require('@ton/core');
 
 const app = express();
 app.use(cors());
@@ -21,6 +20,10 @@ const ADMIN_ID = '1631627984';
 const MERCHANT_WALLET = 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP';
 const TON_API_KEY = '06d6391b22c661acad89e10e47a3ff85eaaa179012354d517460508fbc91dabd';
 
+// Банк-аккаунт в Telegram
+const BANK_ACCOUNT_ID = '7339408064';
+const BANK_USERNAME = '@BankDadTon';
+
 const MIN_BET = 10;
 const ROULETTE_FEE = 0.05;
 
@@ -35,18 +38,26 @@ async function initDatabase() {
     try {
         await client.query(`CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY, telegram_id TEXT UNIQUE, name TEXT, avatar TEXT, username TEXT,
-            stars INTEGER DEFAULT 0, turnover INTEGER DEFAULT 0, games_played INTEGER DEFAULT 0,
+            stars INTEGER DEFAULT 100, turnover INTEGER DEFAULT 0, games_played INTEGER DEFAULT 0,
             wins INTEGER DEFAULT 0, referrer_id TEXT, wallet_address TEXT, banned INTEGER DEFAULT 0
         )`);
         await client.query(`CREATE TABLE IF NOT EXISTS rocket_history (id SERIAL PRIMARY KEY, multiplier REAL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await client.query(`CREATE TABLE IF NOT EXISTS user_finance (id SERIAL PRIMARY KEY, telegram_id TEXT UNIQUE, deposited INTEGER DEFAULT 0, withdrawn INTEGER DEFAULT 0, admin_added INTEGER DEFAULT 0, admin_removed INTEGER DEFAULT 0)`);
         await client.query(`CREATE TABLE IF NOT EXISTS withdraw_requests (id SERIAL PRIMARY KEY, telegram_id TEXT, name TEXT, username TEXT, amount INTEGER, asset TEXT, wallet TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-        await client.query(`CREATE TABLE IF NOT EXISTS referrals_log (id SERIAL PRIMARY KEY, referrer_id TEXT, referred_id TEXT, name TEXT, amount INTEGER, earned INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await client.query(`CREATE TABLE IF NOT EXISTS pending_payments (id SERIAL PRIMARY KEY, telegram_id TEXT NOT NULL, order_id TEXT UNIQUE NOT NULL, amount REAL NOT NULL, stars_amount INTEGER NOT NULL, payload TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, completed_at TIMESTAMP, tx_hash TEXT)`);
         await client.query(`CREATE TABLE IF NOT EXISTS games_history (id SERIAL PRIMARY KEY, telegram_id TEXT, game_type TEXT, game_name TEXT, bet_amount INTEGER, win_amount INTEGER, profit INTEGER, multiplier REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await client.query(`CREATE TABLE IF NOT EXISTS nft_items (id SERIAL PRIMARY KEY, nft_id TEXT UNIQUE, name TEXT, description TEXT, image_url TEXT, rarity TEXT DEFAULT 'COMMON', price_stars INTEGER DEFAULT 100, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await client.query(`CREATE TABLE IF NOT EXISTS user_inventory (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, nft_id TEXT REFERENCES nft_items(nft_id), purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, is_withdrawn BOOLEAN DEFAULT false, withdrawn_at TIMESTAMP, UNIQUE(user_id, nft_id))`);
         await client.query(`CREATE TABLE IF NOT EXISTS market_lots (id SERIAL PRIMARY KEY, nft_id TEXT REFERENCES nft_items(nft_id), seller_id INTEGER REFERENCES users(id), price INTEGER NOT NULL, status TEXT DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, sold_at TIMESTAMP)`);
+        await client.query(`CREATE TABLE IF NOT EXISTS nft_transfers (
+            id SERIAL PRIMARY KEY, 
+            user_id INTEGER REFERENCES users(id),
+            nft_id TEXT,
+            action TEXT,
+            stars_deducted INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
         console.log('✅ База данных готова');
     } catch (err) { console.error(err); } finally { client.release(); }
 }
@@ -54,22 +65,35 @@ initDatabase();
 
 // ========== ВСПОМОГАТЕЛЬНЫЕ ==========
 async function sendTelegramMessage(chatId, text) {
-    try { await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: chatId, text, parse_mode: 'HTML' }); } catch(e) {}
+    try { 
+        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
+            chat_id: chatId, 
+            text, 
+            parse_mode: 'HTML' 
+        }); 
+    } catch(e) { console.error('Telegram send error:', e.message); }
 }
-async function sendGiftNotification(chatId, giftName, senderName) {
-    const text = `🎁 <b>Вам отправили подарок!</b>\n\n📦 Подарок: ${giftName}\n👤 Отправитель: ${senderName}\n\n⭐ Чтобы получить подарок, зайдите в инвентарь!`;
-    try { await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: chatId, text, parse_mode: 'HTML' }); } catch(e) {}
+
+function broadcast(data) { 
+    wss.clients.forEach(c => { 
+        if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(data)); 
+    }); 
 }
-function broadcast(data) { wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(data)); }); }
+
 async function sendUserBalance(tgId) {
     const r = await pool.query("SELECT stars FROM users WHERE telegram_id = $1", [tgId]);
     if (r.rows[0]) {
-        wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN && c.telegram_id === tgId) c.send(JSON.stringify({ type: 'balance_update', stars: r.rows[0].stars })); });
+        wss.clients.forEach(c => { 
+            if (c.readyState === WebSocket.OPEN && c.telegram_id === tgId) 
+                c.send(JSON.stringify({ type: 'balance_update', stars: r.rows[0].stars })); 
+        });
     }
 }
+
 async function saveGameHistory(tgId, type, name, bet, win, profit, mult) {
     await pool.query(`INSERT INTO games_history (telegram_id, game_type, game_name, bet_amount, win_amount, profit, multiplier) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [tgId, type, name, bet, win, profit, mult]);
 }
+
 function generateCrashPoint() {
     const r = Math.random() * 100;
     if (r < 25) return parseFloat((1.05 + Math.random() * 0.15).toFixed(2));
@@ -79,6 +103,139 @@ function generateCrashPoint() {
     if (r < 95) return parseFloat((3.00 + Math.random() * 2.00).toFixed(2));
     return parseFloat((5.00 + Math.random() * 3.00).toFixed(2));
 }
+
+// ========== ВЫВОД NFT В БАНК (списание 15⭐) ==========
+app.post('/api/nft/withdraw-to-bank', async (req, res) => {
+    const { telegram_id, inventoryId } = req.body;
+    
+    try {
+        await pool.query('BEGIN');
+        
+        const user = await pool.query("SELECT id, stars, name, username FROM users WHERE telegram_id = $1", [telegram_id]);
+        if (!user.rows[0]) throw new Error('Пользователь не найден');
+        
+        // Проверяем баланс - нужно 15⭐ для вывода
+        if (user.rows[0].stars < 15) {
+            throw new Error(`Недостаточно звезд для вывода. Нужно 15⭐`);
+        }
+        
+        const nft = await pool.query(`
+            SELECT ui.*, ni.name, ni.image_url, ni.rarity 
+            FROM user_inventory ui 
+            JOIN nft_items ni ON ui.nft_id = ni.nft_id 
+            WHERE ui.id = $1 AND ui.user_id = $2 AND ui.is_withdrawn = false
+        `, [inventoryId, user.rows[0].id]);
+        
+        if (!nft.rows[0]) throw new Error('NFT не найден');
+        
+        // Списание 15⭐ за вывод
+        await pool.query("UPDATE users SET stars = stars - 15 WHERE id = $1", [user.rows[0].id]);
+        
+        // Помечаем как выведенный
+        await pool.query("UPDATE user_inventory SET is_withdrawn = true, withdrawn_at = NOW() WHERE id = $1", [inventoryId]);
+        
+        // Логируем транзакцию
+        await pool.query(`
+            INSERT INTO nft_transfers (user_id, nft_id, action, stars_deducted, status)
+            VALUES ($1, $2, 'withdraw_to_bank', 15, 'completed')
+        `, [user.rows[0].id, nft.rows[0].nft_id]);
+        
+        await pool.query('COMMIT');
+        
+        // Отправляем подтверждение
+        await sendTelegramMessage(telegram_id,
+            `✅ <b>NFT выведен в банк!</b>\n\n` +
+            `📦 Подарок: ${nft.rows[0].name}\n` +
+            `⭐ Списано: 15 звезд\n\n` +
+            `📤 Подарок отправлен на ${BANK_USERNAME}`
+        );
+        
+        res.json({ 
+            success: true, 
+            message: `Подарок "${nft.rows[0].name}" выведен в банк! Списано 15⭐`,
+            nftName: nft.rows[0].name
+        });
+        
+    } catch (e) {
+        await pool.query('ROLLBACK');
+        res.status(400).json({ success: false, error: e.message });
+    }
+});
+
+// ========== ПОЛУЧЕНИЕ NFT ИЗ БАНКА (бесплатно, без списания) ==========
+app.post('/api/nft/receive-from-bank', async (req, res) => {
+    const { telegram_id, nftId } = req.body;
+    
+    try {
+        await pool.query('BEGIN');
+        
+        const user = await pool.query("SELECT id, name FROM users WHERE telegram_id = $1", [telegram_id]);
+        if (!user.rows[0]) throw new Error('Пользователь не найден');
+        
+        // Проверяем, есть ли такой NFT в базе
+        const nft = await pool.query("SELECT * FROM nft_items WHERE nft_id = $1 OR id = $2", [nftId, nftId]);
+        if (!nft.rows[0]) throw new Error('NFT не найден в базе');
+        
+        // Проверяем, нет ли уже такого NFT у пользователя
+        const existing = await pool.query(`
+            SELECT * FROM user_inventory 
+            WHERE user_id = $1 AND nft_id = $2 AND is_withdrawn = false
+        `, [user.rows[0].id, nft.rows[0].nft_id]);
+        
+        if (existing.rows[0]) throw new Error('У вас уже есть этот подарок');
+        
+        // Добавляем NFT в инвентарь пользователя (бесплатно)
+        await pool.query(`
+            INSERT INTO user_inventory (user_id, nft_id, is_withdrawn) 
+            VALUES ($1, $2, false)
+        `, [user.rows[0].id, nft.rows[0].nft_id]);
+        
+        // Логируем получение (без списания)
+        await pool.query(`
+            INSERT INTO nft_transfers (user_id, nft_id, action, stars_deducted, status)
+            VALUES ($1, $2, 'receive_from_bank', 0, 'completed')
+        `, [user.rows[0].id, nft.rows[0].nft_id]);
+        
+        await pool.query('COMMIT');
+        
+        // Уведомляем пользователя
+        await sendTelegramMessage(telegram_id,
+            `🎉 <b>Подарок получен из банка!</b>\n\n` +
+            `📦 Подарок: ${nft.rows[0].name}\n` +
+            `⭐ Списано: 0 звезд\n\n` +
+            `🎁 Подарок добавлен в ваш инвентарь!`
+        );
+        
+        res.json({ 
+            success: true, 
+            message: `Подарок "${nft.rows[0].name}" получен из банка!`,
+            nftName: nft.rows[0].name
+        });
+        
+    } catch (e) {
+        await pool.query('ROLLBACK');
+        res.status(400).json({ success: false, error: e.message });
+    }
+});
+
+// ========== ПОЛУЧИТЬ ИСТОРИЮ ТРАНЗАКЦИЙ С БАНКОМ ==========
+app.post('/api/nft/bank-history', async (req, res) => {
+    const { telegram_id } = req.body;
+    
+    const user = await pool.query("SELECT id FROM users WHERE telegram_id = $1", [telegram_id]);
+    if (!user.rows[0]) return res.json({ success: false, history: [] });
+    
+    const history = await pool.query(`
+        SELECT nt.*, ni.name, ni.image_url, ni.rarity
+        FROM nft_transfers nt
+        JOIN nft_items ni ON nt.nft_id = ni.nft_id
+        WHERE nt.user_id = $1
+        ORDER BY nt.created_at DESC
+        LIMIT 20
+    `, [user.rows[0].id]);
+    
+    res.json({ success: true, history: history.rows });
+});
 
 // ========== РАКЕТА ==========
 let botPaused = false;
@@ -280,54 +437,10 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ========== ОТПРАВКА ПОДАРКОВ ==========
-app.post('/api/gifts/send', async (req, res) => {
-    const { fromTelegramId, toTelegramId, nftId, message } = req.body;
-    
-    try {
-        await pool.query('BEGIN');
-        
-        // Проверяем отправителя
-        const sender = await pool.query("SELECT id, name FROM users WHERE telegram_id = $1", [fromTelegramId]);
-        if (!sender.rows[0]) throw new Error('Отправитель не найден');
-        
-        // Проверяем получателя
-        const receiver = await pool.query("SELECT id, telegram_id FROM users WHERE telegram_id = $1", [toTelegramId]);
-        if (!receiver.rows[0]) throw new Error('Получатель не найден');
-        
-        // Проверяем наличие подарка у отправителя
-        const inventory = await pool.query(`SELECT ui.*, ni.name, ni.price_stars FROM user_inventory ui 
-            JOIN nft_items ni ON ui.nft_id = ni.nft_id 
-            WHERE ui.id = $1 AND ui.user_id = $2 AND ui.is_withdrawn = false`,
-            [nftId, sender.rows[0].id]);
-        
-        if (!inventory.rows[0]) throw new Error('Подарок не найден в инвентаре');
-        
-        // Отправляем подарок (перемещаем в инвентарь получателя)
-        await pool.query("UPDATE user_inventory SET user_id = $1, is_withdrawn = false WHERE id = $2",
-            [receiver.rows[0].id, nftId]);
-        
-        // Отправляем уведомление получателю
-        await sendGiftNotification(receiver.rows[0].telegram_id, inventory.rows[0].name, sender.rows[0].name);
-        
-        await pool.query('COMMIT');
-        
-        res.json({ 
-            success: true, 
-            message: `Подарок "${inventory.rows[0].name}" отправлен пользователю!`,
-            giftName: inventory.rows[0].name
-        });
-        
-    } catch (e) {
-        await pool.query('ROLLBACK');
-        res.status(400).json({ success: false, error: e.message });
-    }
-});
-
 // ========== NFT МАРКЕТ ==========
 app.get('/api/gifts/market', async (req, res) => {
     try {
-        const lots = await pool.query(`SELECT ml.*, ni.name, ni.image_url, ni.rarity, ni.description, u.name as seller_name, u.telegram_id as seller_telegram_id 
+        const lots = await pool.query(`SELECT ml.*, ni.name, ni.image_url, ni.rarity, u.name as seller_name 
             FROM market_lots ml 
             JOIN nft_items ni ON ml.nft_id = ni.nft_id 
             JOIN users u ON ml.seller_id = u.id 
@@ -403,34 +516,6 @@ app.get('/api/nft/inventory/:telegramId', async (req, res) => {
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-app.post('/api/nft/withdraw', async (req, res) => {
-    const { telegramId, inventoryId } = req.body;
-    try {
-        await pool.query('BEGIN');
-        const user = await pool.query("SELECT id, stars, name FROM users WHERE telegram_id = $1 FOR UPDATE", [telegramId]);
-        if (!user.rows[0]) throw new Error('User not found');
-        
-        const item = await pool.query(`SELECT ui.*, ni.name FROM user_inventory ui 
-            JOIN nft_items ni ON ui.nft_id = ni.nft_id 
-            WHERE ui.id = $1 AND ui.user_id = $2 AND ui.is_withdrawn = false FOR UPDATE`, 
-            [inventoryId, user.rows[0].id]);
-        if (!item.rows[0]) throw new Error('Item not found');
-        if (user.rows[0].stars < 15) throw new Error(`Недостаточно звезд. Нужно 15⭐`);
-        
-        await pool.query("UPDATE users SET stars = stars - 15 WHERE id = $1", [user.rows[0].id]);
-        await pool.query("UPDATE user_inventory SET is_withdrawn = true, withdrawn_at = NOW() WHERE id = $1", [inventoryId]);
-        
-        await pool.query('COMMIT');
-        
-        await sendTelegramMessage(telegramId, `✅ Подарок "${item.rows[0].name}" успешно выведен на ваш Telegram-аккаунт!\nСписано: 15⭐`);
-        
-        res.json({ success: true, message: `Подарок "${item.rows[0].name}" выведен на ваш аккаунт!` });
-    } catch (e) { 
-        await pool.query('ROLLBACK'); 
-        res.status(400).json({ success: false, error: e.message }); 
-    }
-});
-
 app.post('/api/admin/add-nft', async (req, res) => {
     if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403);
     const { nft_id, name, description, image_url, rarity, price_stars } = req.body;
@@ -455,42 +540,6 @@ app.post('/api/admin/reset-all', async (req, res) => { if (req.body.admin_id !==
 app.post('/api/admin/reset-leaderboard', async (req, res) => { if (req.body.admin_id !== ADMIN_ID) return res.sendStatus(403); await pool.query("UPDATE users SET turnover=0"); res.json({ success: true }); });
 app.post('/api/admin/pause-bot', (req, res) => { if (req.body.admin_id === ADMIN_ID) { botPaused = true; res.json({ success: true }); } });
 app.post('/api/admin/resume-bot', (req, res) => { if (req.body.admin_id === ADMIN_ID) { botPaused = false; res.json({ success: true }); } });
-
-// ========== TON API ==========
-function parseBocBodyPayload(inMsg) {
-    try {
-        if (!inMsg?.msg_data?.body) return null;
-        const cell = Cell.fromBase64(inMsg.msg_data.body);
-        const slice = cell.beginParse();
-        if (slice.remainingBits >= 32 && slice.loadUint(32) === 0) {
-            const txt = slice.loadStringTail();
-            const m = txt.match(/deposit:(\d+):(\d+)/);
-            if (m) return { telegram_id: m[1] };
-        }
-        return null;
-    } catch (e) { return null; }
-}
-async function checkPendingPayments() {
-    try {
-        const pending = await pool.query("SELECT * FROM pending_payments WHERE status='pending'");
-        if (pending.rows.length === 0) return;
-        const txs = await axios.get(`https://toncenter.com/api/v2/getTransactions`, { params: { address: MERCHANT_WALLET, limit: 30, include_msg_data: true, api_key: TON_API_KEY }, timeout: 10000 });
-        if (!txs.data?.ok) return;
-        for (const pay of pending.rows) {
-            const match = txs.data.result.find(t => { const p = parseBocBodyPayload(t.in_msg); return p && p.telegram_id === pay.telegram_id && parseInt(t.in_msg.value) === pay.amount * 1000000000; });
-            if (match) {
-                await pool.query("BEGIN");
-                await pool.query("UPDATE users SET stars=stars+$1 WHERE telegram_id=$2", [pay.stars_amount, pay.telegram_id]);
-                await pool.query("UPDATE user_finance SET deposited=deposited+$1 WHERE telegram_id=$2", [pay.stars_amount, pay.telegram_id]);
-                await pool.query("UPDATE pending_payments SET status='completed', completed_at=NOW() WHERE id=$1", [pay.id]);
-                await pool.query("COMMIT");
-                await sendTelegramMessage(pay.telegram_id, `✅ Баланс пополнен! Начислено: ${pay.stars_amount} ⭐`);
-                sendUserBalance(pay.telegram_id);
-            }
-        }
-    } catch (e) { console.error(e.message); }
-}
-setInterval(checkPendingPayments, 15000);
 
 // ========== MANIFEST ==========
 app.get('/tonconnect-manifest.json', (req, res) => { res.json({ url: "https://dadton-full.onrender.com", name: "DadTon Casino", iconUrl: "https://dadton-full.onrender.com/icon.png" }); });
