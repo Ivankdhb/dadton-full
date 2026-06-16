@@ -19,7 +19,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function initDB() {
-  // Удаляем старые таблицы с каскадным удалением зависимостей
   await pool.query(`
     DROP TABLE IF EXISTS transactions CASCADE;
     DROP TABLE IF EXISTS withdrawals CASCADE;
@@ -28,7 +27,6 @@ async function initDB() {
     DROP TABLE IF EXISTS users CASCADE;
   `);
 
-  // Создаём таблицы заново с правильными типами
   await pool.query(`
     CREATE TABLE users (
       telegram_id BIGINT PRIMARY KEY,
@@ -84,7 +82,7 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
-  console.log('✅ БД инициализирована (таблицы пересозданы)');
+  console.log('✅ БД инициализирована');
 }
 
 // ── ВСПОМОГАТЕЛЬНЫЕ ─────────────────────────────────────────────────────────
@@ -358,11 +356,19 @@ app.post('/api/poker/start', async (req, res) => {
     const dealerCards = [deck.pop(), deck.pop()];
     const community = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
 
-    pokerSessions[telegram_id] = { bet, deck, playerCards, dealerCards, community, active: true };
+    pokerSessions[telegram_id] = { 
+      bet, 
+      deck, 
+      playerCards, 
+      dealerCards, 
+      community, 
+      active: true,
+      foldRefund: Math.floor(bet / 2) // Запоминаем сумму возврата при фолде
+    };
 
     const user2 = await getUser(telegram_id);
     broadcastTo(telegram_id, { type: 'balance_update', stars: user2.stars });
-    res.json({ success: true, playerCards });
+    res.json({ success: true, playerCards, community });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -374,8 +380,16 @@ app.post('/api/poker/fold', async (req, res) => {
     const session = pokerSessions[telegram_id];
     if (!session || !session.active) return res.status(400).json({ error: 'Нет игры' });
     session.active = false;
+    
+    // Возвращаем половину ставки
+    const refund = session.foldRefund || Math.floor(session.bet / 2);
+    await addStars(telegram_id, refund, 'Возврат при сбросе карт');
+    await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [session.bet - refund, telegram_id]);
+    
     delete pokerSessions[telegram_id];
-    res.json({ result: 'fold', message: 'Ты сбросил карты' });
+    const user = await getUser(telegram_id);
+    broadcastTo(telegram_id, { type: 'balance_update', stars: user.stars });
+    res.json({ success: true, refund });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -395,7 +409,15 @@ app.post('/api/poker/call', async (req, res) => {
     delete pokerSessions[telegram_id];
 
     let result, win = 0;
-    if (playerBest.rank > dealerBest.rank) {
+    
+    // Дилер выигрывает в 60% случаев
+    const dealerWinChance = Math.random() < 0.6;
+    
+    if (dealerWinChance && playerBest.rank <= dealerBest.rank) {
+      // Дилер выиграл
+      await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
+      result = 'lose';
+    } else if (playerBest.rank > dealerBest.rank) {
       win = bet * 2;
       await addStars(telegram_id, win, `Выигрыш в покере x2`);
       await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
@@ -403,6 +425,7 @@ app.post('/api/poker/call', async (req, res) => {
     } else if (playerBest.rank === dealerBest.rank) {
       win = bet;
       await addStars(telegram_id, win, 'Ничья в покере - возврат');
+      await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
       result = 'draw';
     } else {
       await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
@@ -674,6 +697,7 @@ function getRocketBetsList() {
 
 async function rocketLoop() {
   while (true) {
+    // Фаза ожидания - всегда 10 секунд
     rocketState = 'waiting';
     rocketTimer = 10;
     rocketBets = {};
@@ -685,8 +709,7 @@ async function rocketLoop() {
       broadcast({ type: 'rocket_tick', timer: rocketTimer, bets: getRocketBetsList() });
     }
 
-    if (Object.keys(rocketBets).length === 0) continue;
-
+    // Ракета летит ВСЕГДА, даже без ставок
     rocketState = 'flying';
     rocketMultiplier = 1.00;
     rocketCrashPoint = generateCrashPoint();
@@ -699,6 +722,7 @@ async function rocketLoop() {
       await sleep(interval);
       rocketMultiplier = parseFloat((rocketMultiplier + rocketMultiplier * growRate).toFixed(2));
 
+      // Автовывод для игроков
       for (const [tid, bet] of Object.entries(rocketBets)) {
         if (!bet.cashedOut && bet.autoCashout && rocketMultiplier >= bet.autoCashoutValue) {
           await handleRocketCashout(tid, rocketMultiplier);
@@ -708,6 +732,7 @@ async function rocketLoop() {
       broadcast({ type: 'rocket_fly', multiplier: rocketMultiplier, bets: getRocketBetsList() });
     }
 
+    // Краш
     rocketState = 'crashed';
     broadcast({ type: 'rocket_crash', multiplier: rocketCrashPoint });
     crashHistory.unshift(rocketCrashPoint);
@@ -733,11 +758,14 @@ async function handleRocketCashout(telegram_id, multiplier) {
 }
 
 // ── РУЛЕТКА (WebSocket) ─────────────────────────────────────────────────────
-const ROULETTE_SLOTS = [
-  ...Array(14).fill('red'),
-  ...Array(14).fill('blue'),
-  ...Array(2).fill('green')
-];
+// Чередование цветов: зеленый, красный, синий, красный, синий... зеленый
+const ROULETTE_SLOTS = [];
+ROULETTE_SLOTS.push('green'); // первый зеленый сверху
+for (let i = 0; i < 14; i++) {
+  ROULETTE_SLOTS.push('red');
+  ROULETTE_SLOTS.push('blue');
+}
+ROULETTE_SLOTS.push('green'); // последний зеленый снизу
 
 let rouletteState = 'waiting';
 let rouletteTimer = 15;
