@@ -20,7 +20,6 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:70px}
   
-  /* HEADER */
   .header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
   .logo{font-size:20px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
   .header-right{display:flex;align-items:center;gap:10px}
@@ -29,25 +28,21 @@
   .balance-chip{background:var(--bg3);border:1px solid var(--border2);padding:7px 12px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:600;transition:all .2s}
   .balance-chip:active{background:var(--bg4)}
 
-  /* BOTTOM NAV */
   .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:200}
   .nav-btn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--text3);font-size:11px;transition:color .2s}
   .nav-btn.active{color:var(--gold)}
   .nav-btn svg{width:22px;height:22px}
 
-  /* PAGES */
   .page{display:none;padding:16px;min-height:calc(100vh - 120px)}
   .page.active{display:block}
 
-  /* CARDS */
-  .game-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;active-scale:.98}
+  .game-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s}
   .game-card:active{background:var(--bg3);transform:scale(.99)}
   .game-card-left{display:flex;flex-direction:column;gap:4px}
   .game-card-title{font-size:18px;font-weight:700}
   .game-card-sub{font-size:12px;color:var(--text2)}
   .game-card-icon{font-size:36px}
 
-  /* BUTTONS */
   .btn{padding:12px 20px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
   .btn:active{transform:scale(.97)}
   .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000}
@@ -57,22 +52,18 @@
   .btn-full{width:100%}
   .btn-sm{padding:8px 14px;font-size:12px}
 
-  /* INPUTS */
   .input{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;width:100%;outline:none;transition:border .2s}
   .input:focus{border-color:var(--gold)}
 
-  /* SECTIONS */
   .section-title{font-size:16px;font-weight:700;margin-bottom:12px;color:var(--text)}
   .row{display:flex;gap:8px}
   .col{display:flex;flex-direction:column;gap:8px}
   .label{font-size:12px;color:var(--text2);margin-bottom:4px}
 
-  /* QUICK BTNS */
   .quick-btns{display:flex;gap:6px;flex-wrap:wrap}
   .qbtn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;transition:all .2s}
   .qbtn:active{background:var(--bg4);color:var(--gold)}
 
-  /* ───── РАКЕТА ──────────────────────────────────────────────────────── */
   .rocket-video-wrap{position:relative;background:var(--bg2);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;height:200px;display:flex;align-items:center;justify-content:center}
   .rocket-video-wrap video{width:100%;height:100%;object-fit:cover;opacity:.6}
   .rocket-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
@@ -98,7 +89,6 @@
   .p-status.won{color:#4ade80}
   .p-status.waiting{color:var(--text3)}
 
-  /* ───── МИНЫ ──────────────────────────────────────────────────────────── */
   .mines-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0}
   .mine-cell{aspect-ratio:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:all .2s;user-select:none}
   .mine-cell:active{transform:scale(.94)}
@@ -108,10 +98,9 @@
   .mines-mult{text-align:center;font-size:24px;font-weight:800;color:var(--gold);margin:8px 0}
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 
-  /* ───── РУЛЕТКА ───────────────────────────────────────────────────────── */
   .roulette-wheel-wrap{margin:0 auto 16px;width:180px;height:180px;position:relative}
-  .roulette-wheel{width:180px;height:180px;border-radius:50%;position:relative;overflow:hidden;border:3px solid var(--border2);transition:transform 3s cubic-bezier(.2,.8,.3,1)}
-  .roulette-arrow{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:20px;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+  .roulette-wheel{width:180px;height:180px;border-radius:50%;position:relative;overflow:hidden;border:3px solid var(--border2);transition:transform 4s cubic-bezier(.2,.8,.3,1)}
+  .roulette-arrow{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:28px;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
   .roulette-result{text-align:center;font-size:18px;font-weight:800;margin-bottom:8px;min-height:28px}
   .roulette-result.red{color:var(--red)}
   .roulette-result.blue{color:#60a5fa}
@@ -124,8 +113,7 @@
   .color-bet-btn.green-btn{background:#0d2b0d;border-color:#1d7f1d;color:#4ade80}
   .color-bet-btn.selected{border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.3)}
 
-  /* ───── ПОКЕР ─────────────────────────────────────────────────────────── */
-  .poker-table{background:#0d2b1a;border:2px solid #14532d;border-radius:16px;padding:20px;margin-bottom:16px;text-align:center}
+  .poker-table{background:#0d2b1a;border:2px solid #14532d;border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;position:relative}
   .card-row{display:flex;justify-content:center;gap:8px;margin:8px 0}
   .playing-card{width:52px;height:76px;background:#fff;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;font-weight:900;border:2px solid #ddd;box-shadow:0 2px 8px rgba(0,0,0,.4)}
   .playing-card.red-suit{color:var(--red)}
@@ -140,7 +128,20 @@
   .poker-result.lose{background:#2b0d0d;color:var(--red)}
   .poker-result.draw{background:#1a1a0d;color:var(--gold)}
 
-  /* ───── ЛИДЕРБОРД ─────────────────────────────────────────────────────── */
+  /* Кнопка информации о комбинациях */
+  .poker-info-btn{position:absolute;top:8px;right:12px;font-size:20px;cursor:pointer;color:var(--text3);background:none;border:none;transition:color .2s}
+  .poker-info-btn:hover,.poker-info-btn:active{color:var(--gold)}
+
+  /* Модалка комбинаций */
+  .combos-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:600;align-items:center;justify-content:center;padding:20px}
+  .combos-overlay.active{display:flex}
+  .combos-modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto}
+  .combos-title{font-size:18px;font-weight:800;margin-bottom:12px;color:var(--gold);text-align:center}
+  .combo-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .combo-item:last-child{border-bottom:none}
+  .combo-rank{font-weight:700;color:var(--text)}
+  .combo-desc{color:var(--text2);text-align:right;font-size:12px}
+
   .podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:24px}
   .podium-item{flex:1;max-width:110px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
   .podium-avatar{border-radius:50%;object-fit:cover;border:3px solid;background:var(--bg3)}
@@ -163,7 +164,6 @@
   .lb-user{font-size:11px;color:var(--text3)}
   .lb-amount{font-size:14px;font-weight:700;color:var(--gold)}
 
-  /* ───── ПРОФИЛЬ ───────────────────────────────────────────────────────── */
   .profile-header{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
   .profile-avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);background:var(--bg3)}
   .profile-name{font-size:18px;font-weight:800}
@@ -188,7 +188,6 @@
   .tx-amount.minus{color:var(--red)}
   .tx-date{font-size:11px;color:var(--text3);margin-top:2px}
 
-  /* ───── МАРКЕТ ────────────────────────────────────────────────────────── */
   .market-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .nft-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .2s}
   .nft-card:active{transform:scale(.98)}
@@ -199,7 +198,6 @@
   .nft-price{font-size:14px;font-weight:800;color:var(--gold);margin-bottom:8px}
   .inventory-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 
-  /* ───── МОДАЛЫ ────────────────────────────────────────────────────────── */
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:flex-end;justify-content:center}
   .modal-overlay.active{display:flex}
   .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:20px;max-height:90vh;overflow-y:auto}
@@ -210,11 +208,9 @@
   .modal-tab-content{display:none}
   .modal-tab-content.active{display:block}
 
-  /* ───── ADMIN ─────────────────────────────────────────────────────────── */
   .admin-section{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
   .admin-section-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
 
-  /* ───── УТИЛИТЫ ───────────────────────────────────────────────────────── */
   .divider{height:1px;background:var(--border);margin:12px 0}
   .text-center{text-align:center}
   .text-gold{color:var(--gold)}
@@ -428,6 +424,7 @@
 <div id="page-poker" class="page">
   <div class="page-back" onclick="showPage('home')">← Назад</div>
   <div class="poker-table">
+    <button class="poker-info-btn" onclick="toggleCombos()">❗</button>
     <div class="card-label">Дилер</div>
     <div class="card-row" id="dealer-cards">
       <div class="playing-card hidden">🂠</div>
@@ -468,8 +465,25 @@
   </div>
 
   <div id="poker-actions" class="row hidden">
-    <button class="btn btn-dark btn-full" onclick="pokerFold()">❌ Сбросить</button>
+    <button class="btn btn-dark btn-full" onclick="pokerFold()">❌ Сбросить (возврат ½)</button>
     <button class="btn btn-gold btn-full" onclick="pokerCall()">✅ Ставить</button>
+  </div>
+</div>
+
+<!-- MODAL: КОМБИНАЦИИ ПОКЕРА -->
+<div class="combos-overlay" id="combos-overlay" onclick="toggleCombos()">
+  <div class="combos-modal" onclick="event.stopPropagation()">
+    <div class="combos-title">🃏 Комбинации в покере</div>
+    <div class="combo-item"><span class="combo-rank">8️⃣ Стрит-флеш</span><span class="combo-desc">5 карт одной масти по порядку</span></div>
+    <div class="combo-item"><span class="combo-rank">7️⃣ Каре</span><span class="combo-desc">4 карты одного ранга</span></div>
+    <div class="combo-item"><span class="combo-rank">6️⃣ Фулл-хаус</span><span class="combo-desc">Тройка + пара</span></div>
+    <div class="combo-item"><span class="combo-rank">5️⃣ Флеш</span><span class="combo-desc">5 карт одной масти</span></div>
+    <div class="combo-item"><span class="combo-rank">4️⃣ Стрит</span><span class="combo-desc">5 карт по порядку (разные масти)</span></div>
+    <div class="combo-item"><span class="combo-rank">3️⃣ Тройка</span><span class="combo-desc">3 карты одного ранга</span></div>
+    <div class="combo-item"><span class="combo-rank">2️⃣ Две пары</span><span class="combo-desc">2 пары карт одного ранга</span></div>
+    <div class="combo-item"><span class="combo-rank">1️⃣ Пара</span><span class="combo-desc">2 карты одного ранга</span></div>
+    <div class="combo-item"><span class="combo-rank">0️⃣ Старшая карта</span><span class="combo-desc">Нет комбинации</span></div>
+    <button class="btn btn-dark btn-full mt8" onclick="toggleCombos()">Закрыть</button>
   </div>
 </div>
 
@@ -578,7 +592,7 @@
   <div class="modal" onclick="e=>e.stopPropagation()">
     <div class="modal-title">💎 Пополнение</div>
     <div class="modal-tabs">
-      <div class="modal-tab active" onclick="switchDepositTab('ton')">💎 Крипта</div>
+      <div class="modal-tab active" onclick="switchDepositTab('ton')">💎 TON</div>
       <div class="modal-tab" onclick="switchDepositTab('stars')">⭐ Stars</div>
     </div>
     <div id="deposit-ton" class="modal-tab-content active">
@@ -615,6 +629,7 @@
     <select class="select mb8" id="withdraw-currency">
       <option value="TON">💎 TON</option>
       <option value="USDT">💵 USDT</option>
+      <option value="STARS">⭐ Stars</option>
     </select>
     <div class="label">Сумма (⭐)</div>
     <div class="quick-btns mb8">
@@ -1005,16 +1020,12 @@ async function openMineCell(index) {
 
 // ── ROULETTE ──────────────────────────────────────────────────────────────────
 function buildRouletteWheel() {
-  // Чередование: красный-синий-красный-синий... и по одному зеленому сверху и снизу
-  const slots = [];
-  // Добавляем зеленый сверху
-  slots.push('green');
-  // 14 красных и 14 синих чередуются
+  // Чередование: зеленый сверху, красный-синий, зеленый снизу
+  const slots = ['green'];
   for (let i = 0; i < 14; i++) {
     slots.push('red');
     slots.push('blue');
   }
-  // Добавляем зеленый снизу
   slots.push('green');
   
   const total = slots.length;
@@ -1044,10 +1055,8 @@ function handleRouletteTick(msg) {
 }
 
 function handleRouletteRoll(msg) {
-  const colors = { red: '#e63946', blue: '#60a5fa', green: '#4ade80' };
   const labels = { red: '🔴 Красный', blue: '🔵 Синий', green: '🟢 Зелёный' };
   const wheel = document.getElementById('roulette-svg');
-  // Плавное вращение - случайный угол + несколько оборотов
   const deg = Math.random() * 360 + 1440 + 720;
   wheel.style.transition = 'transform 4s cubic-bezier(0.2, 0.8, 0.3, 1)';
   wheel.style.transform = `rotate(${deg}deg)`;
@@ -1058,7 +1067,6 @@ function handleRouletteRoll(msg) {
     if (msg.winner && String(msg.winner.telegram_id) === String(user?.telegram_id)) {
       toast(`🎉 Победа! +${msg.prize}⭐`, 'green');
     }
-    // Сбрасываем transition для следующего вращения
     setTimeout(() => {
       wheel.style.transition = 'none';
       wheel.style.transform = `rotate(${deg % 360}deg)`;
@@ -1108,6 +1116,10 @@ function makeCardHTML(card, size = '') {
   </div>`;
 }
 
+function toggleCombos() {
+  document.getElementById('combos-overlay').classList.toggle('active');
+}
+
 async function pokerStart() {
   if (!user) return toast('Войдите в аккаунт');
   const bet = parseInt(document.getElementById('poker-bet').value);
@@ -1115,9 +1127,7 @@ async function pokerStart() {
   if (bet > stars) return toast('Недостаточно звёзд');
   try {
     const r = await api('/api/poker/start', 'POST', { telegram_id: user.telegram_id, bet });
-    // Показываем свои карты и общий стол сразу
     document.getElementById('player-cards').innerHTML = r.playerCards.map(c => makeCardHTML(c)).join('');
-    // Показываем 5 карт на столе (рубашкой вниз)
     document.getElementById('community-cards').innerHTML = r.community.map(c => makeCardHTML(c, 'community-card')).join('');
     document.getElementById('dealer-cards').innerHTML = '<div class="playing-card hidden">🂠</div><div class="playing-card hidden">🂠</div>';
     document.getElementById('player-hand').textContent = '';
@@ -1134,7 +1144,6 @@ async function pokerFold() {
   if (!pokerActive) return;
   try {
     const r = await api('/api/poker/fold', 'POST', { telegram_id: user.telegram_id });
-    // Возвращаем половину ставки
     const bet = parseInt(document.getElementById('poker-bet').value);
     const refund = Math.floor(bet / 2);
     toast(`❌ Сброшено. Возврат ${refund}⭐`, 'yellow');
@@ -1146,7 +1155,6 @@ async function pokerCall() {
   if (!pokerActive) return;
   try {
     const r = await api('/api/poker/call', 'POST', { telegram_id: user.telegram_id });
-    // Показываем карты дилера
     document.getElementById('dealer-cards').innerHTML = r.dealerCards.map(c => makeCardHTML(c)).join('');
     document.getElementById('dealer-hand').textContent = r.dealerHand;
     document.getElementById('player-hand').textContent = r.playerHand;
@@ -1338,13 +1346,7 @@ function copyRef() {
 
 // ── DEPOSIT ───────────────────────────────────────────────────────────────────
 function openDeposit() { 
-  // Проверяем, есть ли Telegram WebApp
-  if (tg) {
-    // Открываем модалку через Telegram Stars
-    openModal('modal-deposit');
-  } else {
-    toast('Открой через Telegram', 'red');
-  }
+  openModal('modal-deposit');
 }
 
 function switchDepositTab(tab) {
@@ -1370,7 +1372,6 @@ document.getElementById('deposit-ton-amount').addEventListener('input', function
 async function payTon() {
   const amount = parseFloat(document.getElementById('deposit-ton-amount').value);
   if (!amount || amount <= 0) return toast('Укажи сумму');
-  // TonConnect payment
   try {
     if (window.tonConnectUI) {
       const tx = {
@@ -1382,7 +1383,6 @@ async function payTon() {
         }]
       };
       await window.tonConnectUI.sendTransaction(tx);
-      // После успешной оплаты зачисляем звёзды
       await api('/api/deposit/ton', 'POST', { telegram_id: user?.telegram_id, amount_ton: amount });
       closeModal('modal-deposit');
       toast(`✅ Зачислено ${Math.floor(amount * 100)}⭐!`, 'green');
@@ -1397,7 +1397,6 @@ async function payTon() {
 async function payStars() {
   const amount = parseInt(document.getElementById('deposit-stars-amount').value);
   if (!amount || amount < 50) return toast('Минимум 50 Stars');
-  // Открываем Telegram Stars Invoice через WebApp
   if (tg) {
     tg.openInvoice(`https://t.me/DadTonBot?start=stars_${user?.telegram_id}_${amount}`, (status) => {
       if (status === 'paid') {
@@ -1421,7 +1420,7 @@ async function doWithdraw() {
   const currency = document.getElementById('withdraw-currency').value;
   const address = document.getElementById('withdraw-addr').value.trim();
   if (!amount || amount < 100) return toast('Минимум 100⭐');
-  if (!address) return toast('Укажи адрес кошелька');
+  if (!address && currency !== 'STARS') return toast('Укажи адрес кошелька');
   if (amount > stars) return toast('Недостаточно звёзд');
   try {
     await api('/api/withdraw', 'POST', { telegram_id: user.telegram_id, amount, currency, address });
