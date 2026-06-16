@@ -320,20 +320,24 @@ function makeDeck() {
 function rankValue(r) { return RANKS.indexOf(r); }
 
 function evaluateHand(cards) {
+  // cards: 5 карт
   const rv = cards.map(c => rankValue(c.r)).sort((a,b)=>b-a);
   const suits = cards.map(c => c.s);
   const flush = suits.every(s => s === suits[0]);
   const unique = [...new Set(rv)];
   const counts = unique.map(v => rv.filter(x=>x===v).length).sort((a,b)=>b-a);
-  const straight = unique.length === 5 && (rv[0]-rv[4] === 4 || (rv[0]===12&&rv[1]===3));
+  const straight = unique.length === 5 && (rv[0]-rv[4] === 4 || (rv[0]===12 && rv[1]===3 && rv[2]===2 && rv[3]===1 && rv[4]===0));
+  
+  // Стрит с тузом как младшей картой (A,2,3,4,5)
+  const straightLow = unique.length === 5 && rv[0]===12 && rv[1]===3 && rv[2]===2 && rv[3]===1 && rv[4]===0;
 
-  if (flush && straight) return { rank: 8, name: 'Стрит-флеш' };
+  if (flush && (straight || straightLow)) return { rank: 8, name: 'Стрит-флеш' };
   if (counts[0]===4) return { rank: 7, name: 'Каре' };
-  if (counts[0]===3&&counts[1]===2) return { rank: 6, name: 'Фулл-хаус' };
+  if (counts[0]===3 && counts[1]===2) return { rank: 6, name: 'Фулл-хаус' };
   if (flush) return { rank: 5, name: 'Флеш' };
-  if (straight) return { rank: 4, name: 'Стрит' };
+  if (straight || straightLow) return { rank: 4, name: 'Стрит' };
   if (counts[0]===3) return { rank: 3, name: 'Тройка' };
-  if (counts[0]===2&&counts[1]===2) return { rank: 2, name: 'Две пары' };
+  if (counts[0]===2 && counts[1]===2) return { rank: 2, name: 'Две пары' };
   if (counts[0]===2) return { rank: 1, name: 'Пара' };
   return { rank: 0, name: 'Старшая карта' };
 }
@@ -363,7 +367,7 @@ app.post('/api/poker/start', async (req, res) => {
       dealerCards, 
       community, 
       active: true,
-      foldRefund: Math.floor(bet / 2) // Запоминаем сумму возврата при фолде
+      foldRefund: Math.floor(bet / 2)
     };
 
     const user2 = await getUser(telegram_id);
@@ -381,7 +385,6 @@ app.post('/api/poker/fold', async (req, res) => {
     if (!session || !session.active) return res.status(400).json({ error: 'Нет игры' });
     session.active = false;
     
-    // Возвращаем половину ставки
     const refund = session.foldRefund || Math.floor(session.bet / 2);
     await addStars(telegram_id, refund, 'Возврат при сбросе карт');
     await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [session.bet - refund, telegram_id]);
@@ -402,24 +405,20 @@ app.post('/api/poker/call', async (req, res) => {
     if (!session || !session.active) return res.status(400).json({ error: 'Нет игры' });
 
     const { playerCards, dealerCards, community, bet } = session;
-    const playerBest = evaluateHand([...playerCards, ...community].slice(0,5));
-    const dealerBest = evaluateHand([...dealerCards, ...community].slice(0,5));
+    
+    // Оцениваем комбинации
+    const playerBest = evaluateHand([...playerCards, ...community]);
+    const dealerBest = evaluateHand([...dealerCards, ...community]);
 
     session.active = false;
     delete pokerSessions[telegram_id];
 
     let result, win = 0;
     
-    // Дилер выигрывает в 60% случаев
-    const dealerWinChance = Math.random() < 0.6;
-    
-    if (dealerWinChance && playerBest.rank <= dealerBest.rank) {
-      // Дилер выиграл
-      await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
-      result = 'lose';
-    } else if (playerBest.rank > dealerBest.rank) {
+    // Сравниваем комбинации
+    if (playerBest.rank > dealerBest.rank) {
       win = bet * 2;
-      await addStars(telegram_id, win, `Выигрыш в покере x2`);
+      await addStars(telegram_id, win, `Выигрыш в покере x2 (${playerBest.name} vs ${dealerBest.name})`);
       await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
       result = 'win';
     } else if (playerBest.rank === dealerBest.rank) {
@@ -679,6 +678,7 @@ let rocketMultiplier = 1.00;
 let rocketCrashPoint = 2.00;
 let rocketBets = {};
 let crashHistory = [];
+let rocketLoopRunning = false;
 
 function generateCrashPoint() {
   const r = Math.random();
@@ -696,8 +696,11 @@ function getRocketBetsList() {
 }
 
 async function rocketLoop() {
+  if (rocketLoopRunning) return;
+  rocketLoopRunning = true;
+  
   while (true) {
-    // Фаза ожидания - всегда 10 секунд
+    // Фаза ожидания
     rocketState = 'waiting';
     rocketTimer = 10;
     rocketBets = {};
@@ -709,7 +712,7 @@ async function rocketLoop() {
       broadcast({ type: 'rocket_tick', timer: rocketTimer, bets: getRocketBetsList() });
     }
 
-    // Ракета летит ВСЕГДА, даже без ставок
+    // Ракета летит ВСЕГДА
     rocketState = 'flying';
     rocketMultiplier = 1.00;
     rocketCrashPoint = generateCrashPoint();
@@ -722,7 +725,7 @@ async function rocketLoop() {
       await sleep(interval);
       rocketMultiplier = parseFloat((rocketMultiplier + rocketMultiplier * growRate).toFixed(2));
 
-      // Автовывод для игроков
+      // Автовывод
       for (const [tid, bet] of Object.entries(rocketBets)) {
         if (!bet.cashedOut && bet.autoCashout && rocketMultiplier >= bet.autoCashoutValue) {
           await handleRocketCashout(tid, rocketMultiplier);
@@ -758,14 +761,14 @@ async function handleRocketCashout(telegram_id, multiplier) {
 }
 
 // ── РУЛЕТКА (WebSocket) ─────────────────────────────────────────────────────
-// Чередование цветов: зеленый, красный, синий, красный, синий... зеленый
+// Чередование: зеленый сверху и зеленый снизу, между ними красный/синий
 const ROULETTE_SLOTS = [];
-ROULETTE_SLOTS.push('green'); // первый зеленый сверху
+ROULETTE_SLOTS.push('green'); // первый зеленый (сверху)
 for (let i = 0; i < 14; i++) {
   ROULETTE_SLOTS.push('red');
   ROULETTE_SLOTS.push('blue');
 }
-ROULETTE_SLOTS.push('green'); // последний зеленый снизу
+ROULETTE_SLOTS.push('green'); // последний зеленый (снизу)
 
 let rouletteState = 'waiting';
 let rouletteTimer = 15;
