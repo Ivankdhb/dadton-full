@@ -19,8 +19,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function initDB() {
+  // Удаляем старые таблицы с каскадным удалением зависимостей
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
+    DROP TABLE IF EXISTS transactions CASCADE;
+    DROP TABLE IF EXISTS withdrawals CASCADE;
+    DROP TABLE IF EXISTS nft_items CASCADE;
+    DROP TABLE IF EXISTS crash_history CASCADE;
+    DROP TABLE IF EXISTS users CASCADE;
+  `);
+
+  // Создаём таблицы заново с правильными типами
+  await pool.query(`
+    CREATE TABLE users (
       telegram_id BIGINT PRIMARY KEY,
       username TEXT,
       first_name TEXT,
@@ -37,9 +47,10 @@ async function initDB() {
       is_banned BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS nft_items (
+
+    CREATE TABLE nft_items (
       id SERIAL PRIMARY KEY,
-      owner_id BIGINT REFERENCES users(telegram_id),
+      owner_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       image_url TEXT NOT NULL,
       gift_id TEXT,
@@ -47,30 +58,33 @@ async function initDB() {
       market_price BIGINT DEFAULT 0,
       acquired_at TIMESTAMPTZ DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS transactions (
+
+    CREATE TABLE transactions (
       id SERIAL PRIMARY KEY,
-      user_id BIGINT REFERENCES users(telegram_id),
+      user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
       type TEXT,
       amount BIGINT,
       comment TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS withdrawals (
+
+    CREATE TABLE withdrawals (
       id SERIAL PRIMARY KEY,
-      user_id BIGINT REFERENCES users(telegram_id),
+      user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
       amount BIGINT,
       currency TEXT,
       address TEXT,
       status TEXT DEFAULT 'pending',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS crash_history (
+
+    CREATE TABLE crash_history (
       id SERIAL PRIMARY KEY,
       multiplier FLOAT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
-  console.log('✅ БД инициализирована');
+  console.log('✅ БД инициализирована (таблицы пересозданы)');
 }
 
 // ── ВСПОМОГАТЕЛЬНЫЕ ─────────────────────────────────────────────────────────
@@ -198,6 +212,18 @@ app.get('/api/crash-history', async (req, res) => {
 });
 
 // ── API: МИНЫ ────────────────────────────────────────────────────────────────
+const minesSessions = {};
+
+function getMinesMultiplier(safe_opened, mines_count) {
+  const total = 25;
+  const safe_total = total - mines_count;
+  let mult = 1;
+  for (let i = 0; i < safe_opened; i++) {
+    mult *= (safe_total - i) / (total - i);
+  }
+  return Math.max(1.04, parseFloat((1 / mult * 0.97).toFixed(2)));
+}
+
 app.post('/api/mines/start', async (req, res) => {
   try {
     const { telegram_id, bet, mines_count } = req.body;
@@ -210,7 +236,6 @@ app.post('/api/mines/start', async (req, res) => {
     await deductStars(telegram_id, bet, 'Ставка в мины');
     await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [telegram_id]);
 
-    // Расстановка мин
     const cells = Array.from({ length: 25 }, (_, i) => i);
     for (let i = cells.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -218,7 +243,6 @@ app.post('/api/mines/start', async (req, res) => {
     }
     const minePositions = new Set(cells.slice(0, mines_count));
 
-    // Сохраняем сессию в памяти
     minesSessions[telegram_id] = {
       bet,
       mines_count,
@@ -233,18 +257,6 @@ app.post('/api/mines/start', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-const minesSessions = {};
-
-function getMinesMultiplier(safe_opened, mines_count) {
-  const total = 25;
-  const safe_total = total - mines_count;
-  let mult = 1;
-  for (let i = 0; i < safe_opened; i++) {
-    mult *= (safe_total - i) / (total - i);
-  }
-  return Math.max(1.04, parseFloat((1 / mult * 0.97).toFixed(2)));
-}
 
 app.post('/api/mines/open', async (req, res) => {
   try {
@@ -310,7 +322,6 @@ function makeDeck() {
 function rankValue(r) { return RANKS.indexOf(r); }
 
 function evaluateHand(cards) {
-  // cards: 5 карт
   const rv = cards.map(c => rankValue(c.r)).sort((a,b)=>b-a);
   const suits = cards.map(c => c.s);
   const flush = suits.every(s => s === suits[0]);
@@ -484,7 +495,6 @@ app.post('/api/inventory/withdraw', async (req, res) => {
     await deductStars(telegram_id, 15, 'Комиссия за вывод NFT');
     await pool.query('DELETE FROM nft_items WHERE id=$1', [nft_id]);
 
-    // Уведомление банку
     const BOT_TOKEN = process.env.BOT_TOKEN;
     const BANK_ID = process.env.BANK_ACCOUNT_ID;
     const item = nft.rows[0];
@@ -640,11 +650,11 @@ app.post('/api/admin/reset-balances', isAdmin, async (req, res) => {
 });
 
 // ── РАКЕТА (WebSocket) ───────────────────────────────────────────────────────
-let rocketState = 'waiting'; // waiting | flying | crashed
+let rocketState = 'waiting';
 let rocketTimer = 10;
 let rocketMultiplier = 1.00;
 let rocketCrashPoint = 2.00;
-let rocketBets = {}; // telegram_id -> { name, avatar, amount, autoCashout, autoCashoutValue, cashedOut }
+let rocketBets = {};
 let crashHistory = [];
 
 function generateCrashPoint() {
@@ -664,7 +674,6 @@ function getRocketBetsList() {
 
 async function rocketLoop() {
   while (true) {
-    // Фаза ожидания
     rocketState = 'waiting';
     rocketTimer = 10;
     rocketBets = {};
@@ -678,7 +687,6 @@ async function rocketLoop() {
 
     if (Object.keys(rocketBets).length === 0) continue;
 
-    // Фаза полёта
     rocketState = 'flying';
     rocketMultiplier = 1.00;
     rocketCrashPoint = generateCrashPoint();
@@ -691,7 +699,6 @@ async function rocketLoop() {
       await sleep(interval);
       rocketMultiplier = parseFloat((rocketMultiplier + rocketMultiplier * growRate).toFixed(2));
 
-      // Автовывод
       for (const [tid, bet] of Object.entries(rocketBets)) {
         if (!bet.cashedOut && bet.autoCashout && rocketMultiplier >= bet.autoCashoutValue) {
           await handleRocketCashout(tid, rocketMultiplier);
@@ -701,7 +708,6 @@ async function rocketLoop() {
       broadcast({ type: 'rocket_fly', multiplier: rocketMultiplier, bets: getRocketBetsList() });
     }
 
-    // Краш
     rocketState = 'crashed';
     broadcast({ type: 'rocket_crash', multiplier: rocketCrashPoint });
     crashHistory.unshift(rocketCrashPoint);
@@ -727,7 +733,6 @@ async function handleRocketCashout(telegram_id, multiplier) {
 }
 
 // ── РУЛЕТКА (WebSocket) ─────────────────────────────────────────────────────
-// Цвета: 2 зелёных (x10), 14 красных (x2), 14 синих (x2)
 const ROULETTE_SLOTS = [
   ...Array(14).fill('red'),
   ...Array(14).fill('blue'),
@@ -736,7 +741,7 @@ const ROULETTE_SLOTS = [
 
 let rouletteState = 'waiting';
 let rouletteTimer = 15;
-let rouletteBets = {}; // telegram_id -> { name, avatar, amount }
+let rouletteBets = {};
 
 function getRouletteTotal() {
   return Object.values(rouletteBets).reduce((s, b) => s + b.amount, 0);
@@ -761,13 +766,11 @@ async function rouletteLoop() {
 
     if (Object.keys(rouletteBets).length === 0) continue;
 
-    // Выбор победного слота
     const winSlot = ROULETTE_SLOTS[Math.floor(Math.random() * ROULETTE_SLOTS.length)];
     const total = getRouletteTotal();
     const fee = Math.floor(total * 0.05);
     const prize = total - fee;
 
-    // Победитель — случайный среди ставящих (вес = сумма ставки)
     const tickets = [];
     for (const [tid, bet] of Object.entries(rouletteBets)) {
       for (let i = 0; i < bet.amount; i++) tickets.push(tid);
@@ -784,7 +787,6 @@ async function rouletteLoop() {
       broadcastTo(winnerTid, { type: 'balance_update', stars: user.stars });
     }
 
-    // Оборот участников
     for (const [tid, bet] of Object.entries(rouletteBets)) {
       await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.amount, tid]);
     }
