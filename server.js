@@ -121,10 +121,18 @@ let rouletteState = {
     total: 0
 };
 
+// Цвета рулетки: чередование с зелеными по краям
 const rouletteColors = [];
-for (let i = 0; i < 14; i++) rouletteColors.push('red');
-for (let i = 0; i < 14; i++) rouletteColors.push('blue');
-for (let i = 0; i < 2; i++) rouletteColors.push('green');
+// Добавляем зеленые по краям
+rouletteColors.push('green');
+rouletteColors.push('green');
+// Чередуем красный и синий
+for (let i = 0; i < 14; i++) {
+    rouletteColors.push(i % 2 === 0 ? 'red' : 'blue');
+}
+// Добавляем зеленые по краям
+rouletteColors.push('green');
+rouletteColors.push('green');
 
 // ===== WEBSOCKET =====
 const wss = new WebSocket.Server({ port: 8080 });
@@ -169,7 +177,8 @@ async function updateStats(telegramId, game, amount, win, multiplier) {
 
 async function getNFTsForSale() {
     const result = await pool.query(
-        `SELECT n.*, u.username as seller_name FROM nft_items n
+        `SELECT n.*, u.username as seller_name, u.avatar as seller_avatar
+         FROM nft_items n
          JOIN users u ON n.seller_id = u.telegram_id
          WHERE n.for_sale = TRUE AND n.owner_id IS NULL
          ORDER BY n.created_at DESC`
@@ -183,6 +192,15 @@ async function getUserNFTs(telegramId) {
         [telegramId]
     );
     return result.rows;
+}
+
+async function addNFT(name, imageUrl, rarity, price, sellerId) {
+    const result = await pool.query(
+        `INSERT INTO nft_items (name, image_url, rarity, price, seller_id, for_sale)
+         VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING *`,
+        [name, imageUrl, rarity, price, sellerId]
+    );
+    return result.rows[0];
 }
 
 async function buyNFT(nftId, buyerId) {
@@ -262,7 +280,7 @@ wss.on('connection', (ws) => {
                 }
                 case 'rocket_bet': {
                     const user = await getUser(data.telegram_id);
-                    if (!user || user.banned || rocketState.status !== 'countdown' && rocketState.status !== 'waiting') {
+                    if (!user || user.banned || (rocketState.status !== 'countdown' && rocketState.status !== 'waiting')) {
                         ws.send(JSON.stringify({ type: 'error', message: 'Ставки недоступны' }));
                         return;
                     }
