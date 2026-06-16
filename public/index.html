@@ -717,6 +717,7 @@ let rouletteColor = null;
 let pokerActive = false;
 let rocketHasBet = false;
 let rocketFlying = false;
+let pokerResultShown = false;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 tg?.expand();
@@ -1004,7 +1005,18 @@ async function openMineCell(index) {
 
 // ── ROULETTE ──────────────────────────────────────────────────────────────────
 function buildRouletteWheel() {
-  const slots = [...Array(14).fill('red'), ...Array(14).fill('blue'), ...Array(2).fill('green')];
+  // Чередование: красный-синий-красный-синий... и по одному зеленому сверху и снизу
+  const slots = [];
+  // Добавляем зеленый сверху
+  slots.push('green');
+  // 14 красных и 14 синих чередуются
+  for (let i = 0; i < 14; i++) {
+    slots.push('red');
+    slots.push('blue');
+  }
+  // Добавляем зеленый снизу
+  slots.push('green');
+  
   const total = slots.length;
   const seg = document.getElementById('roulette-segments');
   seg.innerHTML = '';
@@ -1035,7 +1047,9 @@ function handleRouletteRoll(msg) {
   const colors = { red: '#e63946', blue: '#60a5fa', green: '#4ade80' };
   const labels = { red: '🔴 Красный', blue: '🔵 Синий', green: '🟢 Зелёный' };
   const wheel = document.getElementById('roulette-svg');
-  const deg = Math.random() * 360 + 1440;
+  // Плавное вращение - случайный угол + несколько оборотов
+  const deg = Math.random() * 360 + 1440 + 720;
+  wheel.style.transition = 'transform 4s cubic-bezier(0.2, 0.8, 0.3, 1)';
   wheel.style.transform = `rotate(${deg}deg)`;
   setTimeout(() => {
     const res = document.getElementById('roulette-result');
@@ -1044,7 +1058,12 @@ function handleRouletteRoll(msg) {
     if (msg.winner && String(msg.winner.telegram_id) === String(user?.telegram_id)) {
       toast(`🎉 Победа! +${msg.prize}⭐`, 'green');
     }
-  }, 3100);
+    // Сбрасываем transition для следующего вращения
+    setTimeout(() => {
+      wheel.style.transition = 'none';
+      wheel.style.transform = `rotate(${deg % 360}deg)`;
+    }, 100);
+  }, 4100);
 }
 
 function renderRouletteParticipants(bets) {
@@ -1096,31 +1115,41 @@ async function pokerStart() {
   if (bet > stars) return toast('Недостаточно звёзд');
   try {
     const r = await api('/api/poker/start', 'POST', { telegram_id: user.telegram_id, bet });
+    // Показываем свои карты и общий стол сразу
     document.getElementById('player-cards').innerHTML = r.playerCards.map(c => makeCardHTML(c)).join('');
+    // Показываем 5 карт на столе (рубашкой вниз)
+    document.getElementById('community-cards').innerHTML = r.community.map(c => makeCardHTML(c, 'community-card')).join('');
     document.getElementById('dealer-cards').innerHTML = '<div class="playing-card hidden">🂠</div><div class="playing-card hidden">🂠</div>';
-    document.getElementById('community-cards').innerHTML = Array(5).fill('<div class="playing-card community-card hidden">🂠</div>').join('');
     document.getElementById('player-hand').textContent = '';
     document.getElementById('dealer-hand').textContent = '';
     document.getElementById('poker-result-wrap').classList.add('hidden');
     document.getElementById('poker-bet-wrap').classList.add('hidden');
     document.getElementById('poker-actions').classList.remove('hidden');
     pokerActive = true;
+    pokerResultShown = false;
   } catch(e) { toast(e.message, 'red'); }
 }
 
 async function pokerFold() {
-  await api('/api/poker/fold', 'POST', { telegram_id: user.telegram_id });
-  toast('Карты сброшены');
-  resetPoker();
+  if (!pokerActive) return;
+  try {
+    const r = await api('/api/poker/fold', 'POST', { telegram_id: user.telegram_id });
+    // Возвращаем половину ставки
+    const bet = parseInt(document.getElementById('poker-bet').value);
+    const refund = Math.floor(bet / 2);
+    toast(`❌ Сброшено. Возврат ${refund}⭐`, 'yellow');
+    resetPoker();
+  } catch(e) { toast(e.message, 'red'); }
 }
 
 async function pokerCall() {
+  if (!pokerActive) return;
   try {
     const r = await api('/api/poker/call', 'POST', { telegram_id: user.telegram_id });
+    // Показываем карты дилера
     document.getElementById('dealer-cards').innerHTML = r.dealerCards.map(c => makeCardHTML(c)).join('');
-    document.getElementById('community-cards').innerHTML = r.community.map(c => makeCardHTML(c, 'community-card')).join('');
-    document.getElementById('player-hand').textContent = r.playerHand;
     document.getElementById('dealer-hand').textContent = r.dealerHand;
+    document.getElementById('player-hand').textContent = r.playerHand;
 
     const wrap = document.getElementById('poker-result-wrap');
     wrap.classList.remove('hidden');
@@ -1129,6 +1158,7 @@ async function pokerCall() {
     document.getElementById('poker-actions').classList.add('hidden');
     document.getElementById('poker-bet-wrap').classList.remove('hidden');
     pokerActive = false;
+    pokerResultShown = true;
   } catch(e) { toast(e.message, 'red'); }
 }
 
@@ -1232,7 +1262,7 @@ async function loadLeaderboard() {
     const rest = data.slice(3);
 
     const podium = document.getElementById('podium');
-    const order = [1, 0, 2]; // Серебро, Золото, Бронза
+    const order = [1, 0, 2];
     const classes = ['second', 'first', 'third'];
     const ranks = ['🥈', '🥇', '🥉'];
     const heights = [60, 80, 48];
@@ -1307,7 +1337,15 @@ function copyRef() {
 }
 
 // ── DEPOSIT ───────────────────────────────────────────────────────────────────
-function openDeposit() { openModal('modal-deposit'); }
+function openDeposit() { 
+  // Проверяем, есть ли Telegram WebApp
+  if (tg) {
+    // Открываем модалку через Telegram Stars
+    openModal('modal-deposit');
+  } else {
+    toast('Открой через Telegram', 'red');
+  }
+}
 
 function switchDepositTab(tab) {
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
@@ -1359,14 +1397,20 @@ async function payTon() {
 async function payStars() {
   const amount = parseInt(document.getElementById('deposit-stars-amount').value);
   if (!amount || amount < 50) return toast('Минимум 50 Stars');
-  // Telegram Stars invoice
-  tg?.openInvoice(`https://t.me/DadTonBot?start=stars_${user?.telegram_id}_${amount}`, (status) => {
-    if (status === 'paid') {
-      api('/api/deposit/ton', 'POST', { telegram_id: user?.telegram_id, amount_ton: amount / 100 });
-      closeModal('modal-deposit');
-      toast(`✅ Зачислено ${amount}⭐!`, 'green');
-    }
-  });
+  // Открываем Telegram Stars Invoice через WebApp
+  if (tg) {
+    tg.openInvoice(`https://t.me/DadTonBot?start=stars_${user?.telegram_id}_${amount}`, (status) => {
+      if (status === 'paid') {
+        api('/api/deposit/ton', 'POST', { telegram_id: user?.telegram_id, amount_ton: amount / 100 });
+        closeModal('modal-deposit');
+        toast(`✅ Зачислено ${amount}⭐!`, 'green');
+      } else {
+        toast('Оплата не прошла', 'red');
+      }
+    });
+  } else {
+    toast('Открой в Telegram', 'red');
+  }
 }
 
 // ── WITHDRAW ─────────────────────────────────────────────────────────────────
@@ -1493,9 +1537,9 @@ let toastTimeout;
 function toast(msg, color = 'default') {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.style.background = color === 'green' ? '#0d2b1a' : color === 'red' ? '#2b0d0d' : 'var(--bg3)';
-  el.style.borderColor = color === 'green' ? '#14532d' : color === 'red' ? '#7f1d1d' : 'var(--border2)';
-  el.style.color = color === 'green' ? '#4ade80' : color === 'red' ? 'var(--red)' : 'var(--text)';
+  el.style.background = color === 'green' ? '#0d2b1a' : color === 'red' ? '#2b0d0d' : color === 'yellow' ? '#1a1a00' : 'var(--bg3)';
+  el.style.borderColor = color === 'green' ? '#14532d' : color === 'red' ? '#7f1d1d' : color === 'yellow' ? '#7a5c00' : 'var(--border2)';
+  el.style.color = color === 'green' ? '#4ade80' : color === 'red' ? 'var(--red)' : color === 'yellow' ? 'var(--gold)' : 'var(--text)';
   el.classList.add('show');
   clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => el.classList.remove('show'), 3000);
