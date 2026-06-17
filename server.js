@@ -21,7 +21,7 @@ const CONFIG = {
   ADMIN_ID: '1631627984',
   BANK_ACCOUNT_ID: '7339408064',
   APP_URL: 'https://dadton-full.onrender.com',
-  TON_RECEIVER_ADDRESS: 'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N' // Замени на свой адрес
+  TON_RECEIVER_ADDRESS: 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP' // Замени на свой адрес
 };
 
 // ── БД ──────────────────────────────────────────────────────────────────────
