@@ -1,4 +1,4 @@
-require('dotenv').config();
+ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -20,10 +20,7 @@ const CONFIG = {
   BOT_TOKEN: '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0',
   ADMIN_ID: '1631627984',
   BANK_ACCOUNT_ID: '7339408064',
-  MERCHANT_WALLET: 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP',
-  TON_API_KEY: '06d6391b22c661acad89e10e47a3ff85eaaa179012354d517460508fbc91dabd',
-  APP_URL: 'https://dadton-full.onrender.com',
-  VIDEO_URL: 'https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4'
+  APP_URL: 'https://dadton-full.onrender.com'
 };
 
 // ── БД ──────────────────────────────────────────────────────────────────────
@@ -316,7 +313,7 @@ app.post('/api/mines/cashout', async (req, res) => {
   }
 });
 
-// ── API: ПОКЕР (МУЛЬТИПЛЕЕР) ───────────────────────────────────────────────
+// ── API: ПОКЕР ───────────────────────────────────────────────────────────────
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
@@ -351,9 +348,9 @@ function evaluateHand(cards) {
   return { rank: 0, name: 'Старшая карта' };
 }
 
-const pokerRooms = {};
+const pokerSessions = {};
 
-app.post('/api/poker/create-room', async (req, res) => {
+app.post('/api/poker/start', async (req, res) => {
   try {
     const { telegram_id, bet } = req.body;
     const user = await getUser(telegram_id);
@@ -361,153 +358,72 @@ app.post('/api/poker/create-room', async (req, res) => {
     if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
     if (bet < 10) return res.status(400).json({ error: 'Минимум 10⭐' });
 
-    const roomCode = generateRoomCode();
-    const room = {
-      code: roomCode,
-      players: [{ telegram_id, name: user.first_name, avatar: user.avatar, bet, cards: [], ready: false, folded: false }],
-      status: 'waiting',
-      deck: [],
-      community: [],
-      turn: 0,
-      pot: 0
-    };
-    pokerRooms[roomCode] = room;
-    await pool.query(
-      'INSERT INTO poker_rooms(room_code, players, status) VALUES($1,$2,$3)',
-      [roomCode, JSON.stringify(room.players), 'waiting']
-    );
-    res.json({ roomCode, room });
+    await deductStars(telegram_id, bet, 'Ставка в покере');
+    await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [telegram_id]);
+
+    const deck = makeDeck();
+    const playerCards = [deck.pop(), deck.pop()];
+    const dealerCards = [deck.pop(), deck.pop()];
+    const community = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+
+    pokerSessions[telegram_id] = { bet, deck, playerCards, dealerCards, community, active: true };
+
+    const user2 = await getUser(telegram_id);
+    broadcastTo(telegram_id, { type: 'balance_update', stars: user2.stars });
+    res.json({ success: true, playerCards, dealerCards, community });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.post('/api/poker/join-room', async (req, res) => {
+app.post('/api/poker/fold', async (req, res) => {
   try {
-    const { telegram_id, roomCode } = req.body;
+    const { telegram_id } = req.body;
+    const session = pokerSessions[telegram_id];
+    if (!session || !session.active) return res.status(400).json({ error: 'Нет игры' });
+    session.active = false;
+    delete pokerSessions[telegram_id];
+    res.json({ result: 'fold', message: 'Ты сбросил карты' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/poker/call', async (req, res) => {
+  try {
+    const { telegram_id } = req.body;
+    const session = pokerSessions[telegram_id];
+    if (!session || !session.active) return res.status(400).json({ error: 'Нет игры' });
+
+    const { playerCards, dealerCards, community, bet } = session;
+    const playerBest = evaluateHand([...playerCards, ...community].slice(0,5));
+    const dealerBest = evaluateHand([...dealerCards, ...community].slice(0,5));
+
+    session.active = false;
+    delete pokerSessions[telegram_id];
+
+    let result, win = 0;
+    if (playerBest.rank > dealerBest.rank) {
+      win = bet * 2;
+      await addStars(telegram_id, win, `Выигрыш в покере x2`);
+      await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
+      result = 'win';
+    } else if (playerBest.rank === dealerBest.rank) {
+      win = bet;
+      await addStars(telegram_id, win, 'Ничья в покере - возврат');
+      result = 'draw';
+    } else {
+      await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet, telegram_id]);
+      result = 'lose';
+    }
+
     const user = await getUser(telegram_id);
-    if (!user) return res.status(404).json({ error: 'Не найден' });
-    
-    const room = pokerRooms[roomCode];
-    if (!room) return res.status(404).json({ error: 'Комната не найдена' });
-    if (room.players.length >= 6) return res.status(400).json({ error: 'Комната полна' });
-    if (room.status !== 'waiting') return res.status(400).json({ error: 'Игра уже началась' });
-    if (room.players.find(p => p.telegram_id == telegram_id)) {
-      return res.json({ room });
-    }
-
-    const bet = room.players[0]?.bet || 10;
-    if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
-
-    room.players.push({ telegram_id, name: user.first_name, avatar: user.avatar, bet, cards: [], ready: false, folded: false });
-    await pool.query(
-      'UPDATE poker_rooms SET players=$1 WHERE room_code=$2',
-      [JSON.stringify(room.players), roomCode]
-    );
-    broadcastToRoom(roomCode, { type: 'poker_room_update', room });
-    res.json({ room });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post('/api/poker/start-game', async (req, res) => {
-  try {
-    const { telegram_id, roomCode } = req.body;
-    const room = pokerRooms[roomCode];
-    if (!room) return res.status(404).json({ error: 'Комната не найдена' });
-    if (room.players.length < 2) return res.status(400).json({ error: 'Нужно минимум 2 игрока' });
-    if (room.players[0].telegram_id != telegram_id) return res.status(403).json({ error: 'Только создатель может начать' });
-
-    for (const player of room.players) {
-      await deductStars(player.telegram_id, player.bet, 'Ставка в покере');
-      await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [player.telegram_id]);
-    }
-
-    room.status = 'playing';
-    room.pot = room.players.reduce((sum, p) => sum + p.bet, 0);
-    room.deck = makeDeck();
-    
-    for (const player of room.players) {
-      player.cards = [room.deck.pop(), room.deck.pop()];
-      player.ready = false;
-      player.folded = false;
-    }
-    room.community = [room.deck.pop(), room.deck.pop(), room.deck.pop()];
-    room.turn = 0;
-
-    await pool.query(
-      'UPDATE poker_rooms SET players=$1, status=$2 WHERE room_code=$3',
-      [JSON.stringify(room.players), 'playing', roomCode]
-    );
-    broadcastToRoom(roomCode, { type: 'poker_game_start', room });
-    broadcastToRoom(roomCode, { type: 'poker_room_update', room });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post('/api/poker/action', async (req, res) => {
-  try {
-    const { telegram_id, roomCode, action } = req.body;
-    const room = pokerRooms[roomCode];
-    if (!room) return res.status(404).json({ error: 'Комната не найдена' });
-    if (room.status !== 'playing') return res.status(400).json({ error: 'Игра не активна' });
-
-    const playerIdx = room.players.findIndex(p => p.telegram_id == telegram_id);
-    if (playerIdx === -1) return res.status(403).json({ error: 'Вы не в комнате' });
-    if (room.turn !== playerIdx) return res.status(400).json({ error: 'Не ваш ход' });
-
-    const player = room.players[playerIdx];
-    player.ready = true;
-
-    if (action === 'fold') {
-      player.folded = true;
-    }
-
-    const allReady = room.players.filter(p => !p.folded).every(p => p.ready);
-    if (allReady) {
-      const activePlayers = room.players.filter(p => !p.folded);
-      if (activePlayers.length === 1) {
-        const winner = activePlayers[0];
-        const winAmount = room.pot;
-        await addStars(winner.telegram_id, winAmount, 'Выигрыш в покере');
-        await pool.query('UPDATE users SET games_won=games_won+1 WHERE telegram_id=$1', [winner.telegram_id]);
-        broadcastToRoom(roomCode, { type: 'poker_result', winner: winner.telegram_id, winAmount, room });
-        room.status = 'finished';
-      } else {
-        let best = null;
-        let bestPlayer = null;
-        for (const p of activePlayers) {
-          const hand = evaluateHand([...p.cards, ...room.community].slice(0,5));
-          if (!best || hand.rank > best.rank || (hand.rank === best.rank && hand.high > best.high)) {
-            best = hand;
-            bestPlayer = p;
-          }
-        }
-        const winAmount = room.pot;
-        await addStars(bestPlayer.telegram_id, winAmount, 'Выигрыш в покере');
-        await pool.query('UPDATE users SET games_won=games_won+1 WHERE telegram_id=$1', [bestPlayer.telegram_id]);
-        broadcastToRoom(roomCode, { type: 'poker_result', winner: bestPlayer.telegram_id, winAmount, hand: best, room });
-        room.status = 'finished';
-      }
-    }
-
-    let next = (playerIdx + 1) % room.players.length;
-    let attempts = 0;
-    while ((room.players[next].folded || room.players[next].ready) && attempts < room.players.length) {
-      next = (next + 1) % room.players.length;
-      attempts++;
-    }
-    room.turn = next;
-
-    await pool.query(
-      'UPDATE poker_rooms SET players=$1 WHERE room_code=$2',
-      [JSON.stringify(room.players), roomCode]
-    );
-    broadcastToRoom(roomCode, { type: 'poker_room_update', room });
-    res.json({ success: true });
+    broadcastTo(telegram_id, { type: 'balance_update', stars: user.stars });
+    res.json({
+      result, win,
+      playerCards, dealerCards, community,
+      playerHand: playerBest.name, dealerHand: dealerBest.name
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -660,28 +576,6 @@ app.post('/api/deposit/gram', async (req, res) => {
     const user2 = await getUser(telegram_id);
     broadcastTo(telegram_id, { type: 'balance_update', stars: user2.stars });
     res.json({ success: true, stars_added: stars });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── WEBHOOK для приёма NFT от @BankDadTon ──────────────────────────────────
-app.post('/webhook/nft', async (req, res) => {
-  try {
-    const { telegram_id, gift_id, name, image_url, secret } = req.body;
-    if (secret !== 'your_secret_key_here') {
-      return res.status(403).json({ error: 'Неверный секрет' });
-    }
-    const user = await getUser(telegram_id);
-    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-    
-    await pool.query(
-      'INSERT INTO nft_items(owner_id, name, image_url, gift_id) VALUES($1, $2, $3, $4)',
-      [telegram_id, name, image_url, gift_id]
-    );
-    
-    broadcastTo(telegram_id, { type: 'nft_received', name, image_url });
-    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -860,6 +754,7 @@ async function handleRocketCashout(telegram_id, multiplier) {
 }
 
 // ── РУЛЕТКА ──────────────────────────────────────────────────────────────────
+// Чередование цветов: синий-красный, каждые 14 зелёный
 const ROULETTE_SLOTS = [];
 for (let i = 0; i < 30; i++) {
   if (i < 14) ROULETTE_SLOTS.push(i % 2 === 0 ? 'blue' : 'red');
@@ -991,14 +886,6 @@ wss.on('connection', (ws) => {
         broadcast({ type: 'roulette_tick', timer: rouletteTimer, bet: null });
       }
 
-      if (msg.type === 'join_poker_room') {
-        ws.room = msg.roomCode;
-        const room = pokerRooms[msg.roomCode];
-        if (room) {
-          ws.send(JSON.stringify({ type: 'poker_room_update', room }));
-        }
-      }
-
     } catch (e) {
       console.error('WS error:', e.message);
     }
@@ -1009,7 +896,6 @@ wss.on('connection', (ws) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log(`🚀 DadTon запущен на порту ${PORT}`);
-  console.log(`📱 APP_URL: ${CONFIG.APP_URL}`);
   await initDB();
   rocketLoop();
   rouletteLoop();
