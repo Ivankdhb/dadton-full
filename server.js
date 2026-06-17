@@ -29,6 +29,7 @@ const pool = new Pool({
 });
 
 async function initDB() {
+  // Создаем таблицы
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       telegram_id BIGINT PRIMARY KEY,
@@ -45,50 +46,66 @@ async function initDB() {
       referred_by BIGINT,
       referral_earnings BIGINT DEFAULT 0,
       is_banned BOOLEAN DEFAULT FALSE,
-      wallet_address TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS nft_items (
-      id SERIAL PRIMARY KEY,
-      owner_id BIGINT REFERENCES users(telegram_id),
-      name TEXT NOT NULL,
-      image_url TEXT NOT NULL,
-      gift_id TEXT,
-      on_market BOOLEAN DEFAULT FALSE,
-      market_price BIGINT DEFAULT 0,
-      acquired_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS transactions (
-      id SERIAL PRIMARY KEY,
-      user_id BIGINT REFERENCES users(telegram_id),
-      type TEXT,
-      amount BIGINT,
-      comment TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS withdrawals (
-      id SERIAL PRIMARY KEY,
-      user_id BIGINT REFERENCES users(telegram_id),
-      amount BIGINT,
-      currency TEXT,
-      address TEXT,
-      status TEXT DEFAULT 'pending',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS crash_history (
-      id SERIAL PRIMARY KEY,
-      multiplier FLOAT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS deposit_invoices (
-      id SERIAL PRIMARY KEY,
-      user_id BIGINT REFERENCES users(telegram_id),
-      amount_gram FLOAT,
-      amount_stars BIGINT,
-      status TEXT DEFAULT 'pending',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  // Добавляем колонки, если их нет
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_address TEXT`);
+    console.log('✅ Колонка wallet_address добавлена');
+  } catch(e) {
+    console.log('Колонка wallet_address уже существует или ошибка:', e.message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nft_items (
+        id SERIAL PRIMARY KEY,
+        owner_id BIGINT REFERENCES users(telegram_id),
+        name TEXT NOT NULL,
+        image_url TEXT NOT NULL,
+        gift_id TEXT,
+        on_market BOOLEAN DEFAULT FALSE,
+        market_price BIGINT DEFAULT 0,
+        acquired_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS transactions (
+        id SERIAL PRIMARY KEY,
+        user_id BIGINT REFERENCES users(telegram_id),
+        type TEXT,
+        amount BIGINT,
+        comment TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS withdrawals (
+        id SERIAL PRIMARY KEY,
+        user_id BIGINT REFERENCES users(telegram_id),
+        amount BIGINT,
+        currency TEXT,
+        address TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS crash_history (
+        id SERIAL PRIMARY KEY,
+        multiplier FLOAT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS deposit_invoices (
+        id SERIAL PRIMARY KEY,
+        user_id BIGINT REFERENCES users(telegram_id),
+        amount_gram FLOAT,
+        amount_stars BIGINT,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Все таблицы созданы');
+  } catch(e) {
+    console.error('Ошибка создания таблиц:', e.message);
+  }
+  
   console.log('✅ БД инициализирована');
 }
 
