@@ -1,4 +1,4 @@
- require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -139,6 +139,17 @@ function generateRoomCode() {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ── TONCONNECT MANIFEST ─────────────────────────────────────────────────────
+app.get('/tonconnect-manifest.json', (req, res) => {
+  res.json({
+    url: CONFIG.APP_URL,
+    name: 'DadTon',
+    iconUrl: `${CONFIG.APP_URL}/icon.png`,
+    termsOfUseUrl: `${CONFIG.APP_URL}/terms`,
+    privacyPolicyUrl: `${CONFIG.APP_URL}/privacy`
+  });
+});
+
 // ── API: АВТОРИЗАЦИЯ ──────────────────────────────────────────────────────────
 app.post('/api/auth', async (req, res) => {
   try {
@@ -163,13 +174,57 @@ app.post('/api/auth', async (req, res) => {
       }
       user = await getUser(telegram_id);
     } else {
-      await pool.query('UPDATE users SET username=$1, first_name=$2, avatar=$3, wallet_address=$4 WHERE telegram_id=$5',
-        [username, first_name, avatar, wallet_address, telegram_id]);
+      // Обновляем данные профиля
+      const updates = [];
+      const values = [];
+      let paramCount = 1;
+      
+      if (username !== undefined) {
+        updates.push(`username=$${paramCount}`);
+        values.push(username);
+        paramCount++;
+      }
+      if (first_name !== undefined) {
+        updates.push(`first_name=$${paramCount}`);
+        values.push(first_name);
+        paramCount++;
+      }
+      if (avatar !== undefined) {
+        updates.push(`avatar=$${paramCount}`);
+        values.push(avatar);
+        paramCount++;
+      }
+      if (wallet_address !== undefined) {
+        updates.push(`wallet_address=$${paramCount}`);
+        values.push(wallet_address);
+        paramCount++;
+      }
+      
+      if (updates.length > 0) {
+        values.push(telegram_id);
+        await pool.query(
+          `UPDATE users SET ${updates.join(', ')} WHERE telegram_id=$${paramCount}`,
+          values
+        );
+      }
       user = await getUser(telegram_id);
     }
     res.json({ success: true, user });
   } catch (e) {
     console.error('auth error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── API: ОБНОВЛЕНИЕ КОШЕЛЬКА ───────────────────────────────────────────────
+app.post('/api/update-wallet', async (req, res) => {
+  try {
+    const { telegram_id, wallet_address } = req.body;
+    if (!telegram_id || !wallet_address) return res.status(400).json({ error: 'Нет данных' });
+    
+    await pool.query('UPDATE users SET wallet_address=$1 WHERE telegram_id=$2', [wallet_address, telegram_id]);
+    res.json({ success: true });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -197,6 +252,7 @@ app.get('/api/profile/:telegram_id', async (req, res) => {
       referral_count: parseInt(refs.rows[0].count)
     });
   } catch (e) {
+    console.error('Profile error:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -220,6 +276,8 @@ app.get('/api/crash-history', async (req, res) => {
 });
 
 // ── API: МИНЫ ────────────────────────────────────────────────────────────────
+const minesSessions = {};
+
 app.post('/api/mines/start', async (req, res) => {
   try {
     const { telegram_id, bet, mines_count } = req.body;
@@ -253,8 +311,6 @@ app.post('/api/mines/start', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-const minesSessions = {};
 
 function getMinesMultiplier(safe_opened, mines_count) {
   const total = 25;
@@ -754,7 +810,6 @@ async function handleRocketCashout(telegram_id, multiplier) {
 }
 
 // ── РУЛЕТКА ──────────────────────────────────────────────────────────────────
-// Чередование цветов: синий-красный, каждые 14 зелёный
 const ROULETTE_SLOTS = [];
 for (let i = 0; i < 30; i++) {
   if (i < 14) ROULETTE_SLOTS.push(i % 2 === 0 ? 'blue' : 'red');
