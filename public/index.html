@@ -20,7 +20,6 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:70px}
   
-  /* HEADER */
   .header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
   .logo{font-size:20px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
   .header-right{display:flex;align-items:center;gap:10px}
@@ -29,17 +28,14 @@
   .balance-chip{background:var(--bg3);border:1px solid var(--border2);padding:7px 12px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:600;transition:all .2s}
   .balance-chip:active{background:var(--bg4)}
 
-  /* BOTTOM NAV */
   .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:200}
   .nav-btn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--text3);font-size:11px;transition:color .2s;border:none;background:transparent}
   .nav-btn.active{color:var(--gold)}
   .nav-btn svg{width:22px;height:22px}
 
-  /* PAGES */
   .page{display:none;padding:16px;min-height:calc(100vh - 120px)}
   .page.active{display:block}
 
-  /* CARDS */
   .game-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s}
   .game-card:active{background:var(--bg3);transform:scale(.99)}
   .game-card-left{display:flex;flex-direction:column;gap:4px}
@@ -47,7 +43,6 @@
   .game-card-sub{font-size:12px;color:var(--text2)}
   .game-card-icon{font-size:36px}
 
-  /* BUTTONS */
   .btn{padding:12px 20px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
   .btn:active{transform:scale(.97)}
   .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000}
@@ -57,27 +52,24 @@
   .btn-full{width:100%}
   .btn-sm{padding:8px 14px;font-size:12px}
 
-  /* INPUTS */
   .input{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;width:100%;outline:none;transition:border .2s}
   .input:focus{border-color:var(--gold)}
 
-  /* SECTIONS */
   .section-title{font-size:16px;font-weight:700;margin-bottom:12px;color:var(--text)}
   .row{display:flex;gap:8px}
   .col{display:flex;flex-direction:column;gap:8px}
   .label{font-size:12px;color:var(--text2);margin-bottom:4px}
 
-  /* QUICK BTNS */
   .quick-btns{display:flex;gap:6px;flex-wrap:wrap}
   .qbtn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;transition:all .2s}
   .qbtn:active{background:var(--bg4);color:var(--gold)}
 
-  /* ───── РАКЕТА ──────────────────────────────────────────────────────── */
+  /* ROCKET */
   .rocket-video-wrap{position:relative;background:var(--bg2);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;height:200px;display:flex;align-items:center;justify-content:center}
   .rocket-video-wrap video{width:100%;height:100%;object-fit:cover;opacity:.6}
   .rocket-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-  .rocket-mult{font-size:48px;font-weight:900;letter-spacing:-2px;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none}
-  .rocket-mult.crashed{-webkit-text-fill-color:var(--red);background:none}
+  .rocket-mult{font-size:48px;font-weight:900;letter-spacing:-2px;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;transition:all .3s}
+  .rocket-mult.crashed{-webkit-text-fill-color:var(--red);background:none;animation:shake .5s}
   .rocket-timer-bar{width:80%;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;border:1px solid var(--border2)}
   .rocket-timer-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width 1s linear;border-radius:3px}
   .rocket-status{font-size:13px;color:var(--text2)}
@@ -98,49 +90,58 @@
   .p-status.won{color:#4ade80}
   .p-status.waiting{color:var(--text3)}
 
-  /* ───── МИНЫ ──────────────────────────────────────────────────────────── */
+  /* MINES */
   .mines-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0}
   .mine-cell{aspect-ratio:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:all .2s;user-select:none}
   .mine-cell:active{transform:scale(.94)}
-  .mine-cell.safe{background:#0d2b1a;border-color:#14532d;color:#4ade80}
+  .mine-cell.safe{background:#0d2b1a;border-color:#14532d;color:#4ade80;animation:popIn .3s}
   .mine-cell.mine{background:#2b0d0d;border-color:#7f1d1d;color:var(--red);animation:shake .3s}
   .mine-cell.disabled{cursor:default;opacity:.6}
   .mines-mult{text-align:center;font-size:24px;font-weight:800;color:var(--gold);margin:8px 0}
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  @keyframes popIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 
-  /* ───── РУЛЕТКА ───────────────────────────────────────────────────────── */
-  .roulette-wheel-wrap{margin:0 auto 16px;width:180px;height:180px;position:relative}
-  .roulette-wheel{width:180px;height:180px;border-radius:50%;position:relative;overflow:hidden;border:3px solid var(--border2);transition:transform 3s cubic-bezier(.2,.8,.3,1)}
-  .roulette-arrow{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:20px;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
-  .roulette-result{text-align:center;font-size:18px;font-weight:800;margin-bottom:8px;min-height:28px}
+  /* ROULETTE */
+  .roulette-container{position:relative;width:280px;height:280px;margin:0 auto 16px}
+  .roulette-wheel-svg{width:280px;height:280px;transition:transform 4s cubic-bezier(.17,.67,.12,.99);filter:drop-shadow(0 0 20px rgba(212,175,55,.3))}
+  .roulette-wheel-svg.spinning{transition:transform 4s cubic-bezier(.17,.67,.12,.99)}
+  .roulette-pointer{position:absolute;top:-15px;left:50%;transform:translateX(-50%);z-index:20;font-size:32px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8));animation:pointerBounce .5s infinite alternate}
+  @keyframes pointerBounce{0%{transform:translateX(-50%) translateY(0)}100%{transform:translateX(-50%) translateY(5px)}}
+  .roulette-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;background:var(--bg2);border-radius:50%;border:3px solid var(--gold);z-index:10;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900}
+  .roulette-result{text-align:center;font-size:22px;font-weight:800;margin:12px 0;min-height:32px}
   .roulette-result.red{color:var(--red)}
   .roulette-result.blue{color:#60a5fa}
   .roulette-result.green{color:#4ade80}
 
   .color-bets{display:flex;gap:8px;margin-bottom:12px}
-  .color-bet-btn{flex:1;padding:10px;border-radius:var(--radius-sm);border:2px solid transparent;text-align:center;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s}
+  .color-bet-btn{flex:1;padding:12px;border-radius:var(--radius-sm);border:2px solid transparent;text-align:center;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s}
   .color-bet-btn.red-btn{background:#2b0d0d;border-color:#7f1d1d;color:var(--red)}
   .color-bet-btn.blue-btn{background:#0d1a2b;border-color:#1d4a7f;color:#60a5fa}
   .color-bet-btn.green-btn{background:#0d2b0d;border-color:#1d7f1d;color:#4ade80}
-  .color-bet-btn.selected{border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.3)}
+  .color-bet-btn.selected{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,.3);transform:scale(1.05)}
 
-  /* ───── ПОКЕР ─────────────────────────────────────────────────────────── */
+  /* POKER */
   .poker-table{background:#0d2b1a;border:2px solid #14532d;border-radius:16px;padding:20px;margin-bottom:16px;text-align:center}
-  .card-row{display:flex;justify-content:center;gap:8px;margin:8px 0}
-  .playing-card{width:52px;height:76px;background:#fff;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;font-weight:900;border:2px solid #ddd;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .card-row{display:flex;justify-content:center;gap:10px;margin:8px 0}
+  .playing-card{width:56px;height:80px;background:#fff;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;font-weight:900;border:2px solid #ddd;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:all .5s;animation:dealCard .3s ease-out}
   .playing-card.red-suit{color:var(--red)}
   .playing-card.black-suit{color:#1a1a1a}
-  .playing-card.hidden{background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#0f3460;color:#f0f0f0;font-size:24px}
+  .playing-card.hidden{background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#0f3460;color:#f0f0f0;font-size:28px;animation:dealCardHidden .3s ease-out}
+  .playing-card.reveal{animation:revealCard .6s ease-out}
+  @keyframes dealCard{0%{transform:translateY(-50px) rotate(-10deg);opacity:0}100%{transform:translateY(0) rotate(0);opacity:1}}
+  @keyframes dealCardHidden{0%{transform:translateY(-50px) rotate(-10deg);opacity:0}100%{transform:translateY(0) rotate(0);opacity:1}}
+  @keyframes revealCard{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
   .card-label{font-size:11px;color:var(--text2);margin:6px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-  .community-cards{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:8px 0}
-  .community-card{width:44px;height:64px;font-size:13px}
-  .hand-name{font-size:14px;font-weight:700;color:var(--gold);margin-top:6px;min-height:20px}
-  .poker-result{font-size:22px;font-weight:900;text-align:center;padding:12px;border-radius:var(--radius);margin-bottom:12px}
+  .community-cards{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .community-card{width:48px;height:68px;font-size:14px}
+  .hand-name{font-size:16px;font-weight:700;color:var(--gold);margin-top:6px;min-height:24px}
+  .poker-result{font-size:24px;font-weight:900;text-align:center;padding:14px;border-radius:var(--radius);margin-bottom:12px;animation:fadeInUp .5s}
   .poker-result.win{background:#0d2b1a;color:#4ade80}
   .poker-result.lose{background:#2b0d0d;color:var(--red)}
   .poker-result.draw{background:#1a1a0d;color:var(--gold)}
+  @keyframes fadeInUp{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
 
-  /* ───── ЛИДЕРБОРД ─────────────────────────────────────────────────────── */
+  /* LEADERBOARD */
   .podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:24px}
   .podium-item{flex:1;max-width:110px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
   .podium-avatar{border-radius:50%;object-fit:cover;border:3px solid;background:var(--bg3)}
@@ -163,7 +164,7 @@
   .lb-user{font-size:11px;color:var(--text3)}
   .lb-amount{font-size:14px;font-weight:700;color:var(--gold)}
 
-  /* ───── ПРОФИЛЬ ───────────────────────────────────────────────────────── */
+  /* PROFILE */
   .profile-header{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
   .profile-avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);background:var(--bg3)}
   .profile-name{font-size:18px;font-weight:800}
@@ -188,7 +189,7 @@
   .tx-amount.minus{color:var(--red)}
   .tx-date{font-size:11px;color:var(--text3);margin-top:2px}
 
-  /* ───── МАРКЕТ ────────────────────────────────────────────────────────── */
+  /* MARKET */
   .market-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .nft-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .2s}
   .nft-card:active{transform:scale(.98)}
@@ -199,7 +200,7 @@
   .nft-price{font-size:14px;font-weight:800;color:var(--gold);margin-bottom:8px}
   .inventory-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 
-  /* ───── МОДАЛЫ ────────────────────────────────────────────────────────── */
+  /* MODALS */
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:flex-end;justify-content:center}
   .modal-overlay.active{display:flex}
   .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:20px;max-height:90vh;overflow-y:auto}
@@ -210,11 +211,9 @@
   .modal-tab-content{display:none}
   .modal-tab-content.active{display:block}
 
-  /* ───── ADMIN ─────────────────────────────────────────────────────────── */
   .admin-section{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
   .admin-section-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
 
-  /* ───── УТИЛИТЫ ───────────────────────────────────────────────────────── */
   .divider{height:1px;background:var(--border);margin:12px 0}
   .text-center{text-align:center}
   .text-gold{color:var(--gold)}
@@ -230,25 +229,18 @@
   .select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;outline:none;width:100%}
   .checkbox-row{display:flex;align-items:center;gap:10px;padding:8px 0}
   .checkbox-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold)}
-
   .ref-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:13px;color:var(--text2);word-break:break-all}
-
   .mines-select-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
   .mines-select-btn{padding:8px 16px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;transition:all .2s}
   .mines-select-btn.active{border-color:var(--gold);color:var(--gold)}
-
-  .roulette-svg{width:180px;height:180px}
-
   .page-back{display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;color:var(--text2);font-size:14px;background:transparent;border:none}
   .page-back:active{color:var(--gold)}
-
   .empty{text-align:center;padding:40px 20px;color:var(--text3)}
   .empty-icon{font-size:40px;margin-bottom:8px}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div class="logo">🎲 DadTon</div>
   <div class="header-right">
@@ -257,7 +249,6 @@
   </div>
 </div>
 
-<!-- PAGES -->
 <div id="page-home" class="page active">
   <div style="margin-bottom:16px">
     <div style="font-size:22px;font-weight:900;margin-bottom:4px">Добро пожаловать 👋</div>
@@ -280,7 +271,7 @@
   <div class="game-card" onclick="openGame('roulette')">
     <div class="game-card-left">
       <div class="game-card-title">🎡 Рулетка</div>
-      <div class="game-card-sub">Одиночная игра • Ставь на цвет</div>
+      <div class="game-card-sub">Ставь на цвет • ×2 или ×10</div>
     </div>
     <div class="game-card-icon">🎡</div>
   </div>
@@ -293,7 +284,7 @@
   </div>
 </div>
 
-<!-- ROCKET GAME -->
+<!-- ROCKET PAGE -->
 <div id="page-rocket" class="page">
   <button class="page-back" onclick="showPage('home')">← Назад</button>
   <div class="rocket-video-wrap">
@@ -308,9 +299,7 @@
       </div>
     </div>
   </div>
-
   <div class="crash-history" id="crash-history"></div>
-
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
     <div class="label">Сумма ставки</div>
     <div class="row mb8">
@@ -338,14 +327,13 @@
       </button>
     </div>
   </div>
-
   <div class="section-title">👥 Участники</div>
   <div class="participants-list" id="rocket-participants">
     <div class="text-sm text-center" style="padding:12px">Нет участников</div>
   </div>
 </div>
 
-<!-- MINES GAME -->
+<!-- MINES PAGE -->
 <div id="page-mines" class="page">
   <button class="page-back" onclick="showPage('home')">← Назад</button>
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
@@ -368,30 +356,26 @@
       <span class="mines-select-btn" onclick="selectMines(this,24)">24</span>
     </div>
   </div>
-
   <div class="mines-grid" id="mines-grid"></div>
   <div class="mines-mult hidden" id="mines-mult">x1.00</div>
-
   <button class="btn btn-gold btn-full" id="btn-mines-action" onclick="minesAction()">💣 Новая игра</button>
 </div>
 
-<!-- ROULETTE GAME -->
+<!-- ROULETTE PAGE -->
 <div id="page-roulette" class="page">
   <button class="page-back" onclick="showPage('home')">← Назад</button>
-  <div style="text-align:center;margin-bottom:8px">
-    <div class="roulette-arrow">▼</div>
-    <div style="position:relative;display:inline-block">
-      <svg class="roulette-svg" id="roulette-svg" viewBox="0 0 180 180">
-        <defs><clipPath id="circle-clip"><circle cx="90" cy="90" r="88"/></clipPath></defs>
-        <g clip-path="url(#circle-clip)" id="roulette-segments"></g>
-        <circle cx="90" cy="90" r="88" fill="none" stroke="#333" stroke-width="3"/>
-        <circle cx="90" cy="90" r="14" fill="#111" stroke="#444" stroke-width="2"/>
-      </svg>
-    </div>
-    <div class="roulette-result" id="roulette-result"></div>
-    <div style="font-size:14px;color:var(--text2)">⏳ Прокрутка через: <span id="roulette-timer">15</span>с</div>
+  <div class="roulette-container">
+    <div class="roulette-pointer">▼</div>
+    <svg class="roulette-wheel-svg" id="roulette-wheel-svg" viewBox="0 0 280 280">
+      <defs><clipPath id="roulette-clip"><circle cx="140" cy="140" r="135"/></clipPath></defs>
+      <g clip-path="url(#roulette-clip)" id="roulette-segments"></g>
+      <circle cx="140" cy="140" r="135" fill="none" stroke="#444" stroke-width="3"/>
+    </svg>
+    <div class="roulette-center">🎡</div>
   </div>
-
+  <div class="roulette-result" id="roulette-result"></div>
+  <div style="text-align:center;font-size:14px;color:var(--text2);margin-bottom:12px">⏳ Прокрутка через: <span id="roulette-timer" style="color:var(--gold);font-weight:700">15</span>с</div>
+  
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
     <div class="label">Выбери цвет</div>
     <div class="color-bets mb8">
@@ -414,7 +398,6 @@
       <button class="btn btn-dark" onclick="rouletteCancel()">❌</button>
     </div>
   </div>
-
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
     <div style="display:flex;justify-content:space-between;margin-bottom:10px">
       <span class="section-title" style="margin:0">👥 Участники</span>
@@ -424,36 +407,34 @@
   </div>
 </div>
 
-<!-- POKER GAME -->
+<!-- POKER PAGE -->
 <div id="page-poker" class="page">
   <button class="page-back" onclick="showPage('home')">← Назад</button>
   <div class="poker-table">
-    <div class="card-label">Дилер</div>
+    <div class="card-label">🃏 Дилер</div>
     <div class="card-row" id="dealer-cards">
-      <div class="playing-card hidden">🂠</div>
-      <div class="playing-card hidden">🂠</div>
+      <div class="playing-card hidden">?</div>
+      <div class="playing-card hidden">?</div>
     </div>
     <div class="hand-name" id="dealer-hand"></div>
     <div class="divider"></div>
-    <div class="card-label">Общий стол</div>
+    <div class="card-label">🂠 Общий стол</div>
     <div class="community-cards" id="community-cards">
-      <div class="playing-card community-card hidden">🂠</div>
-      <div class="playing-card community-card hidden">🂠</div>
-      <div class="playing-card community-card hidden">🂠</div>
-      <div class="playing-card community-card hidden">🂠</div>
-      <div class="playing-card community-card hidden">🂠</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
     </div>
     <div class="divider"></div>
-    <div class="card-label">Твои карты</div>
+    <div class="card-label">🎴 Твои карты</div>
     <div class="card-row" id="player-cards">
-      <div class="playing-card hidden">🂠</div>
-      <div class="playing-card hidden">🂠</div>
+      <div class="playing-card hidden">?</div>
+      <div class="playing-card hidden">?</div>
     </div>
     <div class="hand-name" id="player-hand"></div>
   </div>
-
   <div id="poker-result-wrap" class="hidden"></div>
-
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px" id="poker-bet-wrap">
     <div class="label">Ставка</div>
     <div class="row mb8">
@@ -466,10 +447,9 @@
     </div>
     <button class="btn btn-gold btn-full" onclick="pokerStart()">🃏 Раздать карты</button>
   </div>
-
   <div id="poker-actions" class="row hidden">
     <button class="btn btn-dark btn-full" onclick="pokerFold()">❌ Сбросить</button>
-    <button class="btn btn-gold btn-full" onclick="pokerCall()">✅ Ставить</button>
+    <button class="btn btn-gold btn-full" onclick="pokerCall()">✅ Вскрыться</button>
   </div>
 </div>
 
@@ -479,18 +459,14 @@
     <div style="font-size:20px;font-weight:800">🛒 Маркет</div>
     <div class="balance-chip">⭐ <span class="balance-chip-val">0</span></div>
   </div>
-  <div class="market-grid" id="market-grid">
-    <div class="empty"><div class="empty-icon">🛒</div>Нет товаров</div>
-  </div>
+  <div class="market-grid" id="market-grid"><div class="empty"><div class="empty-icon">🛒</div>Нет товаров</div></div>
 </div>
 
 <!-- INVENTORY PAGE -->
 <div id="page-inventory" class="page">
   <button class="page-back" onclick="showPage('profile')">← Назад</button>
   <div style="font-size:20px;font-weight:800;margin-bottom:16px">📦 Инвентарь</div>
-  <div class="market-grid" id="inventory-grid">
-    <div class="empty"><div class="empty-icon">📦</div>Пусто</div>
-  </div>
+  <div class="market-grid" id="inventory-grid"><div class="empty"><div class="empty-icon">📦</div>Пусто</div></div>
 </div>
 
 <!-- LEADERBOARD PAGE -->
@@ -521,19 +497,14 @@
     <button class="btn btn-dark" onclick="showPage('inventory')">📦 Инвентарь</button>
     <button class="btn btn-dark" onclick="showPage('market')">🛒 Маркет</button>
   </div>
-
   <div class="tabs">
     <button class="tab active" onclick="switchTab('stats', event)">📊 Статистика</button>
     <button class="tab" onclick="switchTab('history', event)">🎮 История</button>
     <button class="tab" onclick="switchTab('finance', event)">💰 Финансы</button>
     <button class="tab" onclick="switchTab('refs', event)">👥 Рефералы</button>
   </div>
-  <div id="tab-stats" class="tab-content active">
-    <div class="text-sm text-center" style="padding:20px">Смотри карточки выше</div>
-  </div>
-  <div id="tab-history" class="tab-content">
-    <div id="tx-list"><div class="text-sm text-center" style="padding:20px">Нет операций</div></div>
-  </div>
+  <div id="tab-stats" class="tab-content active"><div class="text-sm text-center" style="padding:20px">Смотри карточки выше</div></div>
+  <div id="tab-history" class="tab-content"><div id="tx-list"><div class="text-sm text-center" style="padding:20px">Нет операций</div></div></div>
   <div id="tab-finance" class="tab-content">
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-value" id="stat-deposited">0</div><div class="stat-label">💰 Пополнено</div></div>
@@ -551,7 +522,6 @@
     <div class="ref-box" id="ref-link">Загрузка...</div>
     <button class="btn btn-dark btn-full mt8" onclick="copyRef()">📋 Копировать</button>
   </div>
-
   <div id="admin-btn-wrap" class="hidden mt8">
     <button class="btn btn-danger btn-full" onclick="openAdmin()">👑 Панель админа</button>
   </div>
@@ -573,7 +543,6 @@
   </button>
 </nav>
 
-<!-- MODALS -->
 <!-- DEPOSIT MODAL -->
 <div class="modal-overlay" id="modal-deposit" onclick="closeModal('modal-deposit')">
   <div class="modal" onclick="event.stopPropagation()">
@@ -583,23 +552,28 @@
       <button class="modal-tab" onclick="switchDepositTab('stars', event)">⭐ Stars</button>
     </div>
     <div id="deposit-gram" class="modal-tab-content active">
-      <div class="text-sm mb8">1 Gram = 100 ⭐</div>
+      <div class="text-sm mb8">1 Gram = 100 ⭐ (требуется кошелёк TON)</div>
       <div class="quick-btns mb8">
-        <span class="qbtn" onclick="setDepositGram(0.5)">0.5 Gram</span>
-        <span class="qbtn" onclick="setDepositGram(1)">1 Gram</span>
-        <span class="qbtn" onclick="setDepositGram(2)">2 Gram</span>
-        <span class="qbtn" onclick="setDepositGram(5)">5 Gram</span>
+        <span class="qbtn" onclick="setDepositGram(0.5)">0.5</span>
+        <span class="qbtn" onclick="setDepositGram(1)">1</span>
+        <span class="qbtn" onclick="setDepositGram(2)">2</span>
+        <span class="qbtn" onclick="setDepositGram(5)">5</span>
       </div>
-      <input class="input mb8" id="deposit-gram-amount" type="number" value="1" min="0.1" step="0.1" placeholder="Сумма Gram"/>
+      <input class="input mb8" id="deposit-gram-amount" type="number" value="1" min="0.1" step="0.1"/>
       <div class="text-sm mb8">= <span id="deposit-gram-stars">100</span> ⭐</div>
-      <button class="btn btn-gold btn-full" onclick="payGram()">💸 Оплатить через Gram</button>
+      <button class="btn btn-gold btn-full" onclick="createGramInvoice()">💸 Создать счёт</button>
+      <div id="gram-invoice-info" class="hidden mt8" style="background:var(--bg3);border-radius:8px;padding:12px;font-size:13px">
+        <div>🔑 ID счёта: <span id="gram-invoice-id"></span></div>
+        <div>💰 Сумма: <span id="gram-invoice-amount"></span> ⭐</div>
+        <div class="text-sm mt8">Отправьте Gram на подключённый кошелёк и ожидайте подтверждения</div>
+      </div>
     </div>
     <div id="deposit-stars" class="modal-tab-content">
       <div class="quick-btns mb8">
-        <span class="qbtn" onclick="setDepositStars(50)">50 ⭐</span>
-        <span class="qbtn" onclick="setDepositStars(100)">100 ⭐</span>
-        <span class="qbtn" onclick="setDepositStars(250)">250 ⭐</span>
-        <span class="qbtn" onclick="setDepositStars(500)">500 ⭐</span>
+        <span class="qbtn" onclick="setDepositStars(50)">50</span>
+        <span class="qbtn" onclick="setDepositStars(100)">100</span>
+        <span class="qbtn" onclick="setDepositStars(250)">250</span>
+        <span class="qbtn" onclick="setDepositStars(500)">500</span>
       </div>
       <input class="input mb8" id="deposit-stars-amount" type="number" value="100" min="50" step="50"/>
       <button class="btn btn-gold btn-full" onclick="payStars()">⭐ Оплатить Stars</button>
@@ -638,7 +612,7 @@
     <div class="label">Цена (⭐, минимум 10)</div>
     <input class="input mb8" id="sell-price" type="number" value="100" min="10"/>
     <input type="hidden" id="sell-nft-id"/>
-    <button class="btn btn-gold btn-full" onclick="confirmSell()">✅ Выставить на продажу</button>
+    <button class="btn btn-gold btn-full" onclick="confirmSell()">✅ Выставить</button>
     <button class="btn btn-dark btn-full mt8" onclick="closeModal('modal-sell')">Отмена</button>
   </div>
 </div>
@@ -647,62 +621,29 @@
 <div class="modal-overlay" id="modal-admin" onclick="closeModal('modal-admin')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-title">👑 DadTon Admin</div>
-
     <div class="admin-section">
-      <div class="admin-section-title">💰 Управление балансом</div>
+      <div class="admin-section-title">💰 Баланс</div>
       <input class="input mb8" id="admin-uid" placeholder="Telegram ID"/>
-      <input class="input mb8" id="admin-amount" type="number" placeholder="Сумма ⭐"/>
-      <div class="row">
-        <button class="btn btn-gold btn-full" onclick="adminBalance('add')">➕ Начислить</button>
-        <button class="btn btn-red btn-full" onclick="adminBalance('sub')">➖ Снять</button>
-      </div>
+      <input class="input mb8" id="admin-amount" type="number" placeholder="Сумма"/>
+      <div class="row"><button class="btn btn-gold btn-full" onclick="adminBalance('add')">➕</button><button class="btn btn-red btn-full" onclick="adminBalance('sub')">➖</button></div>
     </div>
-
     <div class="admin-section">
-      <div class="admin-section-title">🎁 Добавить NFT</div>
-      <input class="input mb8" id="admin-nft-uid" placeholder="Telegram ID владельца"/>
-      <input class="input mb8" id="admin-nft-name" placeholder="Название"/>
-      <input class="input mb8" id="admin-nft-img" placeholder="URL картинки"/>
-      <input class="input mb8" id="admin-nft-gift" placeholder="Gift ID (необязательно)"/>
-      <button class="btn btn-gold btn-full" onclick="adminAddNft()">➕ Добавить NFT</button>
+      <div class="admin-section-title">💎 Подтверждение депозитов</div>
+      <button class="btn btn-dark btn-full mb8" onclick="loadPendingDeposits()">🔄 Обновить</button>
+      <div id="admin-pending-deposits"></div>
     </div>
-
     <div class="admin-section">
-      <div class="admin-section-title">⚡ Бан / Разбан</div>
-      <input class="input mb8" id="admin-ban-uid" placeholder="Telegram ID"/>
-      <div class="row">
-        <button class="btn btn-red btn-full" onclick="adminBan(true)">🔨 Забанить</button>
-        <button class="btn btn-dark btn-full" onclick="adminBan(false)">🔓 Разбанить</button>
-      </div>
-    </div>
-
-    <div class="admin-section">
-      <div class="admin-section-title">📋 Заявки на вывод</div>
+      <div class="admin-section-title">📋 Выводы</div>
       <button class="btn btn-dark btn-full mb8" onclick="loadWithdrawals()">🔄 Обновить</button>
       <div id="admin-withdrawals"></div>
     </div>
-
-    <div class="admin-section">
-      <div class="admin-section-title">👥 Пользователи</div>
-      <button class="btn btn-dark btn-full mb8" onclick="loadAdminUsers()">🔄 Обновить</button>
-      <div id="admin-users" style="max-height:200px;overflow-y:auto"></div>
-    </div>
-
-    <div class="admin-section">
-      <div class="admin-section-title">⚠️ Опасная зона</div>
-      <button class="btn btn-dark btn-full mb8" onclick="adminAction('reset-leaderboard')">🏆 Сбросить лидерборд</button>
-      <button class="btn btn-danger btn-full" onclick="adminAction('reset-balances')">💣 СБРОСИТЬ ВСЕ БАЛАНСЫ</button>
-    </div>
-
     <button class="btn btn-dark btn-full mt8" onclick="closeModal('modal-admin')">Закрыть</button>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── GLOBALS ──────────────────────────────────────────────────────────────────
 const APP_URL = 'https://dadton-full.onrender.com';
 const ADMIN_ID = '1631627984';
 let tg = window.Telegram?.WebApp;
@@ -711,16 +652,14 @@ let stars = 0;
 let ws = null;
 let wsReady = false;
 let currentPage = 'home';
-
-// Game state
 let minesCount = 5;
 let minesActive = false;
 let rouletteColor = null;
 let pokerActive = false;
 let rocketHasBet = false;
 let rocketFlying = false;
+let rouletteSpinning = false;
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
 tg?.expand();
 tg?.setHeaderColor('#0a0a0a');
 tg?.setBackgroundColor('#0a0a0a');
@@ -733,22 +672,16 @@ async function init() {
     connectWS();
     return;
   }
-
   try {
     const res = await api('/api/auth', 'POST', {
-      telegram_id: tgUser.id,
-      username: tgUser.username || '',
-      first_name: tgUser.first_name || '',
-      avatar: tgUser.photo_url || '',
-      ref: new URLSearchParams(tg.initData).get('start_param') || ''
+      telegram_id: tgUser.id, username: tgUser.username || '', first_name: tgUser.first_name || '',
+      avatar: tgUser.photo_url || '', ref: new URLSearchParams(tg.initData).get('start_param') || ''
     });
     user = res.user;
     stars = user.stars;
     updateUI();
     connectWS();
-  } catch(e) {
-    toast('Ошибка подключения', 'red');
-  }
+  } catch(e) { toast('Ошибка подключения', 'red'); }
 }
 
 function updateUI() {
@@ -768,17 +701,11 @@ function updateUI() {
     document.getElementById('stat-diff').textContent = (user.total_deposited || 0) - (user.total_withdrawn || 0);
     document.getElementById('stat-balance').textContent = stars;
     document.getElementById('ref-link').textContent = `https://t.me/DadTonBot?start=${user.referral_code}`;
-    if (String(user.telegram_id) === ADMIN_ID) {
-      document.getElementById('admin-btn-wrap').classList.remove('hidden');
-    }
-    // Заполняем адрес кошелька если есть
-    if (user.wallet_address) {
-      document.getElementById('withdraw-addr').value = user.wallet_address;
-    }
+    if (String(user.telegram_id) === ADMIN_ID) document.getElementById('admin-btn-wrap').classList.remove('hidden');
+    if (user.wallet_address) document.getElementById('withdraw-addr').value = user.wallet_address;
   }
 }
 
-// ── API ───────────────────────────────────────────────────────────────────────
 async function api(path, method = 'GET', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
@@ -788,55 +715,33 @@ async function api(path, method = 'GET', body = null) {
   return data;
 }
 
-// ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 function connectWS() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${APP_URL.replace(/^https?:\/\//, '')}`;
   ws = new WebSocket(wsUrl);
-  ws.onopen = () => {
-    wsReady = true;
-    wsSend({ type: 'auth', telegram_id: user?.telegram_id });
-  };
+  ws.onopen = () => { wsReady = true; wsSend({ type: 'auth', telegram_id: user?.telegram_id }); };
   ws.onmessage = (e) => handleWS(JSON.parse(e.data));
   ws.onclose = () => { wsReady = false; setTimeout(connectWS, 3000); };
 }
 
-function wsSend(data) {
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
-}
+function wsSend(data) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data)); }
 
 function handleWS(msg) {
-  if (msg.type === 'balance_update') {
-    stars = msg.stars;
-    updateUI();
-  }
+  if (msg.type === 'balance_update') { stars = msg.stars; updateUI(); }
   if (msg.type === 'crash_history') renderCrashHistory(msg.history);
-  if (msg.type === 'rocket_tick') handleRocketTick(msg);
-  if (msg.type === 'rocket_waiting') handleRocketTick(msg);
-  if (msg.type === 'rocket_start') {
-    rocketFlying = true;
-    document.getElementById('rocket-timer-bar-wrap').classList.add('hidden');
-    document.getElementById('rocket-mult-display').classList.remove('crashed');
-    if (rocketHasBet) document.getElementById('btn-rocket-cashout-wrap').classList.remove('hidden');
-  }
+  if (msg.type === 'rocket_tick' || msg.type === 'rocket_waiting') handleRocketTick(msg);
+  if (msg.type === 'rocket_start') handleRocketStart(msg);
   if (msg.type === 'rocket_fly') handleRocketFly(msg);
   if (msg.type === 'rocket_crash') handleRocketCrash(msg);
-  if (msg.type === 'rocket_cashout_success') {
-    if (String(msg.telegram_id) === String(user?.telegram_id)) {
-      toast(`🎉 Выведено x${msg.multiplier}! +${msg.winAmount}⭐`, 'green');
-      rocketHasBet = false;
-      document.getElementById('btn-rocket-cashout-wrap').classList.add('hidden');
-    }
+  if (msg.type === 'rocket_cashout_success' && String(msg.telegram_id) === String(user?.telegram_id)) {
+    toast(`🎉 Выведено x${msg.multiplier}! +${msg.winAmount}⭐`, 'green');
+    rocketHasBet = false;
+    document.getElementById('btn-rocket-cashout-wrap').classList.add('hidden');
   }
   if (msg.type === 'roulette_tick') handleRouletteTick(msg);
   if (msg.type === 'roulette_roll') handleRouletteRoll(msg);
-  if (msg.type === 'nft_received') {
-    toast(`🎁 Получен NFT: ${msg.name}!`, 'green');
-    loadInventory();
-  }
 }
 
-// ── NAVIGATION ────────────────────────────────────────────────────────────────
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -845,7 +750,6 @@ function showPage(name) {
   if (page) page.classList.add('active');
   if (nav) nav.classList.add('active');
   currentPage = name;
-
   if (name === 'market') loadMarket();
   if (name === 'inventory') loadInventory();
   if (name === 'leaders') loadLeaderboard();
@@ -854,7 +758,7 @@ function showPage(name) {
 
 function openGame(name) { showPage(name); }
 
-// ── ROCKET ───────────────────────────────────────────────────────────────────
+// ROCKET
 function handleRocketTick(msg) {
   rocketFlying = false;
   const el = document.getElementById('rocket-mult-display');
@@ -862,15 +766,21 @@ function handleRocketTick(msg) {
   el.classList.remove('crashed');
   document.getElementById('rocket-status').textContent = 'Принимаем ставки...';
   document.getElementById('rocket-timer-bar-wrap').classList.remove('hidden');
-  const pct = (msg.timer / 10) * 100;
-  document.getElementById('rocket-timer-fill').style.width = pct + '%';
+  document.getElementById('rocket-timer-fill').style.width = (msg.timer / 10 * 100) + '%';
   if (msg.bets) renderRocketParticipants(msg.bets);
   document.getElementById('btn-rocket-cashout-wrap').classList.add('hidden');
 }
 
+function handleRocketStart(msg) {
+  rocketFlying = true;
+  document.getElementById('rocket-timer-bar-wrap').classList.add('hidden');
+  document.getElementById('rocket-mult-display').classList.remove('crashed');
+  document.getElementById('rocket-status').textContent = '🚀 Летим!';
+  if (rocketHasBet) document.getElementById('btn-rocket-cashout-wrap').classList.remove('hidden');
+}
+
 function handleRocketFly(msg) {
   document.getElementById('rocket-mult-display').textContent = msg.multiplier + 'x';
-  document.getElementById('rocket-status').textContent = 'Летим!';
   document.getElementById('cashout-mult').textContent = msg.multiplier;
   if (msg.bets) renderRocketParticipants(msg.bets);
 }
@@ -897,37 +807,30 @@ function renderCrashHistory(history) {
 
 function renderRocketParticipants(bets) {
   const el = document.getElementById('rocket-participants');
-  if (!bets || bets.length === 0) {
-    el.innerHTML = '<div class="text-sm text-center" style="padding:12px">Нет участников</div>';
-    return;
-  }
+  if (!bets || bets.length === 0) { el.innerHTML = '<div class="text-sm text-center" style="padding:12px">Нет участников</div>'; return; }
   el.innerHTML = bets.map(b => `
     <div class="participant-row">
       <img class="p-avatar" src="${b.avatar || ''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 30 30%22><rect fill=%22%23222%22 width=%2230%22 height=%2230%22/><text x=%2215%22 y=%2220%22 font-size=%2215%22 text-anchor=%22middle%22>👤</text></svg>'"/>
       <span class="p-name">${b.name || 'Игрок'}</span>
       <span class="p-amount">${b.amount}⭐</span>
       <span class="p-status ${b.cashedOut ? 'won' : 'waiting'}">${b.cashedOut ? '✅ ' + b.cashoutMultiplier + 'x' : '⏳'}</span>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 async function rocketBet() {
-  if (!user) return toast('Войдите в аккаунт');
+  if (!user) return toast('Войдите');
   const amount = parseInt(document.getElementById('rocket-bet').value);
-  const autoCb = document.getElementById('rocket-auto-cb').checked;
-  const autoVal = parseFloat(document.getElementById('rocket-auto-val').value);
   if (amount < 10) return toast('Минимум 10⭐');
   if (amount > stars) return toast('Недостаточно звёзд');
-  wsSend({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.first_name, avatar: user.avatar, amount, autoCashout: autoCb, autoCashoutValue: autoVal });
+  wsSend({ type: 'rocket_bet', telegram_id: user.telegram_id, name: user.first_name, avatar: user.avatar, amount,
+    autoCashout: document.getElementById('rocket-auto-cb').checked,
+    autoCashoutValue: parseFloat(document.getElementById('rocket-auto-val').value) });
   rocketHasBet = true;
   document.getElementById('btn-rocket-bet').classList.add('hidden');
   document.getElementById('btn-rocket-cancel').classList.remove('hidden');
 }
 
-function rocketCashout() {
-  wsSend({ type: 'rocket_cashout', telegram_id: user?.telegram_id });
-}
-
+function rocketCashout() { wsSend({ type: 'rocket_cashout', telegram_id: user?.telegram_id }); }
 function rocketCancel() {
   wsSend({ type: 'cancel_rocket_bet', telegram_id: user?.telegram_id });
   rocketHasBet = false;
@@ -935,7 +838,7 @@ function rocketCancel() {
   document.getElementById('btn-rocket-cancel').classList.add('hidden');
 }
 
-// ── MINES ─────────────────────────────────────────────────────────────────────
+// MINES
 function selectMines(el, count) {
   document.querySelectorAll('.mines-select-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
@@ -949,27 +852,20 @@ function buildMinesGrid(disabled = false, revealed = [], minePositions = []) {
     const cell = document.createElement('div');
     cell.className = 'mine-cell' + (disabled ? ' disabled' : '');
     cell.dataset.index = i;
-    if (minePositions.includes(i)) {
-      cell.classList.add('mine');
-      cell.textContent = '💣';
-    } else if (revealed.includes(i)) {
-      cell.classList.add('safe');
-      cell.textContent = '⭐';
-    } else {
-      cell.textContent = '?';
-      if (!disabled) cell.onclick = () => openMineCell(i);
-    }
+    if (minePositions.includes(i)) { cell.classList.add('mine'); cell.textContent = '💣'; }
+    else if (revealed.includes(i)) { cell.classList.add('safe'); cell.textContent = '⭐'; }
+    else { cell.textContent = '?'; if (!disabled) cell.onclick = () => openMineCell(i); }
     grid.appendChild(cell);
   }
 }
 
 async function minesAction() {
-  if (!user) return toast('Войдите в аккаунт');
+  if (!user) return toast('Войдите');
   const btn = document.getElementById('btn-mines-action');
   if (minesActive) {
     try {
       const r = await api('/api/mines/cashout', 'POST', { telegram_id: user.telegram_id });
-      toast(`💰 Выведено x${r.multiplier}! +${r.win}⭐`, 'green');
+      toast(`💰 +${r.win}⭐ (x${r.multiplier})`, 'green');
       minesActive = false;
       document.getElementById('mines-mult').classList.add('hidden');
       btn.textContent = '💣 Новая игра';
@@ -999,7 +895,7 @@ async function openMineCell(index) {
       buildMinesGrid(true, [], r.minePositions);
       document.getElementById('btn-mines-action').textContent = '💣 Новая игра';
       document.getElementById('mines-mult').classList.add('hidden');
-      toast('💣 Мина! Проиграл', 'red');
+      toast('💣 Мина!', 'red');
     } else {
       buildMinesGrid(false, r.revealed);
       document.getElementById('mines-mult').textContent = 'x' + r.multiplier;
@@ -1008,29 +904,27 @@ async function openMineCell(index) {
   } catch(e) { toast(e.message, 'red'); }
 }
 
-// ── ROULETTE ──────────────────────────────────────────────────────────────────
+// ROULETTE
 function buildRouletteWheel() {
   const slots = [];
   for (let i = 0; i < 30; i++) {
-    if (i < 14) slots.push(i % 2 === 0 ? 'red' : 'blue');
-    else if (i < 28) slots.push(i % 2 === 0 ? 'blue' : 'red');
-    else slots.push('green');
+    if (i === 0 || i === 15) slots.push('green');
+    else if (i % 2 === 0) slots.push('red');
+    else slots.push('blue');
   }
-  const total = slots.length;
   const seg = document.getElementById('roulette-segments');
   seg.innerHTML = '';
-  const cx = 90, cy = 90, r = 88;
+  const cx = 140, cy = 140, r = 135;
   slots.forEach((color, i) => {
-    const a1 = (i / total) * 2 * Math.PI - Math.PI / 2;
-    const a2 = ((i + 1) / total) * 2 * Math.PI - Math.PI / 2;
+    const a1 = (i / 30) * 2 * Math.PI - Math.PI / 2;
+    const a2 = ((i + 1) / 30) * 2 * Math.PI - Math.PI / 2;
     const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
     const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
-    const fill = color === 'red' ? '#7f1d1d' : color === 'blue' ? '#1e3a5f' : '#14532d';
-    const stroke = color === 'red' ? '#991b1b' : color === 'blue' ? '#1d4a7f' : '#166534';
+    const fill = color === 'red' ? '#b91c1c' : color === 'blue' ? '#1e40af' : '#15803d';
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${cx},${cy} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} Z`);
     path.setAttribute('fill', fill);
-    path.setAttribute('stroke', stroke);
+    path.setAttribute('stroke', '#333');
     path.setAttribute('stroke-width', '1');
     seg.appendChild(path);
   });
@@ -1042,30 +936,34 @@ function handleRouletteTick(msg) {
   if (msg.bet) {
     document.getElementById('roulette-participants').innerHTML = `
       <div class="participant-row">
-        <img class="p-avatar" src="${msg.bet.avatar || ''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 30 30%22><rect fill=%22%23222%22 width=%2230%22 height=%2230%22/><text x=%2215%22 y=%2220%22 font-size=%2215%22 text-anchor=%22middle%22>👤</text></svg>'"/>
+        <img class="p-avatar" src="${msg.bet.avatar || ''}" onerror="this.src='data:image/svg+xml,...'"/>
         <span class="p-name">${msg.bet.name || 'Игрок'}</span>
         <span class="p-amount">${msg.bet.amount}⭐</span>
-        <span style="font-size:12px;color:${msg.bet.color === 'red' ? '#e63946' : msg.bet.color === 'blue' ? '#60a5fa' : '#4ade80'}">●</span>
-      </div>
-    `;
+        <span style="font-size:12px;color:${msg.bet.color==='red'?'#e63946':msg.bet.color==='blue'?'#60a5fa':'#4ade80'}">●</span>
+      </div>`;
   } else {
     document.getElementById('roulette-participants').innerHTML = '<div class="text-sm text-center" style="padding:8px">Нет ставок</div>';
   }
 }
 
 function handleRouletteRoll(msg) {
-  const labels = { red: '🔴 Красный', blue: '🔵 Синий', green: '🟢 Зелёный' };
-  const wheel = document.getElementById('roulette-svg');
-  const deg = Math.random() * 360 + 1440;
-  wheel.style.transform = `rotate(${deg}deg)`;
+  rouletteSpinning = true;
+  const wheel = document.getElementById('roulette-wheel-svg');
+  const segmentAngle = 360 / 30;
+  const targetAngle = msg.winIndex * segmentAngle + segmentAngle / 2;
+  const spins = 5;
+  const totalRotation = spins * 360 + (360 - targetAngle);
+  
+  wheel.style.transform = `rotate(${totalRotation}deg)`;
+  
   setTimeout(() => {
+    rouletteSpinning = false;
+    const labels = { red: '🔴 Красный', blue: '🔵 Синий', green: '🟢 Зелёный' };
     const res = document.getElementById('roulette-result');
-    res.textContent = labels[msg.winSlot] + (msg.winner ? ` • ${msg.bet.name} +${msg.winAmount}⭐` : '');
+    res.textContent = labels[msg.winSlot] + (msg.winner && String(msg.winner) === String(user?.telegram_id) ? ` • Вы выиграли +${msg.winAmount}⭐!` : '');
     res.className = 'roulette-result ' + msg.winSlot;
-    if (msg.winner && String(msg.winner) === String(user?.telegram_id)) {
-      toast(`🎉 Победа! +${msg.winAmount}⭐`, 'green');
-    }
-  }, 3100);
+    if (msg.winner && String(msg.winner) === String(user?.telegram_id)) toast(`🎉 +${msg.winAmount}⭐`, 'green');
+  }, 4200);
 }
 
 function selectColor(color, el) {
@@ -1074,37 +972,46 @@ function selectColor(color, el) {
   rouletteColor = color;
 }
 
-async function rouletteBet() {
-  if (!user) return toast('Войдите в аккаунт');
+function rouletteBet() {
+  if (!user) return toast('Войдите');
   if (!rouletteColor) return toast('Выбери цвет');
+  if (rouletteSpinning) return toast('Подождите окончания вращения');
   const amount = parseInt(document.getElementById('roulette-bet').value);
   if (amount < 10) return toast('Минимум 10⭐');
   if (amount > stars) return toast('Недостаточно звёзд');
   wsSend({ type: 'roulette_bet', telegram_id: user.telegram_id, name: user.first_name, avatar: user.avatar, amount, color: rouletteColor });
 }
 
-function rouletteCancel() {
-  wsSend({ type: 'cancel_roulette_bet', telegram_id: user?.telegram_id });
-}
+function rouletteCancel() { wsSend({ type: 'cancel_roulette_bet', telegram_id: user?.telegram_id }); }
 
-// ── POKER ─────────────────────────────────────────────────────────────────────
+// POKER
 function makeCardHTML(card, size = '') {
+  if (card.hidden) return `<div class="playing-card hidden ${size}">?</div>`;
   const red = ['♥','♦'].includes(card.s);
-  return `<div class="playing-card ${size} ${red ? 'red-suit' : 'black-suit'}">
-    <div>${card.r}</div><div>${card.s}</div>
-  </div>`;
+  return `<div class="playing-card ${size} ${red ? 'red-suit' : 'black-suit'}"><div>${card.r}</div><div>${card.s}</div></div>`;
 }
 
 async function pokerStart() {
-  if (!user) return toast('Войдите в аккаунт');
+  if (!user) return toast('Войдите');
   const bet = parseInt(document.getElementById('poker-bet').value);
   if (bet < 10) return toast('Минимум 10⭐');
   if (bet > stars) return toast('Недостаточно звёзд');
   try {
     const r = await api('/api/poker/start', 'POST', { telegram_id: user.telegram_id, bet });
-    document.getElementById('player-cards').innerHTML = r.playerCards.map(c => makeCardHTML(c)).join('');
-    document.getElementById('dealer-cards').innerHTML = r.dealerCards.map(c => makeCardHTML(c)).join('');
-    document.getElementById('community-cards').innerHTML = r.community.map(c => makeCardHTML(c, 'community-card')).join('');
+    // Карты игрока с анимацией
+    setTimeout(() => {
+      document.getElementById('player-cards').innerHTML = r.playerCards.map((c, i) => 
+        `<div class="playing-card ${['♥','♦'].includes(c.s) ? 'red-suit' : 'black-suit'}" style="animation-delay:${i*0.2}s"><div>${c.r}</div><div>${c.s}</div></div>`
+      ).join('');
+    }, 200);
+    // Карты дилера скрыты
+    document.getElementById('dealer-cards').innerHTML = r.dealerCards.map(() => '<div class="playing-card hidden">?</div>').join('');
+    // Карты на столе
+    setTimeout(() => {
+      document.getElementById('community-cards').innerHTML = r.community.map((c, i) => 
+        `<div class="playing-card community-card ${['♥','♦'].includes(c.s) ? 'red-suit' : 'black-suit'}" style="animation-delay:${i*0.15+0.4}s"><div>${c.r}</div><div>${c.s}</div></div>`
+      ).join('');
+    }, 400);
     document.getElementById('player-hand').textContent = '';
     document.getElementById('dealer-hand').textContent = '';
     document.getElementById('poker-result-wrap').classList.add('hidden');
@@ -1123,11 +1030,12 @@ async function pokerFold() {
 async function pokerCall() {
   try {
     const r = await api('/api/poker/call', 'POST', { telegram_id: user.telegram_id });
-    document.getElementById('dealer-cards').innerHTML = r.dealerCards.map(c => makeCardHTML(c)).join('');
-    document.getElementById('community-cards').innerHTML = r.community.map(c => makeCardHTML(c, 'community-card')).join('');
-    document.getElementById('player-hand').textContent = r.playerHand;
-    document.getElementById('dealer-hand').textContent = r.dealerHand;
-
+    // Показываем карты дилера с анимацией
+    document.getElementById('dealer-cards').innerHTML = r.dealerCards.map((c, i) => 
+      `<div class="playing-card ${['♥','♦'].includes(c.s) ? 'red-suit' : 'black-suit'} reveal" style="animation-delay:${i*0.3}s"><div>${c.r}</div><div>${c.s}</div></div>`
+    ).join('');
+    document.getElementById('player-hand').textContent = 'Твоя рука: ' + r.playerHand;
+    document.getElementById('dealer-hand').textContent = 'Дилер: ' + r.dealerHand;
     const wrap = document.getElementById('poker-result-wrap');
     wrap.classList.remove('hidden');
     const msgs = { win: `🎉 Победа! +${r.win}⭐`, lose: '😔 Дилер выиграл', draw: '🤝 Ничья' };
@@ -1144,341 +1052,169 @@ function resetPoker() {
   document.getElementById('poker-bet-wrap').classList.remove('hidden');
 }
 
-// ── MARKET ───────────────────────────────────────────────────────────────────
+// MARKET, INVENTORY, LEADERBOARD, PROFILE (оставляем как было)
 async function loadMarket() {
   try {
     const items = await api('/api/market');
     const grid = document.getElementById('market-grid');
-    if (!items.length) {
-      grid.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div>Нет товаров</div>';
-      return;
-    }
+    if (!items.length) { grid.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div>Нет товаров</div>'; return; }
     grid.innerHTML = items.map(item => `
-      <div class="nft-card">
-        <img class="nft-img" src="${item.image_url}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23222%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 font-size=%2240%22 text-anchor=%22middle%22>🎁</text></svg>'"/>
-        <div class="nft-body">
-          <div class="nft-name">${item.name}</div>
-          <div class="nft-seller">от ${item.first_name || item.username || 'Игрок'}</div>
-          <div class="nft-price">⭐ ${item.market_price}</div>
-          ${item.owner_id != user?.telegram_id ?
-            `<button class="btn btn-gold btn-full btn-sm" onclick="buyNft(${item.id})">Купить</button>` :
-            '<div class="text-sm" style="color:var(--text3)">Ваш товар</div>'
-          }
-        </div>
-      </div>
-    `).join('');
+      <div class="nft-card"><img class="nft-img" src="${item.image_url}" onerror="this.src='data:image/svg+xml,...'"/>
+        <div class="nft-body"><div class="nft-name">${item.name}</div><div class="nft-seller">от ${item.first_name || 'Игрок'}</div>
+        <div class="nft-price">⭐ ${item.market_price}</div>
+        ${item.owner_id != user?.telegram_id ? `<button class="btn btn-gold btn-full btn-sm" onclick="buyNft(${item.id})">Купить</button>` : '<div class="text-sm">Ваш</div>'}</div></div>`).join('');
   } catch(e) {}
 }
-
-async function buyNft(id) {
-  if (!user) return toast('Войдите');
-  try {
-    await api('/api/market/buy', 'POST', { telegram_id: user.telegram_id, nft_id: id });
-    toast('✅ Куплено!', 'green');
-    loadMarket();
-  } catch(e) { toast(e.message, 'red'); }
-}
-
-// ── INVENTORY ────────────────────────────────────────────────────────────────
+async function buyNft(id) { try { await api('/api/market/buy', 'POST', { telegram_id: user.telegram_id, nft_id: id }); toast('✅ Куплено!', 'green'); loadMarket(); } catch(e) { toast(e.message, 'red'); } }
 async function loadInventory() {
   if (!user) return;
   try {
     const items = await api(`/api/inventory/${user.telegram_id}`);
     const grid = document.getElementById('inventory-grid');
-    if (!items.length) {
-      grid.innerHTML = '<div class="empty"><div class="empty-icon">📦</div>Пусто</div>';
-      return;
-    }
+    if (!items.length) { grid.innerHTML = '<div class="empty"><div class="empty-icon">📦</div>Пусто</div>'; return; }
     grid.innerHTML = items.map(item => `
-      <div class="inventory-card">
-        <img class="nft-img" src="${item.image_url}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23222%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 font-size=%2240%22 text-anchor=%22middle%22>🎁</text></svg>'"/>
-        <div class="nft-body">
-          <div class="nft-name">${item.name}</div>
-          <div class="row mt8" style="gap:6px">
-            <button class="btn btn-dark btn-full btn-sm" onclick="openSell(${item.id})">Продать</button>
-            <button class="btn btn-dark btn-full btn-sm" onclick="withdrawNft(${item.id})">Вывести (15⭐)</button>
-          </div>
-        </div>
-      </div>
-    `).join('');
+      <div class="inventory-card"><img class="nft-img" src="${item.image_url}" onerror="this.src='...'"/>
+        <div class="nft-body"><div class="nft-name">${item.name}</div>
+        <div class="row mt8" style="gap:6px"><button class="btn btn-dark btn-full btn-sm" onclick="openSell(${item.id})">Продать</button>
+        <button class="btn btn-dark btn-full btn-sm" onclick="withdrawNft(${item.id})">Вывести (15⭐)</button></div></div></div>`).join('');
   } catch(e) {}
 }
-
-function openSell(id) {
-  document.getElementById('sell-nft-id').value = id;
-  openModal('modal-sell');
-}
-
+function openSell(id) { document.getElementById('sell-nft-id').value = id; openModal('modal-sell'); }
 async function confirmSell() {
   const price = parseInt(document.getElementById('sell-price').value);
-  const id = document.getElementById('sell-nft-id').value;
   if (price < 10) return toast('Минимум 10⭐');
-  try {
-    await api('/api/market/sell', 'POST', { telegram_id: user.telegram_id, nft_id: id, price });
-    closeModal('modal-sell');
-    toast('✅ Выставлено на продажу', 'green');
-    loadInventory();
-  } catch(e) { toast(e.message, 'red'); }
+  try { await api('/api/market/sell', 'POST', { telegram_id: user.telegram_id, nft_id: document.getElementById('sell-nft-id').value, price }); closeModal('modal-sell'); toast('✅ Выставлено', 'green'); loadInventory(); } catch(e) { toast(e.message, 'red'); }
 }
-
-async function withdrawNft(id) {
-  if (stars < 15) return toast('Нужно 15⭐ для вывода');
-  try {
-    await api('/api/inventory/withdraw', 'POST', { telegram_id: user.telegram_id, nft_id: id });
-    toast('✅ Заявка отправлена!', 'green');
-    loadInventory();
-  } catch(e) { toast(e.message, 'red'); }
-}
-
-// ── LEADERBOARD ──────────────────────────────────────────────────────────────
+async function withdrawNft(id) { if (stars < 15) return toast('Нужно 15⭐'); try { await api('/api/inventory/withdraw', 'POST', { telegram_id: user.telegram_id, nft_id: id }); toast('✅ Заявка отправлена', 'green'); loadInventory(); } catch(e) { toast(e.message, 'red'); } }
 async function loadLeaderboard() {
   try {
     const data = await api('/api/leaderboard');
-    const top3 = data.slice(0, 3);
-    const rest = data.slice(3);
-
+    const top3 = data.slice(0, 3), rest = data.slice(3);
     const podium = document.getElementById('podium');
-    const order = [1, 0, 2];
-    const classes = ['second', 'first', 'third'];
-    const ranks = ['🥈', '🥇', '🥉'];
-    const heights = [60, 80, 48];
-
-    podium.innerHTML = order.map((idx, i) => {
-      const p = top3[idx];
-      if (!p) return '';
-      return `
-        <div class="podium-item ${classes[i]}">
-          <div class="podium-rank">${ranks[i]}</div>
-          <img class="podium-avatar" src="${p.avatar || ''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 60%22><rect fill=%22%23222%22 width=%2260%22 height=%2260%22/><text x=%2230%22 y=%2240%22 font-size=%2228%22 text-anchor=%22middle%22>👤</text></svg>'"/>
-          <div class="podium-name">${p.first_name || p.username || 'Игрок'}</div>
-          <div class="podium-amount">${p.total_wagered}⭐</div>
-          <div class="podium-block" style="height:${heights[i]}px">${idx + 1}</div>
-        </div>
-      `;
-    }).join('');
-
+    const order = [1, 0, 2], classes = ['second', 'first', 'third'], ranks = ['🥈', '🥇', '🥉'], heights = [60, 80, 48];
+    podium.innerHTML = order.map((idx, i) => { const p = top3[idx]; if (!p) return '';
+      return `<div class="podium-item ${classes[i]}"><div class="podium-rank">${ranks[i]}</div>
+        <img class="podium-avatar" src="${p.avatar || ''}" onerror="this.src='...'"/><div class="podium-name">${p.first_name || 'Игрок'}</div>
+        <div class="podium-amount">${p.total_wagered}⭐</div><div class="podium-block" style="height:${heights[i]}px">${idx + 1}</div></div>`; }).join('');
     document.getElementById('leaderboard-list').innerHTML = rest.map((p, i) => `
-      <div class="leaderboard-row">
-        <div class="lb-rank">${i + 4}</div>
-        <img class="lb-avatar" src="${p.avatar || ''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 36%22><rect fill=%22%23222%22 width=%2236%22 height=%2236%22/><text x=%2218%22 y=%2224%22 font-size=%2218%22 text-anchor=%22middle%22>👤</text></svg>'"/>
-        <div class="lb-info">
-          <div class="lb-name">${p.first_name || 'Игрок'}</div>
-          <div class="lb-user">${p.username ? '@' + p.username : ''}</div>
-        </div>
-        <div class="lb-amount">${p.total_wagered}⭐</div>
-      </div>
-    `).join('');
+      <div class="leaderboard-row"><div class="lb-rank">${i + 4}</div><img class="lb-avatar" src="${p.avatar || ''}" onerror="this.src='...'"/>
+      <div class="lb-info"><div class="lb-name">${p.first_name || 'Игрок'}</div><div class="lb-user">${p.username ? '@'+p.username : ''}</div></div>
+      <div class="lb-amount">${p.total_wagered}⭐</div></div>`).join('');
   } catch(e) {}
 }
-
-// ── PROFILE ───────────────────────────────────────────────────────────────────
 async function loadProfile() {
   if (!user) return;
   try {
     const data = await api(`/api/profile/${user.telegram_id}`);
-    user = data.user;
-    stars = user.stars;
-    updateUI();
-
+    user = data.user; stars = user.stars; updateUI();
     document.getElementById('stat-ref-count').textContent = data.referral_count || 0;
     document.getElementById('stat-ref-earn').textContent = user.referral_earnings || 0;
-
     const txList = document.getElementById('tx-list');
-    if (!data.transactions?.length) {
-      txList.innerHTML = '<div class="text-sm text-center" style="padding:20px">Нет операций</div>';
-    } else {
-      txList.innerHTML = data.transactions.map(tx => `
-        <div class="tx-row">
-          <div>
-            <div class="tx-type">${tx.comment || tx.type}</div>
-            <div class="tx-date">${new Date(tx.created_at).toLocaleString('ru')}</div>
-          </div>
-          <div class="tx-amount ${tx.type === 'credit' ? 'plus' : 'minus'}">${tx.type === 'credit' ? '+' : '-'}${tx.amount}⭐</div>
-        </div>
-      `).join('');
-    }
-  } catch(e) {
-    console.error('Profile load error:', e);
-  }
+    if (!data.transactions?.length) { txList.innerHTML = '<div class="text-sm text-center" style="padding:20px">Нет операций</div>'; }
+    else txList.innerHTML = data.transactions.map(tx => `
+      <div class="tx-row"><div><div class="tx-type">${tx.comment || tx.type}</div><div class="tx-date">${new Date(tx.created_at).toLocaleString('ru')}</div></div>
+      <div class="tx-amount ${tx.type==='credit'?'plus':'minus'}">${tx.type==='credit'?'+':'-'}${tx.amount}⭐</div></div>`).join('');
+  } catch(e) {}
 }
-
 function switchTab(name, event) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name)?.classList.add('active');
   if (event && event.target) event.target.classList.add('active');
 }
+function copyRef() { navigator.clipboard?.writeText(document.getElementById('ref-link').textContent).then(() => toast('✅ Скопировано!')); }
 
-function copyRef() {
-  const text = document.getElementById('ref-link').textContent;
-  navigator.clipboard?.writeText(text).then(() => toast('✅ Скопировано!'));
-}
-
-// ── DEPOSIT ───────────────────────────────────────────────────────────────────
+// DEPOSIT
 function openDeposit() { openModal('modal-deposit'); }
-
 function switchDepositTab(tab, event) {
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.modal-tab-content').forEach(t => t.classList.remove('active'));
   document.getElementById('deposit-' + tab).classList.add('active');
   if (event && event.target) event.target.classList.add('active');
 }
+function setDepositGram(val) { document.getElementById('deposit-gram-amount').value = val; document.getElementById('deposit-gram-stars').textContent = Math.floor(val * 100); }
+function setDepositStars(val) { document.getElementById('deposit-stars-amount').value = val; }
+document.getElementById('deposit-gram-amount').addEventListener('input', function() { document.getElementById('deposit-gram-stars').textContent = Math.floor(parseFloat(this.value || 0) * 100); });
 
-function setDepositGram(val) {
-  document.getElementById('deposit-gram-amount').value = val;
-  document.getElementById('deposit-gram-stars').textContent = Math.floor(val * 100);
-}
-
-function setDepositStars(val) {
-  document.getElementById('deposit-stars-amount').value = val;
-}
-
-document.getElementById('deposit-gram-amount').addEventListener('input', function() {
-  document.getElementById('deposit-gram-stars').textContent = Math.floor(parseFloat(this.value || 0) * 100);
-});
-
-async function payGram() {
+async function createGramInvoice() {
+  if (!user) return toast('Войдите');
+  if (!user.wallet_address) return toast('Сначала подключите TON кошелёк!');
   const amount = parseFloat(document.getElementById('deposit-gram-amount').value);
   if (!amount || amount <= 0) return toast('Укажи сумму');
   try {
-    await api('/api/deposit/gram', 'POST', { telegram_id: user?.telegram_id, amount_gram: amount });
-    closeModal('modal-deposit');
-    toast(`✅ Зачислено ${Math.floor(amount * 100)}⭐!`, 'green');
+    const r = await api('/api/create-invoice', 'POST', { telegram_id: user.telegram_id, amount_gram: amount, wallet_address: user.wallet_address });
+    document.getElementById('gram-invoice-id').textContent = r.invoice_id;
+    document.getElementById('gram-invoice-amount').textContent = r.stars_amount;
+    document.getElementById('gram-invoice-info').classList.remove('hidden');
+    toast('✅ Счёт создан! Отправьте Gram и ожидайте', 'green');
   } catch(e) { toast(e.message, 'red'); }
 }
 
 async function payStars() {
   const amount = parseInt(document.getElementById('deposit-stars-amount').value);
   if (!amount || amount < 50) return toast('Минимум 50 Stars');
-  tg?.openInvoice(`https://t.me/DadTonBot?start=stars_${user?.telegram_id}_${amount}`, (status) => {
-    if (status === 'paid') {
-      api('/api/deposit/gram', 'POST', { telegram_id: user?.telegram_id, amount_gram: amount / 100 });
-      closeModal('modal-deposit');
-      toast(`✅ Зачислено ${amount}⭐!`, 'green');
-    }
-  });
+  try {
+    await api('/api/deposit/stars', 'POST', { telegram_id: user?.telegram_id, amount });
+    closeModal('modal-deposit');
+    toast(`✅ +${amount}⭐`, 'green');
+  } catch(e) { toast(e.message, 'red'); }
 }
 
-// ── WITHDRAW ─────────────────────────────────────────────────────────────────
+// WITHDRAW
 function openWithdraw() { openModal('modal-withdraw'); }
-
 async function doWithdraw() {
   const amount = parseInt(document.getElementById('withdraw-amount').value);
   const currency = document.getElementById('withdraw-currency').value;
   const address = document.getElementById('withdraw-addr').value.trim();
   if (!amount || amount < 100) return toast('Минимум 100⭐');
-  if (!address) return toast('Укажи адрес кошелька');
+  if (!address) return toast('Укажи адрес');
   if (amount > stars) return toast('Недостаточно звёзд');
-  try {
-    await api('/api/withdraw', 'POST', { telegram_id: user.telegram_id, amount, currency, address });
-    closeModal('modal-withdraw');
-    toast('✅ Заявка отправлена!', 'green');
-  } catch(e) { toast(e.message, 'red'); }
+  try { await api('/api/withdraw', 'POST', { telegram_id: user.telegram_id, amount, currency, address }); closeModal('modal-withdraw'); toast('✅ Заявка отправлена', 'green'); } catch(e) { toast(e.message, 'red'); }
 }
 
-// ── ADMIN ─────────────────────────────────────────────────────────────────────
-function openAdmin() { openModal('modal-admin'); loadWithdrawals(); }
-
+// ADMIN
+function openAdmin() { openModal('modal-admin'); loadWithdrawals(); loadPendingDeposits(); }
 async function adminBalance(action) {
-  const uid = document.getElementById('admin-uid').value;
-  const amount = parseInt(document.getElementById('admin-amount').value);
+  const uid = document.getElementById('admin-uid').value, amount = parseInt(document.getElementById('admin-amount').value);
   if (!uid || !amount) return toast('Заполни поля');
-  try {
-    await fetch(APP_URL + '/api/admin/balance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-id': user.telegram_id },
-      body: JSON.stringify({ telegram_id: uid, amount, action })
-    });
-    toast('✅ Готово', 'green');
-  } catch(e) { toast(e.message, 'red'); }
+  try { await fetch(APP_URL+'/api/admin/balance',{method:'POST',headers:{'Content-Type':'application/json','x-admin-id':user.telegram_id},body:JSON.stringify({telegram_id:uid,amount,action})}); toast('✅ Готово','green'); } catch(e) { toast(e.message,'red'); }
 }
-
-async function adminAddNft() {
-  const body = {
-    owner_id: document.getElementById('admin-nft-uid').value,
-    name: document.getElementById('admin-nft-name').value,
-    image_url: document.getElementById('admin-nft-img').value,
-    gift_id: document.getElementById('admin-nft-gift').value
-  };
-  try {
-    await fetch(APP_URL + '/api/admin/add-nft', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-id': user.telegram_id },
-      body: JSON.stringify(body)
-    });
-    toast('✅ NFT добавлен', 'green');
-  } catch(e) { toast(e.message, 'red'); }
-}
-
-async function adminBan(ban) {
-  const uid = document.getElementById('admin-ban-uid').value;
-  if (!uid) return toast('Укажи ID');
-  await fetch(APP_URL + '/api/admin/ban', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-id': user.telegram_id },
-    body: JSON.stringify({ telegram_id: uid, ban })
-  });
-  toast(ban ? '🔨 Забанен' : '🔓 Разбанен', 'green');
-}
-
 async function loadWithdrawals() {
   try {
-    const res = await fetch(APP_URL + '/api/admin/withdrawals', { headers: { 'x-admin-id': user.telegram_id } });
+    const res = await fetch(APP_URL+'/api/admin/withdrawals',{headers:{'x-admin-id':user.telegram_id}});
     const data = await res.json();
     const el = document.getElementById('admin-withdrawals');
-    if (!data.length) { el.innerHTML = '<div class="text-sm">Нет заявок</div>'; return; }
-    el.innerHTML = data.map(w => `
-      <div style="background:var(--bg4);border-radius:8px;padding:10px;margin-bottom:6px">
-        <div style="font-size:13px;margin-bottom:6px">${w.first_name || w.username} | ${w.amount}⭐ | ${w.currency}</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${w.address}</div>
-        <div class="row">
-          <button class="btn btn-gold btn-sm" onclick="approveWithdrawal(${w.id})">✅</button>
-          <button class="btn btn-red btn-sm" onclick="rejectWithdrawal(${w.id})">❌</button>
-        </div>
-      </div>
-    `).join('');
+    if (!data.length) { el.innerHTML='<div class="text-sm">Нет заявок</div>'; return; }
+    el.innerHTML = data.map(w => `<div style="background:var(--bg4);border-radius:8px;padding:10px;margin-bottom:6px"><div style="font-size:13px">${w.first_name||w.username} | ${w.amount}⭐ | ${w.currency}</div><div style="font-size:11px;color:var(--text3)">${w.address}</div><div class="row"><button class="btn btn-gold btn-sm" onclick="approveWithdrawal(${w.id})">✅</button><button class="btn btn-red btn-sm" onclick="rejectWithdrawal(${w.id})">❌</button></div></div>`).join('');
   } catch(e) {}
 }
-
-async function approveWithdrawal(id) {
-  await fetch(APP_URL + `/api/admin/withdrawal/${id}/approve`, { method: 'POST', headers: { 'x-admin-id': user.telegram_id } });
-  toast('✅ Одобрено', 'green'); loadWithdrawals();
-}
-
-async function rejectWithdrawal(id) {
-  await fetch(APP_URL + `/api/admin/withdrawal/${id}/reject`, { method: 'POST', headers: { 'x-admin-id': user.telegram_id } });
-  toast('✅ Отклонено', 'green'); loadWithdrawals();
-}
-
-async function loadAdminUsers() {
+async function loadPendingDeposits() {
   try {
-    const res = await fetch(APP_URL + '/api/admin/users', { headers: { 'x-admin-id': user.telegram_id } });
+    const res = await fetch(APP_URL+'/api/admin/pending-deposits',{headers:{'x-admin-id':user.telegram_id}});
     const data = await res.json();
-    document.getElementById('admin-users').innerHTML = data.slice(0, 20).map(u => `
-      <div style="background:var(--bg4);border-radius:6px;padding:8px;margin-bottom:4px;font-size:12px">
-        <b>${u.first_name || u.username || 'ID:' + u.telegram_id}</b> | ${u.stars}⭐
-        <span style="color:${u.is_banned ? 'var(--red)' : '#4ade80'}">${u.is_banned ? '🔴 БАН' : '🟢'}</span>
-      </div>
-    `).join('');
+    const el = document.getElementById('admin-pending-deposits');
+    if (!data.length) { el.innerHTML='<div class="text-sm">Нет ожидающих</div>'; return; }
+    el.innerHTML = data.map(d => `<div style="background:var(--bg4);border-radius:8px;padding:10px;margin-bottom:6px"><div>${d.first_name||d.username} | ${d.amount_gram} Gram (${d.amount_stars}⭐)</div><div style="font-size:11px">ID: ${d.id} | Кошелёк: ${d.wallet_address?.slice(0,8)}...</div><button class="btn btn-gold btn-sm btn-full mt8" onclick="approveDeposit(${d.id})">✅ Подтвердить</button></div>`).join('');
   } catch(e) {}
 }
-
-async function adminAction(action) {
-  if (!confirm('Вы уверены?')) return;
-  await fetch(APP_URL + `/api/admin/${action}`, { method: 'POST', headers: { 'x-admin-id': user.telegram_id } });
-  toast('✅ Выполнено', 'green');
+async function approveWithdrawal(id) { await fetch(APP_URL+`/api/admin/withdrawal/${id}/approve`,{method:'POST',headers:{'x-admin-id':user.telegram_id}}); toast('✅','green'); loadWithdrawals(); }
+async function rejectWithdrawal(id) { await fetch(APP_URL+`/api/admin/withdrawal/${id}/reject`,{method:'POST',headers:{'x-admin-id':user.telegram_id}}); toast('❌','red'); loadWithdrawals(); }
+async function approveDeposit(id) {
+  try {
+    await fetch(APP_URL+`/api/approve-deposit/${id}`,{method:'POST',headers:{'x-admin-id':user.telegram_id}});
+    toast('✅ Депозит подтверждён','green');
+    loadPendingDeposits();
+  } catch(e) { toast(e.message,'red'); }
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
+// UTILS
 function setBet(id, val) { document.getElementById(id).value = val; }
 function addBet(id, val) { const el = document.getElementById(id); el.value = parseInt(el.value || 0) + val; }
 function halfBet(id) { const el = document.getElementById(id); el.value = Math.max(10, Math.floor(parseInt(el.value || 20) / 2)); }
 function doubleBet(id) { const el = document.getElementById(id); el.value = Math.min(stars, parseInt(el.value || 10) * 2); }
 function setMaxBet(id) { document.getElementById(id).value = stars; }
-
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
 let toastTimeout;
 function toast(msg, color = 'default') {
   const el = document.getElementById('toast');
@@ -1491,50 +1227,30 @@ function toast(msg, color = 'default') {
   toastTimeout = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-// ── TONCONNECT ────────────────────────────────────────────────────────────────
+// TONCONNECT
 let tonConnectUI;
 async function initTonConnect() {
   try {
-    tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: `${APP_URL}/tonconnect-manifest.json`,
-      buttonRootId: null
-    });
+    tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: `${APP_URL}/tonconnect-manifest.json`, buttonRootId: null });
     window.tonConnectUI = tonConnectUI;
     document.getElementById('btn-connect').onclick = () => tonConnectUI.openModal();
-    
     tonConnectUI.onStatusChange(async (wallet) => {
       const btn = document.getElementById('btn-connect');
       if (wallet) {
         const addr = wallet.account.address;
         btn.textContent = '💎 ' + addr.slice(0, 4) + '...' + addr.slice(-4);
         document.getElementById('withdraw-addr').value = addr;
-        // Сохраняем кошелёк в профиль
         if (user && user.telegram_id) {
-          try {
-            await api('/api/update-wallet', 'POST', { 
-              telegram_id: user.telegram_id, 
-              wallet_address: addr 
-            });
-            user.wallet_address = addr;
-          } catch(e) {
-            console.error('Wallet update error:', e);
-          }
+          try { await api('/api/update-wallet', 'POST', { telegram_id: user.telegram_id, wallet_address: addr }); user.wallet_address = addr; } catch(e) {}
         }
-      } else {
-        btn.textContent = '💎 Кошелёк';
-      }
+      } else { btn.textContent = '💎 Кошелёк'; }
     });
-  } catch(e) {
-    document.getElementById('btn-connect').onclick = () => toast('TonConnect недоступен');
-  }
+  } catch(e) { document.getElementById('btn-connect').onclick = () => toast('TonConnect недоступен'); }
 }
 
-// ── МОДАЛИ: блокируем всплытие ───────────────────────────────────────────────
-document.querySelectorAll('.modal').forEach(m => {
-  m.addEventListener('click', e => e.stopPropagation());
-});
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => e.stopPropagation()));
 
-// ── START ─────────────────────────────────────────────────────────────────────
+// START
 buildMinesGrid();
 buildRouletteWheel();
 initTonConnect();
