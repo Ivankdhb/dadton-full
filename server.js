@@ -19,7 +19,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ✅ Все секреты в переменных окружения
 const CONFIG = {
   BOT_TOKEN: process.env.BOT_TOKEN || '8710793985:AAF0RDrfFcTLOcLItyFfdr0jsFVZu0MsZR0',
   ADMIN_ID: process.env.ADMIN_ID || '1631627984',
@@ -28,7 +27,6 @@ const CONFIG = {
   TON_RECEIVER_ADDRESS: process.env.TON_RECEIVER_ADDRESS || 'UQCEA1RKJ0eAZ_kvpN7tzhrCIh94XBw9ROSeQbaHPXOEOPRP'
 };
 
-// ✅ Пул с настройками
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://dadton_db_user:i3gLm3A1tac4iXu7mUKwJMKKBIQRrDn2@dpg-d8ka6f57vvec73ere1p0-a/dadton_db',
   max: 20,
@@ -37,14 +35,12 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// ✅ Логгер
 const logger = {
   info: (...args) => console.log('[INFO]', new Date().toISOString(), ...args),
   error: (...args) => console.error('[ERROR]', new Date().toISOString(), ...args),
   warn: (...args) => console.warn('[WARN]', new Date().toISOString(), ...args)
 };
 
-// ✅ Кеш
 class Cache {
   constructor(ttl = 30000) {
     this.cache = new Map();
@@ -66,7 +62,6 @@ class Cache {
 }
 const userCache = new Cache(30000);
 
-// ✅ Rate Limiter
 const rateLimit = new Map();
 function checkRateLimit(telegram_id, action, limit = 10, window = 60000) {
   const key = `${telegram_id}:${action}`;
@@ -81,7 +76,6 @@ function checkRateLimit(telegram_id, action, limit = 10, window = 60000) {
   return data.count <= limit;
 }
 
-// ✅ Инициализация БД с индексами
 async function initDB() {
   const client = await pool.connect();
   try {
@@ -166,7 +160,6 @@ async function initDB() {
   }
 }
 
-// ✅ Функции с кешем
 async function getUser(telegram_id) {
   const cached = userCache.get(telegram_id);
   if (cached) return cached;
@@ -220,7 +213,6 @@ function generateRef() {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ✅ Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -240,7 +232,6 @@ app.get('/tonconnect-manifest.json', (req, res) => {
   });
 });
 
-// ✅ Аутентификация
 app.post('/api/auth', async (req, res) => {
   try {
     const { telegram_id, username, first_name, avatar, ref, wallet_address } = req.body;
@@ -340,7 +331,6 @@ app.get('/api/crash-history', async (req, res) => {
   res.json(r.rows.map(x => x.multiplier));
 });
 
-// ✅ WebSocket рассылка
 function broadcast(data) {
   const msg = JSON.stringify(data);
   wss.clients.forEach(c => {
@@ -355,7 +345,6 @@ function broadcastTo(telegram_id, data) {
   });
 }
 
-// ✅ Игровые сессии
 const minesSessions = {};
 const pokerSessions = {};
 const blackjackSessions = {};
@@ -363,14 +352,15 @@ const rocketBets = {};
 let crashHistory = [];
 let coinflipBets = {};
 
-// ✅ Мины
+// ================================================================
+// МИНЫ
+// ================================================================
 app.post('/api/mines/start', async (req, res) => {
   try {
     const { telegram_id, bet, mines_count } = req.body;
     if (!checkRateLimit(telegram_id, 'mines', 5)) {
       return res.status(429).json({ error: 'Слишком много запросов' });
     }
-    
     const user = await getUser(telegram_id);
     if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
     if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
@@ -422,7 +412,6 @@ app.post('/api/mines/open', async (req, res) => {
     const session = minesSessions[telegram_id];
     if (!session || !session.active) return res.status(400).json({ error: 'Нет активной игры' });
     if (session.revealed.includes(cell)) return res.status(400).json({ error: 'Уже открыта' });
-    
     const isMine = session.minePositions.includes(cell);
     session.revealed.push(cell);
 
@@ -463,7 +452,9 @@ app.post('/api/mines/cashout', async (req, res) => {
   }
 });
 
-// ✅ Блэкджек
+// ================================================================
+// БЛЭКДЖЕК
+// ================================================================
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
@@ -503,7 +494,6 @@ app.post('/api/blackjack/start', async (req, res) => {
     if (!checkRateLimit(telegram_id, 'blackjack', 5)) {
       return res.status(429).json({ error: 'Слишком много запросов' });
     }
-    
     const user = await getUser(telegram_id);
     if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
     if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
@@ -600,14 +590,15 @@ app.post('/api/blackjack/stand', async (req, res) => {
   }
 });
 
-// ✅ Кости
+// ================================================================
+// КОСТИ
+// ================================================================
 app.post('/api/dice/roll', async (req, res) => {
   try {
     const { telegram_id, bet, target, over_under } = req.body;
     if (!checkRateLimit(telegram_id, 'dice', 10)) {
       return res.status(429).json({ error: 'Слишком много запросов' });
     }
-    
     const user = await getUser(telegram_id);
     if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
     if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
@@ -616,7 +607,6 @@ app.post('/api/dice/roll', async (req, res) => {
 
     await deductStars(telegram_id, bet, 'Ставка в кости');
     await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [telegram_id]);
-    
     const result = Math.floor(Math.random() * 6) + 1;
     const won = over_under === 'over' ? result > target : result < target;
     const probability = over_under === 'over' ? (6 - target) / 6 : (target - 1) / 6;
@@ -639,14 +629,15 @@ app.post('/api/dice/roll', async (req, res) => {
   }
 });
 
-// ✅ Монетка
+// ================================================================
+// МОНЕТКА
+// ================================================================
 app.post('/api/coinflip/bet', async (req, res) => {
   try {
     const { telegram_id, bet, choice } = req.body;
     if (!checkRateLimit(telegram_id, 'coinflip', 3)) {
       return res.status(429).json({ error: 'Слишком много запросов' });
     }
-    
     const user = await getUser(telegram_id);
     if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
     if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
@@ -668,7 +659,9 @@ app.post('/api/coinflip/bet', async (req, res) => {
   }
 });
 
-// ✅ Покер
+// ================================================================
+// ПОКЕР
+// ================================================================
 function rankValue(r) { return RANKS.indexOf(r); }
 
 function evaluateHand(cards) {
@@ -696,7 +689,6 @@ app.post('/api/poker/start', async (req, res) => {
     if (!checkRateLimit(telegram_id, 'poker', 3)) {
       return res.status(429).json({ error: 'Слишком много запросов' });
     }
-    
     const user = await getUser(telegram_id);
     if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
     if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
@@ -769,7 +761,9 @@ app.post('/api/poker/call', async (req, res) => {
   }
 });
 
-// ✅ Маркет
+// ================================================================
+// МАРКЕТ
+// ================================================================
 app.get('/api/market', async (req, res) => {
   try {
     const r = await pool.query(
@@ -789,10 +783,8 @@ app.post('/api/market/sell', async (req, res) => {
   try {
     const { telegram_id, nft_id, price } = req.body;
     if (price < 10) return res.status(400).json({ error: 'Минимальная цена 10' });
-    
     const nft = await pool.query('SELECT * FROM nft_items WHERE id=$1 AND owner_id=$2', [nft_id, telegram_id]);
     if (!nft.rows[0]) return res.status(403).json({ error: 'Не ваш NFT' });
-    
     await pool.query('UPDATE nft_items SET on_market=TRUE, market_price=$1 WHERE id=$2', [price, nft_id]);
     res.json({ success: true });
   } catch (e) {
@@ -805,7 +797,6 @@ app.post('/api/market/buy', async (req, res) => {
     const { telegram_id, nft_id } = req.body;
     const nft = await pool.query('SELECT * FROM nft_items WHERE id=$1 AND on_market=TRUE', [nft_id]);
     if (!nft.rows[0]) return res.status(404).json({ error: 'NFT не найден' });
-    
     const item = nft.rows[0];
     if (item.owner_id == telegram_id) return res.status(400).json({ error: 'Нельзя купить у себя' });
 
@@ -841,12 +832,10 @@ app.post('/api/nft/receive', async (req, res) => {
     const { telegram_id, gift_id, name, image_url } = req.body;
     const user = await getUser(telegram_id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-
     await pool.query(
       'INSERT INTO nft_items(owner_id, name, image_url, gift_id) VALUES($1, $2, $3, $4)',
       [telegram_id, name, image_url, gift_id]
     );
-
     broadcastTo(telegram_id, { type: 'nft_received', name, image_url });
     res.json({ success: true });
   } catch (e) {
@@ -859,7 +848,6 @@ app.post('/api/inventory/withdraw', async (req, res) => {
     const { telegram_id, nft_id } = req.body;
     const user = await getUser(telegram_id);
     if (user.stars < 15) return res.status(400).json({ error: 'Нужно 15 для вывода' });
-    
     const nft = await pool.query('SELECT * FROM nft_items WHERE id=$1 AND owner_id=$2', [nft_id, telegram_id]);
     if (!nft.rows[0]) return res.status(403).json({ error: 'Не ваш NFT' });
 
@@ -881,7 +869,9 @@ app.post('/api/inventory/withdraw', async (req, res) => {
   }
 });
 
-// ✅ Вывод
+// ================================================================
+// ВЫВОД
+// ================================================================
 app.post('/api/withdraw', async (req, res) => {
   try {
     const { telegram_id, amount, currency, address } = req.body;
@@ -911,13 +901,14 @@ app.post('/api/withdraw', async (req, res) => {
   }
 });
 
-// ✅ Депозиты
+// ================================================================
+// ДЕПОЗИТЫ
+// ================================================================
 app.post('/api/deposit/ton', async (req, res) => {
   try {
     const { telegram_id, amount_gram, tx_hash } = req.body;
     const user = await getUser(telegram_id);
     if (!user) return res.status(404).json({ error: 'Не найден' });
-    
     const stars_amount = Math.floor(amount_gram * 100);
     const inv = await pool.query(
       `INSERT INTO deposit_invoices(user_id, amount_gram, amount_stars, tx_hash, status) 
@@ -966,7 +957,6 @@ app.post('/api/deposit/stars', async (req, res) => {
     const user = await getUser(telegram_id);
     if (!user) return res.status(404).json({ error: 'Не найден' });
     if (!amount || amount < 50) return res.status(400).json({ error: 'Минимум 50' });
-    
     await addStars(telegram_id, amount, 'Пополнение Stars: ' + amount);
     await pool.query('UPDATE users SET total_deposited=total_deposited+$1 WHERE telegram_id=$2', [amount, telegram_id]);
 
@@ -978,7 +968,9 @@ app.post('/api/deposit/stars', async (req, res) => {
   }
 });
 
-// ✅ Админ
+// ================================================================
+// АДМИНКА
+// ================================================================
 function isAdmin(req, res, next) {
   const id = req.headers['x-admin-id'] || req.body?.admin_id;
   if (String(id) !== String(CONFIG.ADMIN_ID)) {
@@ -1111,7 +1103,9 @@ app.post('/api/admin/reset-balances', isAdmin, async (req, res) => {
   }
 });
 
-// ✅ Ракета
+// ================================================================
+// РАКЕТА
+// ================================================================
 let rocketState = 'waiting';
 let rocketTimer = 10;
 let rocketMultiplier = 1.00;
@@ -1139,14 +1133,11 @@ function getRocketBetsList() {
 async function handleRocketCashout(telegram_id, multiplier) {
   const bet = rocketBets[telegram_id];
   if (!bet || bet.cashedOut) return false;
-  
   bet.cashedOut = true;
   bet.cashoutMultiplier = multiplier;
   const win = Math.floor(bet.amount * multiplier);
-  
   await addStars(telegram_id, win, 'Вывод в ракете x' + multiplier);
   await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.amount, telegram_id]);
-  
   const user = await getUser(telegram_id);
   broadcastTo(telegram_id, { type: 'rocket_cashout_success', telegram_id, multiplier, winAmount: win });
   broadcastTo(telegram_id, { type: 'balance_update', stars: user.stars });
@@ -1213,7 +1204,9 @@ async function rocketLoop() {
   }
 }
 
-// ✅ Рулетка
+// ================================================================
+// РУЛЕТКА
+// ================================================================
 const ROULETTE_SLOTS = [];
 for (let i = 0; i < 30; i++) {
   if (i === 0 || i === 15) ROULETTE_SLOTS.push('green');
@@ -1238,7 +1231,6 @@ async function rouletteLoop() {
         rouletteTimer = i - 1;
         broadcast({ type: 'roulette_tick', timer: rouletteTimer, bet: rouletteBet });
       }
-      
       if (!rouletteBet) continue;
 
       const winIndex = Math.floor(Math.random() * ROULETTE_SLOTS.length);
@@ -1268,12 +1260,13 @@ async function rouletteLoop() {
   }
 }
 
-// ✅ Монетка луп
+// ================================================================
+// МОНЕТКА ЛУП
+// ================================================================
 async function coinflipLoop() {
   while (true) {
     try {
       await sleep(10000);
-      
       const bets = Object.entries(coinflipBets);
       if (bets.length === 0) continue;
 
@@ -1302,7 +1295,9 @@ async function coinflipLoop() {
   }
 }
 
-// ✅ WebSocket
+// ================================================================
+// WEBSOCKET
+// ================================================================
 wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
     try {
@@ -1331,7 +1326,6 @@ wss.on('connection', (ws) => {
 
         await deductStars(msg.telegram_id, msg.amount, 'Ставка в ракете');
         await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [msg.telegram_id]);
-        
         rocketBets[msg.telegram_id] = {
           name: msg.name,
           avatar: msg.avatar,
@@ -1341,7 +1335,6 @@ wss.on('connection', (ws) => {
           cashedOut: false,
           cashoutMultiplier: null
         };
-        
         const u = await getUser(msg.telegram_id);
         ws.send(JSON.stringify({ type: 'balance_update', stars: u.stars }));
         broadcast({ type: 'rocket_tick', timer: rocketTimer, bets: getRocketBetsList() });
@@ -1404,18 +1397,17 @@ wss.on('connection', (ws) => {
   });
 });
 
-// ✅ Запуск
+// ================================================================
+// ЗАПУСК
+// ================================================================
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   logger.info(`🚀 DadTon запущен на порту ${PORT}`);
   await initDB();
-  
-  // Запускаем игровые циклы
   rocketLoop();
   rouletteLoop();
   coinflipLoop();
 
-  // Очистка сессий каждые 5 минут
   setInterval(async () => {
     try {
       const now = Date.now();
