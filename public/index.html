@@ -277,13 +277,399 @@
   </div>
 </div>
 
-<!-- Все страницы (сокращено для экономии места, полная версия в предыдущем ответе) -->
-<!-- ... остальной HTML такой же как в вашем исходном коде ... -->
+<!-- ====== ГЛАВНАЯ ====== -->
+<div id="page-home" class="page active">
+  <div style="margin-bottom:16px">
+    <div style="font-size:22px;font-weight:900;margin-bottom:4px;color:var(--gold)">Добро пожаловать 👋</div>
+    <div class="text-sm">Выбери игру и начни играть</div>
+  </div>
+  <div class="game-card" onclick="openGame('rocket')">
+    <div class="game-card-left"><div class="game-card-title">🚀 Ракета</div><div class="game-card-sub">Краш-игра • Успей забрать</div></div>
+    <div class="game-card-icon">🚀</div>
+  </div>
+  <div class="game-card" onclick="openGame('mines')">
+    <div class="game-card-left"><div class="game-card-title">💣 Мины</div><div class="game-card-sub">5×5 • Найди безопасные клетки</div></div>
+    <div class="game-card-icon">💣</div>
+  </div>
+  <div class="game-card" onclick="openGame('roulette')">
+    <div class="game-card-left"><div class="game-card-title">🎡 Рулетка</div><div class="game-card-sub">Ставь на цвет • ×2 или ×10</div></div>
+    <div class="game-card-icon">🎡</div>
+  </div>
+  <div class="game-card" onclick="openGame('poker')">
+    <div class="game-card-left"><div class="game-card-title">🃏 Покер</div><div class="game-card-sub">Техасский Холдем</div></div>
+    <div class="game-card-icon">🃏</div>
+  </div>
+  <div class="game-card" onclick="openGame('blackjack')">
+    <div class="game-card-left"><div class="game-card-title">🂡 Блэкджек</div><div class="game-card-sub">Набери 21 очко</div></div>
+    <div class="game-card-icon">🂡</div>
+  </div>
+  <div class="game-card" onclick="openGame('dice')">
+    <div class="game-card-left"><div class="game-card-title">🎲 Кости</div><div class="game-card-sub">Угадай число</div></div>
+    <div class="game-card-icon">🎲</div>
+  </div>
+  <div class="game-card" onclick="openGame('coinflip')">
+    <div class="game-card-left"><div class="game-card-title">🪙 Монетка</div><div class="game-card-sub">Орёл или решка • Мультиплеер</div></div>
+    <div class="game-card-icon">🪙</div>
+  </div>
+</div>
+
+<!-- ====== РАКЕТА ====== -->
+<div id="page-rocket" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div class="rocket-video-wrap">
+    <video id="rocket-video" autoplay loop muted playsinline>
+      <source src="https://github.com/Ivankdhb/animation-site/raw/972460234f4ae5ebc7366f1476c917e602b08daf/OhB1.gif.mp4" type="video/mp4"/>
+    </video>
+    <div class="rocket-overlay">
+      <div class="rocket-mult" id="rocket-mult-display">⏳</div>
+      <div class="rocket-status" id="rocket-status">Ожидание старта...</div>
+      <div class="rocket-timer-bar" id="rocket-timer-bar-wrap"><div class="rocket-timer-fill" id="rocket-timer-fill" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div class="crash-history" id="crash-history"></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+    <div class="label">Сумма ставки</div>
+    <div class="row mb8"><input class="input" id="rocket-bet" type="number" value="10" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8">
+      <span class="qbtn" onclick="setBet('rocket-bet',10)">MIN</span>
+      <span class="qbtn" onclick="addBet('rocket-bet',10)">+10</span>
+      <span class="qbtn" onclick="addBet('rocket-bet',50)">+50</span>
+      <span class="qbtn" onclick="setMaxBet('rocket-bet')">MAX</span>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="rocket-auto-cb"/>
+      <label for="rocket-auto-cb" style="font-size:13px;color:var(--text2)">Автовывод</label>
+      <input class="input" id="rocket-auto-val" type="number" value="1.5" step="0.1" min="1.1" style="width:80px"/>
+      <span style="font-size:12px;color:var(--text2)">x</span>
+    </div>
+    <div class="row mt8">
+      <button class="btn btn-gold btn-full" id="btn-rocket-bet" onclick="rocketBet()">💰 Сделать ставку</button>
+      <button class="btn btn-dark hidden" id="btn-rocket-cancel" onclick="rocketCancel()">❌ Отмена</button>
+    </div>
+    <div id="btn-rocket-cashout-wrap" class="hidden mt8">
+      <button class="btn btn-full" style="background:linear-gradient(135deg,#14532d,#166534);color:#4ade80" onclick="rocketCashout()">💰 Забрать (<span id="cashout-mult">1.00</span>x)</button>
+    </div>
+  </div>
+  <div class="section-title">👥 Участники</div>
+  <div class="participants-list" id="rocket-participants"><div class="text-sm text-center" style="padding:12px">Нет участников</div></div>
+</div>
+
+<!-- ====== МИНЫ ====== -->
+<div id="page-mines" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+    <div class="label">Сумма ставки</div>
+    <div class="row mb8"><input class="input" id="mines-bet" type="number" value="20" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8">
+      <span class="qbtn" onclick="setBet('mines-bet',10)">MIN</span><span class="qbtn" onclick="halfBet('mines-bet')">½</span>
+      <span class="qbtn" onclick="doubleBet('mines-bet')">×2</span><span class="qbtn" onclick="setMaxBet('mines-bet')">MAX</span>
+    </div>
+    <div class="label">Количество мин</div>
+    <div class="mines-select-row">
+      <span class="mines-select-btn active" onclick="selectMines(this,5)">5</span>
+      <span class="mines-select-btn" onclick="selectMines(this,10)">10</span>
+      <span class="mines-select-btn" onclick="selectMines(this,15)">15</span>
+      <span class="mines-select-btn" onclick="selectMines(this,20)">20</span>
+      <span class="mines-select-btn" onclick="selectMines(this,24)">24</span>
+    </div>
+  </div>
+  <div class="mines-grid" id="mines-grid"></div>
+  <div class="mines-mult hidden" id="mines-mult">x1.00</div>
+  <button class="btn btn-gold btn-full" id="btn-mines-action" onclick="minesAction()">💣 Новая игра</button>
+</div>
+
+<!-- ====== РУЛЕТКА ====== -->
+<div id="page-roulette" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div class="roulette-container">
+    <div class="roulette-pointer">▼</div>
+    <svg class="roulette-wheel-svg" id="roulette-wheel-svg" viewBox="0 0 280 280">
+      <defs><clipPath id="roulette-clip"><circle cx="140" cy="140" r="135"/></clipPath></defs>
+      <g clip-path="url(#roulette-clip)" id="roulette-segments"></g>
+      <circle cx="140" cy="140" r="135" fill="none" stroke="#444" stroke-width="3"/>
+    </svg>
+    <div class="roulette-center">🎡</div>
+  </div>
+  <div class="roulette-result" id="roulette-result"></div>
+  <div style="text-align:center;font-size:14px;color:var(--text2);margin-bottom:12px">⏳ Прокрутка через: <span id="roulette-timer" style="color:var(--gold);font-weight:700">15</span>с</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+    <div class="label">Выбери цвет</div>
+    <div class="color-bets mb8">
+      <div class="color-bet-btn red-btn" onclick="selectColor('red',this)">🔴 Красный<br><span style="font-size:10px;opacity:.7">×2</span></div>
+      <div class="color-bet-btn blue-btn" onclick="selectColor('blue',this)">🔵 Синий<br><span style="font-size:10px;opacity:.7">×2</span></div>
+      <div class="color-bet-btn green-btn" onclick="selectColor('green',this)">🟢 Зелёный<br><span style="font-size:10px;opacity:.7">×10</span></div>
+    </div>
+    <div class="label">Сумма ставки</div>
+    <div class="row mb8"><input class="input" id="roulette-bet" type="number" value="10" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8">
+      <span class="qbtn" onclick="setBet('roulette-bet',10)">MIN</span><span class="qbtn" onclick="addBet('roulette-bet',10)">+10</span>
+      <span class="qbtn" onclick="addBet('roulette-bet',50)">+50</span><span class="qbtn" onclick="setMaxBet('roulette-bet')">MAX</span>
+    </div>
+    <div class="row"><button class="btn btn-gold btn-full" onclick="rouletteBet()">📥 Сделать ставку</button><button class="btn btn-dark" onclick="rouletteCancel()">❌</button></div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="section-title" style="margin:0">👥 Участники</span><span style="font-size:13px;color:var(--gold)">Банк: <span id="roulette-bank">0</span>⭐</span></div>
+    <div id="roulette-participants"><div class="text-sm text-center" style="padding:8px">Нет ставок</div></div>
+  </div>
+</div>
+
+<!-- ====== ПОКЕР ====== -->
+<div id="page-poker" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div class="poker-table">
+    <div class="card-label">🃏 Дилер</div>
+    <div class="card-row" id="dealer-cards"><div class="playing-card hidden">?</div><div class="playing-card hidden">?</div></div>
+    <div class="hand-name" id="dealer-hand"></div>
+    <div class="divider" style="background:rgba(255,255,255,.1)"></div>
+    <div class="card-label">🂠 Общий стол</div>
+    <div class="community-cards" id="community-cards">
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+      <div class="playing-card community-card hidden">?</div>
+    </div>
+    <div class="divider" style="background:rgba(255,255,255,.1)"></div>
+    <div class="card-label">🎴 Твои карты</div>
+    <div class="card-row" id="player-cards"><div class="playing-card hidden">?</div><div class="playing-card hidden">?</div></div>
+    <div class="hand-name" id="player-hand"></div>
+  </div>
+  <div id="poker-result-wrap" class="hidden"></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px" id="poker-bet-wrap">
+    <div class="label">Ставка</div>
+    <div class="row mb8"><input class="input" id="poker-bet" type="number" value="20" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8"><span class="qbtn" onclick="setBet('poker-bet',10)">MIN</span><span class="qbtn" onclick="addBet('poker-bet',20)">+20</span><span class="qbtn" onclick="setMaxBet('poker-bet')">MAX</span></div>
+    <button class="btn btn-gold btn-full" onclick="pokerStart()">🃏 Раздать карты</button>
+  </div>
+  <div id="poker-actions" class="row hidden"><button class="btn btn-dark btn-full" onclick="pokerFold()">❌ Сбросить</button><button class="btn btn-gold btn-full" onclick="pokerCall()">✅ Вскрыться</button></div>
+</div>
+
+<!-- ====== БЛЭКДЖЕК ====== -->
+<div id="page-blackjack" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div class="blackjack-table">
+    <div class="card-label">🎩 Дилер</div>
+    <div class="card-row" id="bj-dealer-cards"><div class="playing-card hidden">?</div><div class="playing-card hidden">?</div></div>
+    <div class="hand-value" id="bj-dealer-value">?</div>
+    <div class="divider" style="background:rgba(255,255,255,.1);margin:20px 0"></div>
+    <div class="card-label">🎴 Твои карты</div>
+    <div class="card-row" id="bj-player-cards"><div class="playing-card hidden">?</div><div class="playing-card hidden">?</div></div>
+    <div class="hand-value" id="bj-player-value">?</div>
+  </div>
+  <div id="bj-result-wrap" class="hidden"></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px" id="bj-bet-wrap">
+    <div class="label">Ставка</div>
+    <div class="row mb8"><input class="input" id="bj-bet" type="number" value="20" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8"><span class="qbtn" onclick="setBet('bj-bet',10)">MIN</span><span class="qbtn" onclick="addBet('bj-bet',20)">+20</span><span class="qbtn" onclick="setMaxBet('bj-bet')">MAX</span></div>
+    <button class="btn btn-gold btn-full" onclick="blackjackStart()">🂡 Раздать карты</button>
+  </div>
+  <div id="bj-actions" class="row hidden">
+    <button class="btn btn-gold btn-full" onclick="blackjackHit()">➕ Ещё</button>
+    <button class="btn btn-dark btn-full" onclick="blackjackStand()">✋ Хватит</button>
+  </div>
+</div>
+
+<!-- ====== КОСТИ ====== -->
+<div id="page-dice" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;text-align:center">
+    <div class="dice-display">
+      <div class="dice" id="dice-display">🎲</div>
+    </div>
+    <div class="dice-result" id="dice-result"></div>
+    <div class="label">Режим</div>
+    <div class="dice-mode">
+      <button class="dice-mode-btn active" onclick="selectDiceMode('over',this)">⬆️ Больше</button>
+      <button class="dice-mode-btn" onclick="selectDiceMode('under',this)">⬇️ Меньше</button>
+    </div>
+    <div class="label">Целевое число</div>
+    <div class="dice-target" id="dice-targets">
+      <button class="dice-target-btn" onclick="selectDiceTarget(1,this)">1</button>
+      <button class="dice-target-btn" onclick="selectDiceTarget(2,this)">2</button>
+      <button class="dice-target-btn active" onclick="selectDiceTarget(3,this)">3</button>
+      <button class="dice-target-btn" onclick="selectDiceTarget(4,this)">4</button>
+      <button class="dice-target-btn" onclick="selectDiceTarget(5,this)">5</button>
+    </div>
+    <div class="text-sm" style="margin:8px 0">Множитель: <span id="dice-mult" style="color:var(--gold);font-weight:700">x2.38</span></div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+    <div class="label">Сумма ставки</div>
+    <div class="row mb8"><input class="input" id="dice-bet" type="number" value="20" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8">
+      <span class="qbtn" onclick="setBet('dice-bet',10)">MIN</span><span class="qbtn" onclick="halfBet('dice-bet')">½</span>
+      <span class="qbtn" onclick="doubleBet('dice-bet')">×2</span><span class="qbtn" onclick="setMaxBet('dice-bet')">MAX</span>
+    </div>
+    <button class="btn btn-gold btn-full" id="btn-dice-roll" onclick="diceRoll()">🎲 Бросить кости</button>
+  </div>
+</div>
+
+<!-- ====== МОНЕТКА ====== -->
+<div id="page-coinflip" class="page">
+  <button class="page-back" onclick="showPage('home')">← Назад</button>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;text-align:center">
+    <div class="coinflip-container">
+      <div class="coin" id="coin-display">🪙</div>
+    </div>
+    <div style="font-size:14px;color:var(--text2);margin:12px 0">⏳ Раунд через: <span id="coinflip-timer" style="color:var(--gold);font-weight:700">10</span>с</div>
+    <div class="label">Выбери сторону</div>
+    <div class="coinflip-choices">
+      <div class="coin-choice" onclick="selectCoinChoice('heads',this)">
+        <div class="coin-choice-icon">👑</div>
+        <div class="coin-choice-label">Орёл</div>
+      </div>
+      <div class="coin-choice" onclick="selectCoinChoice('tails',this)">
+        <div class="coin-choice-icon">🌿</div>
+        <div class="coin-choice-label">Решка</div>
+      </div>
+    </div>
+    <div class="text-sm" style="margin:8px 0">Выплата: <span style="color:var(--gold);font-weight:700">x1.95</span></div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+    <div class="label">Сумма ставки</div>
+    <div class="row mb8"><input class="input" id="coinflip-bet" type="number" value="20" min="10" style="flex:1"/></div>
+    <div class="quick-btns mb8">
+      <span class="qbtn" onclick="setBet('coinflip-bet',10)">MIN</span><span class="qbtn" onclick="halfBet('coinflip-bet')">½</span>
+      <span class="qbtn" onclick="doubleBet('coinflip-bet')">×2</span><span class="qbtn" onclick="setMaxBet('coinflip-bet')">MAX</span>
+    </div>
+    <button class="btn btn-gold btn-full" onclick="coinflipBet()">🪙 Сделать ставку</button>
+  </div>
+  <div class="section-title">👥 Участники раунда</div>
+  <div class="participants-list" id="coinflip-participants"><div class="text-sm text-center" style="padding:12px">Нет участников</div></div>
+  <div class="section-title" style="margin-top:16px">📜 История</div>
+  <div class="coinflip-history" id="coinflip-history"></div>
+</div>
+
+<!-- ====== МАРКЕТ ====== -->
+<div id="page-market" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:20px;font-weight:800;color:var(--gold)">🛒 Маркет</div><div class="balance-chip">⭐ <span class="balance-chip-val">0</span></div></div>
+  <div class="market-grid" id="market-grid"><div class="empty"><div class="empty-icon">🛒</div>Нет товаров</div></div>
+</div>
+
+<!-- ====== ИНВЕНТАРЬ ====== -->
+<div id="page-inventory" class="page">
+  <button class="page-back" onclick="showPage('profile')">← Назад</button>
+  <div style="font-size:20px;font-weight:800;margin-bottom:16px;color:var(--gold)">📦 Инвентарь</div>
+  <div class="market-grid" id="inventory-grid"><div class="empty"><div class="empty-icon">📦</div>Пусто</div></div>
+</div>
+
+<!-- ====== ЛИДЕРЫ ====== -->
+<div id="page-leaders" class="page">
+  <div style="font-size:20px;font-weight:800;margin-bottom:16px;color:var(--gold)">🏆 Лидеры</div>
+  <div class="podium" id="podium"></div>
+  <div id="leaderboard-list"></div>
+</div>
+
+<!-- ====== ПРОФИЛЬ ====== -->
+<div id="page-profile" class="page">
+  <div class="profile-header">
+    <img class="profile-avatar" id="profile-avatar" src="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect fill=%22%23222%22 width=%2240%22 height=%2240%22/><text x=%2220%22 y=%2227%22 font-size=%2220%22 text-anchor=%22middle%22>👤</text></svg>'"/>
+    <div><div class="profile-name" id="profile-name">Загрузка...</div><div class="profile-user" id="profile-user"></div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value" id="stat-games">0</div><div class="stat-label">🎮 Игр</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-wins">0</div><div class="stat-label">🏆 Побед</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-wager">0</div><div class="stat-label">⭐ Оборот</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-wr">0%</div><div class="stat-label">📈 Винрейт</div></div>
+  </div>
+  <div class="action-grid">
+    <button class="btn btn-gold" onclick="openDeposit()">💎 Пополнить</button>
+    <button class="btn btn-dark" onclick="openWithdraw()">💸 Вывести</button>
+    <button class="btn btn-dark" onclick="showPage('inventory')">📦 Инвентарь</button>
+    <button class="btn btn-dark" onclick="showPage('market')">🛒 Маркет</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('stats', event)">📊 Статистика</button>
+    <button class="tab" onclick="switchTab('history', event)">🎮 История</button>
+    <button class="tab" onclick="switchTab('finance', event)">💰 Финансы</button>
+    <button class="tab" onclick="switchTab('refs', event)">👥 Рефералы</button>
+  </div>
+  <div id="tab-stats" class="tab-content active"><div class="text-sm text-center" style="padding:20px">Смотри карточки выше</div></div>
+  <div id="tab-history" class="tab-content"><div id="tx-list"><div class="text-sm text-center" style="padding:20px">Нет операций</div></div></div>
+  <div id="tab-finance" class="tab-content">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="stat-deposited">0</div><div class="stat-label">💰 Пополнено</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-withdrawn">0</div><div class="stat-label">💸 Выведено</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-diff">0</div><div class="stat-label">📊 Разница</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-balance">0</div><div class="stat-label">🎰 Баланс</div></div>
+    </div>
+  </div>
+  <div id="tab-refs" class="tab-content">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="stat-ref-count">0</div><div class="stat-label">👥 Рефералов</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-ref-earn">0</div><div class="stat-label">💰 Заработано</div></div>
+    </div>
+    <div class="label mt8">Реферальная ссылка</div>
+    <div class="ref-box" id="ref-link">Загрузка...</div>
+    <button class="btn btn-dark btn-full mt8" onclick="copyRef()">📋 Копировать</button>
+  </div>
+  <div id="admin-btn-wrap" class="hidden mt8"><button class="btn btn-danger btn-full" onclick="openAdmin()">👑 Панель админа</button></div>
+</div>
+
+<!-- ====== НАВИГАЦИЯ ====== -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('home')" id="nav-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Главная</button>
+  <button class="nav-btn" onclick="showPage('market')" id="nav-market"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>Маркет</button>
+  <button class="nav-btn" onclick="showPage('leaders')" id="nav-leaders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Лидеры</button>
+  <button class="nav-btn" onclick="showPage('profile')" id="nav-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Профиль</button>
+</nav>
+
+<!-- ====== МОДАЛКИ ====== -->
+<div class="modal-overlay" id="modal-deposit" onclick="closeModal('modal-deposit')"><div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-title">💎 Пополнение</div>
+  <div class="modal-tabs"><button class="modal-tab active" onclick="switchDepositTab('ton', event)">💎 TON</button><button class="modal-tab" onclick="switchDepositTab('stars', event)">⭐ Stars</button></div>
+  <div id="deposit-ton" class="modal-tab-content active">
+    <div class="text-sm mb8">1 TON = 100 ⭐ (прямая транзакция через кошелёк)</div>
+    <div class="quick-btns mb8"><span class="qbtn" onclick="setDepositTon(0.5)">0.5</span><span class="qbtn" onclick="setDepositTon(1)">1</span><span class="qbtn" onclick="setDepositTon(2)">2</span><span class="qbtn" onclick="setDepositTon(5)">5</span></div>
+    <input class="input mb8" id="deposit-ton-amount" type="number" value="1" min="0.1" step="0.1"/>
+    <div class="text-sm mb8">= <span id="deposit-ton-stars">100</span> ⭐</div>
+    <button class="btn btn-gold btn-full" onclick="createTonTransaction()">💸 Отправить TON</button>
+    <div id="ton-tx-info" class="hidden mt8" style="background:var(--bg3);border-radius:8px;padding:12px;font-size:13px">
+      <div>⏳ Ожидание подтверждения транзакции...</div>
+      <div class="text-sm mt8">После оплаты звёзды зачислятся автоматически</div>
+    </div>
+  </div>
+  <div id="deposit-stars" class="modal-tab-content">
+    <div class="quick-btns mb8"><span class="qbtn" onclick="setDepositStars(50)">50</span><span class="qbtn" onclick="setDepositStars(100)">100</span><span class="qbtn" onclick="setDepositStars(250)">250</span><span class="qbtn" onclick="setDepositStars(500)">500</span></div>
+    <input class="input mb8" id="deposit-stars-amount" type="number" value="100" min="50" step="50"/>
+    <button class="btn btn-gold btn-full" onclick="payStars()">⭐ Оплатить Stars</button>
+  </div>
+  <button class="btn btn-dark btn-full mt8" onclick="closeModal('modal-deposit')">Отмена</button>
+</div></div>
+
+<div class="modal-overlay" id="modal-withdraw" onclick="closeModal('modal-withdraw')"><div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-title">💸 Вывод</div>
+  <div class="label">Валюта</div>
+  <select class="select mb8" id="withdraw-currency"><option value="Gram">💎 Gram</option><option value="USDT">💵 USDT</option><option value="Stars">⭐ Stars</option></select>
+  <div class="label">Сумма (⭐)</div>
+  <div class="quick-btns mb8"><span class="qbtn" onclick="setBet('withdraw-amount',100)">MIN</span><span class="qbtn" onclick="setMaxBet('withdraw-amount')">MAX</span></div>
+  <input class="input mb8" id="withdraw-amount" type="number" value="100" min="100"/>
+  <div class="label">Адрес</div><input class="input mb8" id="withdraw-addr" placeholder="UQ..."/>
+  <button class="btn btn-gold btn-full" onclick="doWithdraw()">📤 Отправить</button>
+  <button class="btn btn-dark btn-full mt8" onclick="closeModal('modal-withdraw')">Отмена</button>
+</div></div>
+
+<div class="modal-overlay" id="modal-sell" onclick="closeModal('modal-sell')"><div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-title">🏷️ Продать NFT</div>
+  <div class="label">Цена (⭐, минимум 10)</div><input class="input mb8" id="sell-price" type="number" value="100" min="10"/>
+  <input type="hidden" id="sell-nft-id"/>
+  <button class="btn btn-gold btn-full" onclick="confirmSell()">✅ Выставить</button>
+  <button class="btn btn-dark btn-full mt8" onclick="closeModal('modal-sell')">Отмена</button>
+</div></div>
+
+<div class="modal-overlay" id="modal-admin" onclick="closeModal('modal-admin')"><div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-title">👑 Admin</div>
+  <div class="admin-section"><div class="admin-section-title">💰 Баланс</div><input class="input mb8" id="admin-uid" placeholder="ID"/><input class="input mb8" id="admin-amount" type="number" placeholder="Сумма"/><div class="row"><button class="btn btn-gold btn-full" onclick="adminBalance('add')">➕</button><button class="btn btn-red btn-full" onclick="adminBalance('sub')">➖</button></div></div>
+  <div class="admin-section"><div class="admin-section-title">💎 Депозиты</div><button class="btn btn-dark btn-full mb8" onclick="loadPendingDeposits()">🔄 Обновить</button><div id="admin-pending-deposits"></div></div>
+  <div class="admin-section"><div class="admin-section-title">📋 Выводы</div><button class="btn btn-dark btn-full mb8" onclick="loadWithdrawals()">🔄 Обновить</button><div id="admin-withdrawals"></div></div>
+  <button class="btn btn-dark btn-full mt8" onclick="closeModal('modal-admin')">Закрыть</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-// ════════════════════════════════════════════════════════════════
-// КЛИЕНТСКАЯ ЛОГИКА (исправленная)
-// ════════════════════════════════════════════════════════════════
+// ================================================================
+// ПОЛНЫЙ КЛИЕНТСКИЙ КОД
+// ================================================================
 
 const APP_URL = window.location.origin;
 const ADMIN_ID = '1631627984';
@@ -300,6 +686,7 @@ let minesActive = false;
 let rouletteColor = null;
 let pokerActive = false;
 let rocketHasBet = false;
+let rocketFlying = false;
 let rouletteSpinning = false;
 let blackjackActive = false;
 let diceMode = 'over';
@@ -309,7 +696,7 @@ let tonConnectUI = null;
 let toastQueue = [];
 let toastShowing = false;
 
-// ─── Инициализация ──────────────────────────────────────────────
+// ---- Инициализация ----
 tg?.expand();
 tg?.setHeaderColor('#0a0a0a');
 tg?.setBackgroundColor('#0a0a0a');
@@ -341,7 +728,7 @@ async function init() {
   }
 }
 
-// ─── API ────────────────────────────────────────────────────────
+// ---- API ----
 async function api(path, method = 'GET', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
@@ -351,7 +738,7 @@ async function api(path, method = 'GET', body = null) {
   return data;
 }
 
-// ─── WebSocket ──────────────────────────────────────────────────
+// ---- WebSocket ----
 function connectWS() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(protocol + '//' + APP_URL.replace(/^https?:\/\//, ''));
@@ -372,7 +759,7 @@ function wsSend(data) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
 }
 
-// ─── UI обновления ─────────────────────────────────────────────
+// ---- UI ----
 function updateUI() {
   document.getElementById('balance-display').textContent = stars;
   document.querySelectorAll('.balance-chip-val').forEach(el => el.textContent = stars);
@@ -393,7 +780,7 @@ function updateUI() {
   if (user.wallet_address) document.getElementById('withdraw-addr').value = user.wallet_address;
 }
 
-// ─── Обработка WebSocket сообщений ─────────────────────────────
+// ---- Обработка WS ----
 function handleWS(msg) {
   if (msg.type === 'balance_update') { stars = msg.stars; updateUI(); }
   if (msg.type === 'crash_history') renderCrashHistory(msg.history);
@@ -426,7 +813,7 @@ function handleWS(msg) {
   if (msg.type === 'error') toast(msg.message, 'red');
 }
 
-// ─── Навигация ──────────────────────────────────────────────────
+// ---- Навигация ----
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -443,7 +830,7 @@ function showPage(name) {
 
 function openGame(name) { showPage(name); }
 
-// ─── Тосты с очередью ───────────────────────────────────────────
+// ---- Тосты ----
 function toast(msg, color = 'default') {
   toastQueue.push({ msg, color });
   processToast();
@@ -465,7 +852,7 @@ function processToast() {
   }, 3000);
 }
 
-// ─── Валидация ставок ──────────────────────────────────────────
+// ---- Валидация ----
 function validateBet(inputId, min = 10) {
   const el = document.getElementById(inputId);
   const val = parseInt(el.value);
@@ -482,7 +869,7 @@ function validateBet(inputId, min = 10) {
   return val;
 }
 
-// ─── Вспомогательные функции ────────────────────────────────────
+// ---- Вспомогательные ----
 function setBet(id, val) { document.getElementById(id).value = val; }
 function addBet(id, val) { const el = document.getElementById(id); el.value = Math.min(stars, parseInt(el.value || 0) + val); }
 function halfBet(id) { const el = document.getElementById(id); el.value = Math.max(10, Math.floor(parseInt(el.value || 20) / 2)); }
@@ -491,7 +878,9 @@ function setMaxBet(id) { document.getElementById(id).value = stars; }
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// ─── Ракета ─────────────────────────────────────────────────────
+// ================================================================
+// РАКЕТА
+// ================================================================
 function handleRocketTick(msg) {
   rocketFlying = false;
   const el = document.getElementById('rocket-mult-display');
@@ -569,7 +958,9 @@ function rocketCancel() {
   document.getElementById('btn-rocket-cancel').classList.add('hidden');
 }
 
-// ─── Мины ───────────────────────────────────────────────────────
+// ================================================================
+// МИНЫ
+// ================================================================
 function selectMines(el, count) {
   document.querySelectorAll('.mines-select-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
@@ -650,7 +1041,9 @@ async function openMineCell(index) {
   }
 }
 
-// ─── Рулетка ────────────────────────────────────────────────────
+// ================================================================
+// РУЛЕТКА
+// ================================================================
 function buildRouletteWheel() {
   const slots = [];
   for (let i = 0; i < 30; i++) {
@@ -733,7 +1126,9 @@ function rouletteCancel() {
   wsSend({ type: 'cancel_roulette_bet', telegram_id: user?.telegram_id });
 }
 
-// ─── Покер ──────────────────────────────────────────────────────
+// ================================================================
+// КАРТЫ (общие функции для покера и блэкджека)
+// ================================================================
 function makeCardHTML(card, size = '', delay = 0) {
   if (!card || card.hidden) {
     return `<div class="playing-card hidden ${size} deal" style="animation-delay:${delay}s">?</div>`;
@@ -744,6 +1139,9 @@ function makeCardHTML(card, size = '', delay = 0) {
   </div>`;
 }
 
+// ================================================================
+// ПОКЕР
+// ================================================================
 async function pokerStart() {
   if (!user) return toast('Войдите');
   const bet = validateBet('poker-bet');
@@ -798,7 +1196,9 @@ function resetPoker() {
   document.getElementById('poker-bet-wrap').classList.remove('hidden');
 }
 
-// ─── Блэкджек ──────────────────────────────────────────────────
+// ================================================================
+// БЛЭКДЖЕК
+// ================================================================
 async function blackjackStart() {
   if (!user) return toast('Войдите');
   const bet = validateBet('bj-bet');
@@ -872,7 +1272,9 @@ async function blackjackStand() {
   }
 }
 
-// ─── Кости ──────────────────────────────────────────────────────
+// ================================================================
+// КОСТИ
+// ================================================================
 function selectDiceMode(mode, el) {
   document.querySelectorAll('.dice-mode-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
@@ -929,7 +1331,9 @@ async function diceRoll() {
   }
 }
 
-// ─── Монетка ────────────────────────────────────────────────────
+// ================================================================
+// МОНЕТКА
+// ================================================================
 function selectCoinChoice(choice, el) {
   document.querySelectorAll('.coin-choice').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
@@ -990,7 +1394,9 @@ function handleCoinflipResult(msg) {
   }, 2000);
 }
 
-// ─── Маркет ─────────────────────────────────────────────────────
+// ================================================================
+// МАРКЕТ
+// ================================================================
 async function loadMarket() {
   try {
     const items = await api('/api/market');
@@ -1025,7 +1431,9 @@ async function buyNft(id) {
   }
 }
 
-// ─── Инвентарь ──────────────────────────────────────────────────
+// ================================================================
+// ИНВЕНТАРЬ
+// ================================================================
 async function loadInventory() {
   if (!user) return;
   try {
@@ -1085,7 +1493,9 @@ async function withdrawNft(id) {
   }
 }
 
-// ─── Лидеры ─────────────────────────────────────────────────────
+// ================================================================
+// ЛИДЕРЫ
+// ================================================================
 async function loadLeaderboard() {
   try {
     const data = await api('/api/leaderboard');
@@ -1120,7 +1530,9 @@ async function loadLeaderboard() {
   }
 }
 
-// ─── Профиль ────────────────────────────────────────────────────
+// ================================================================
+// ПРОФИЛЬ
+// ================================================================
 async function loadProfile() {
   if (!user?.telegram_id) return;
   try {
@@ -1163,7 +1575,9 @@ function copyRef() {
     .then(() => toast('✅ Скопировано'));
 }
 
-// ─── Депозиты ──────────────────────────────────────────────────
+// ================================================================
+// ДЕПОЗИТЫ
+// ================================================================
 function openDeposit() { openModal('modal-deposit'); }
 
 function switchDepositTab(tab, event) {
@@ -1242,7 +1656,9 @@ async function payStars() {
   }
 }
 
-// ─── Вывод ──────────────────────────────────────────────────────
+// ================================================================
+// ВЫВОД
+// ================================================================
 function openWithdraw() { openModal('modal-withdraw'); }
 
 async function doWithdraw() {
@@ -1267,7 +1683,9 @@ async function doWithdraw() {
   }
 }
 
-// ─── Админка ────────────────────────────────────────────────────
+// ================================================================
+// АДМИНКА
+// ================================================================
 function openAdmin() { openModal('modal-admin'); loadWithdrawals(); loadPendingDeposits(); }
 
 async function adminBalance(action) {
@@ -1366,7 +1784,9 @@ async function approveDeposit(id) {
   }
 }
 
-// ─── TonConnect ─────────────────────────────────────────────────
+// ================================================================
+// TON CONNECT
+// ================================================================
 async function initTonConnect() {
   try {
     tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -1402,21 +1822,25 @@ async function initTonConnect() {
   }
 }
 
-// ─── Закрытие модалок по клику на оверлей ─────────────────────
+// ================================================================
+// ЗАКРЫТИЕ МОДАЛОК
+// ================================================================
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('active');
   });
 });
 
-// ─── Инициализация ─────────────────────────────────────────────
+// ================================================================
+// СТАРТ
+// ================================================================
 buildMinesGrid();
 buildRouletteWheel();
 updateDiceMultiplier();
 initTonConnect();
 init();
 
-// Глобальный доступ к функциям
+// Глобальный доступ для onclick
 window.showPage = showPage;
 window.openGame = openGame;
 window.setBet = setBet;
