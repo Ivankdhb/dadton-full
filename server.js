@@ -12,7 +12,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 app.use(cors({
-  origin: ['https://dadton-full.onrender.com', 'https://t.me', 'https://web.telegram.org'],
+  origin: ['https://dadton-full.onrender.com', 'https://t.me', 'https://web.telegram.org', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json());
@@ -74,6 +74,8 @@ function checkRateLimit(telegram_id, action, limit = 10, window = 60000) {
   rateLimit.set(key, data);
   return data.count <= limit;
 }
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function initDB() {
   const client = await pool.connect();
@@ -210,8 +212,23 @@ function generateRef() {
   return 'ref_' + Math.random().toString(36).slice(2, 10);
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function broadcast(data) {
+  const msg = JSON.stringify(data);
+  wss.clients.forEach(c => {
+    if (c.readyState === WebSocket.OPEN) c.send(msg);
+  });
+}
 
+function broadcastTo(telegram_id, data) {
+  wss.clients.forEach(c => {
+    if (c.readyState === WebSocket.OPEN && c.telegram_id == telegram_id)
+      c.send(JSON.stringify(data));
+  });
+}
+
+// ================================================================
+// AUTH
+// ================================================================
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -330,31 +347,339 @@ app.get('/api/crash-history', async (req, res) => {
   res.json(r.rows.map(x => x.multiplier));
 });
 
-function broadcast(data) {
-  const msg = JSON.stringify(data);
-  wss.clients.forEach(c => {
-    if (c.readyState === WebSocket.OPEN) c.send(msg);
-  });
+// ================================================================
+// ДЕПОЗИТЫ (АВТОМАТИЧЕСКИЕ)
+// ================================================================
+app.post('/api/deposit/ton', async (req, res) => {
+  try {
+    const { telegram_id, amount_gram, tx_hash, signature } = req.body;
+    const user = await getUser(telegram_id);
+    if (!user) return res.status(404).json({ error: 'Не найден' });
+    
+    const stars_amount = Math.floor(amount_gram * 100);
+    
+    // Если есть подпись - автоматическое пополнение
+    if (signature === 'auto') {
+      await addStars(telegram_id, stars_amount, 'Пополнение TON: ' + amount_gram + ' (авто)');
+      await pool.query('UPDATE users SET total_deposited=total_deposited+$1 WHERE telegram_id=$2', [stars_amount, telegram_id]);
+      
+      const u = await getUser(telegram_id);
+      broadcastTo(telegram_id, { type: 'balance_update', stars: u.stars });
+      
+      try {
+        await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+          chat_id: CONFIG.ADMIN_ID,
+          text: `✅ АВТОМАТИЧЕСКОЕ ПОПОЛНЕНИЕ TON\n\n👤 @${user.username} (${telegram_id})\n💰 ${amount_gram} TON = ${stars_amount}⭐\n📝 TX: ${tx_hash || 'нет'}`
+        });
+      } catch (e) { logger.error('Telegram error:', e.message); }
+      
+      return res.json({ success: true, stars_added: stars_amount, status: 'auto' });
+    }
+    
+    // Ручной режим (ожидание подтверждения)
+    const inv = await pool.query(
+      `INSERT INTO deposit_invoices(user_id, amount_gram, amount_stars, tx_hash, status) 
+       VALUES($1,$2,$3,$4,$5) RETURNING id`,
+      [telegram_id, amount_gram, stars_amount, tx_hash, 'pending']
+    );
+    
+    try {
+      await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: CONFIG.ADMIN_ID,
+        text: `🔔 НОВОЕ ПОПОЛНЕНИЕ TON (ожидает)\n\n👤 @${user.username} (${telegram_id})\n💰 ${amount_gram} TON = ${stars_amount}⭐\n🆔 ID: ${inv.rows[0].id}`
+      });
+    } catch (e) { logger.error('Telegram error:', e.message); }
+    
+    res.json({ success: true, invoice_id: inv.rows[0].id, stars_amount, status: 'pending' });
+  } catch (e) {
+    logger.error('Deposit error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/deposit/stars', async (req, res) => {
+  try {
+    const { telegram_id, amount, signature } = req.body;
+    const user = await getUser(telegram_id);
+    if (!user) return res.status(404).json({ error: 'Не найден' });
+    if (!amount || amount < 50) return res.status(400).json({ error: 'Минимум 50' });
+    
+    if (signature === 'auto') {
+      await addStars(telegram_id, amount, 'Пополнение Stars: ' + amount + ' (авто)');
+      await pool.query('UPDATE users SET total_deposited=total_deposited+$1 WHERE telegram_id=$2', [amount, telegram_id]);
+
+      const u = await getUser(telegram_id);
+      broadcastTo(telegram_id, { type: 'balance_update', stars: u.stars });
+      
+      try {
+        await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+          chat_id: CONFIG.ADMIN_ID,
+          text: `✅ АВТО ПОПОЛНЕНИЕ STARS\n\n👤 @${user.username} (${telegram_id})\n💰 ${amount}⭐`
+        });
+      } catch (e) { logger.error('Telegram error:', e.message); }
+      
+      return res.json({ success: true, stars_added: amount, status: 'auto' });
+    }
+    
+    const inv = await pool.query(
+      `INSERT INTO deposit_invoices(user_id, amount_stars, status) 
+       VALUES($1,$2,$3) RETURNING id`,
+      [telegram_id, amount, 'pending']
+    );
+    
+    try {
+      await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: CONFIG.ADMIN_ID,
+        text: `⭐ НОВОЕ ПОПОЛНЕНИЕ STARS (ожидает)\n\n👤 @${user.username} (${telegram_id})\n💰 ${amount}⭐\n🆔 ID: ${inv.rows[0].id}`
+      });
+    } catch (e) { logger.error('Telegram error:', e.message); }
+    
+    res.json({ success: true, invoice_id: inv.rows[0].id, status: 'pending' });
+  } catch (e) {
+    logger.error('Stars deposit error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/approve-deposit/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin_id = req.headers['x-admin-id'];
+    if (String(admin_id) !== CONFIG.ADMIN_ID) return res.status(403).json({ error: 'Нет доступа' });
+
+    const inv = await pool.query('SELECT * FROM deposit_invoices WHERE id=$1 AND status=$2', [id, 'pending']);
+    if (!inv.rows[0]) return res.status(404).json({ error: 'Инвойс не найден' });
+
+    const { user_id, amount_stars, amount_gram } = inv.rows[0];
+    await addStars(user_id, amount_stars, 'Пополнение подтверждено админом' + (amount_gram ? ' TON: ' + amount_gram : ''));
+    await pool.query('UPDATE users SET total_deposited=total_deposited+$1 WHERE telegram_id=$2', [amount_stars, user_id]);
+    await pool.query('UPDATE deposit_invoices SET status=$1 WHERE id=$2', ['completed', id]);
+
+    const user = await getUser(user_id);
+    broadcastTo(user_id, { type: 'balance_update', stars: user.stars });
+    
+    try {
+      await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: user_id,
+        text: `✅ Ваше пополнение подтверждено!\n💰 +${amount_stars}⭐`
+      });
+    } catch (e) { logger.error('Telegram error:', e.message); }
+    
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('Approve deposit error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// ВЫВОД
+// ================================================================
+app.post('/api/withdraw', async (req, res) => {
+  try {
+    const { telegram_id, amount, currency, address } = req.body;
+    const user = await getUser(telegram_id);
+    if (!user) return res.status(404).json({ error: 'Не найден' });
+    if (user.stars < amount) return res.status(400).json({ error: 'Недостаточно звёзд' });
+    if (amount < 100) return res.status(400).json({ error: 'Минимум 100' });
+
+    await deductStars(telegram_id, amount, 'Запрос вывода: ' + currency);
+    await pool.query(
+      'INSERT INTO withdrawals(user_id,amount,currency,address) VALUES($1,$2,$3,$4)',
+      [telegram_id, amount, currency, address]
+    );
+
+    try {
+      await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: CONFIG.ADMIN_ID,
+        text: `💸 ЗАПРОС НА ВЫВОД\n\n👤 @${user.username} (${telegram_id})\n💰 ${amount}⭐ → ${currency}\n📭 ${address}`
+      });
+    } catch (e) { logger.error('Telegram send error:', e.message); }
+
+    const u2 = await getUser(telegram_id);
+    broadcastTo(telegram_id, { type: 'balance_update', stars: u2.stars });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// АДМИН ПАНЕЛЬ
+// ================================================================
+function isAdmin(req, res, next) {
+  const id = req.headers['x-admin-id'] || req.body?.admin_id;
+  if (String(id) !== String(CONFIG.ADMIN_ID)) {
+    return res.status(403).json({ error: 'Нет доступа' });
+  }
+  next();
 }
 
-function broadcastTo(telegram_id, data) {
-  wss.clients.forEach(c => {
-    if (c.readyState === WebSocket.OPEN && c.telegram_id == telegram_id)
-      c.send(JSON.stringify(data));
-  });
-}
+app.get('/api/admin/users', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT telegram_id, username, first_name, stars, total_wagered, games_played, games_won, is_banned, created_at FROM users ORDER BY total_wagered DESC'
+    );
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-// Глобальные состояния игр
+app.post('/api/admin/balance', isAdmin, async (req, res) => {
+  try {
+    const { telegram_id, amount, action } = req.body;
+    if (!telegram_id || !amount) return res.status(400).json({ error: 'Все поля обязательны' });
+    
+    if (action === 'add') {
+      await addStars(telegram_id, amount, 'Начисление от админа');
+      await pool.query('UPDATE users SET total_deposited=total_deposited+$1 WHERE telegram_id=$2', [amount, telegram_id]);
+    } else if (action === 'sub') {
+      await deductStars(telegram_id, amount, 'Списание от админа');
+    } else {
+      return res.status(400).json({ error: 'Неизвестное действие' });
+    }
+    
+    const user = await getUser(telegram_id);
+    broadcastTo(telegram_id, { type: 'balance_update', stars: user.stars });
+    res.json({ success: true, new_balance: user.stars });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/ban', isAdmin, async (req, res) => {
+  try {
+    const { telegram_id, ban } = req.body;
+    await pool.query('UPDATE users SET is_banned=$1 WHERE telegram_id=$2', [ban, telegram_id]);
+    userCache.clear();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/withdrawals', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT w.*, u.username, u.first_name 
+       FROM withdrawals w 
+       JOIN users u ON w.user_id = u.telegram_id 
+       WHERE w.status = $1 
+       ORDER BY w.created_at DESC`,
+      ['pending']
+    );
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/withdrawal/:id/approve', isAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE withdrawals SET status=$1 WHERE id=$2', ['approved', req.params.id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/withdrawal/:id/reject', isAdmin, async (req, res) => {
+  try {
+    const w = await pool.query('SELECT * FROM withdrawals WHERE id=$1', [req.params.id]);
+    if (w.rows[0] && w.rows[0].status === 'pending') {
+      await addStars(w.rows[0].user_id, w.rows[0].amount, 'Возврат при отказе вывода');
+      await pool.query('UPDATE withdrawals SET status=$1 WHERE id=$2', ['rejected', req.params.id]);
+      const user = await getUser(w.rows[0].user_id);
+      broadcastTo(w.rows[0].user_id, { type: 'balance_update', stars: user.stars });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/pending-deposits', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT d.*, u.username, u.first_name, u.wallet_address 
+       FROM deposit_invoices d 
+       JOIN users u ON d.user_id = u.telegram_id 
+       WHERE d.status = $1 
+       ORDER BY d.created_at DESC`,
+      ['pending']
+    );
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/broadcast', isAdmin, async (req, res) => {
+  try {
+    const { message, photo_url, button_text, button_url } = req.body;
+    if (!message) return res.status(400).json({ error: 'Нет сообщения' });
+    
+    const users = await pool.query('SELECT telegram_id FROM users');
+    let sent = 0;
+    
+    for (const user of users.rows) {
+      try {
+        let payload = { chat_id: user.telegram_id, text: message, parse_mode: 'HTML' };
+        if (photo_url) {
+          payload.photo = photo_url;
+          payload.caption = message;
+          delete payload.text;
+        }
+        if (button_text && button_url) {
+          payload.reply_markup = {
+            inline_keyboard: [[{ text: button_text, url: button_url }]]
+          };
+        }
+        await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, payload);
+        sent++;
+        await sleep(50);
+      } catch (e) {
+        logger.error('Broadcast error to', user.telegram_id, e.message);
+      }
+    }
+    
+    res.json({ success: true, sent });
+  } catch (e) {
+    logger.error('Broadcast error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/reset-db', isAdmin, async (req, res) => {
+  try {
+    await pool.query('TRUNCATE TABLE users CASCADE');
+    await pool.query('TRUNCATE TABLE transactions CASCADE');
+    await pool.query('TRUNCATE TABLE nft_items CASCADE');
+    await pool.query('TRUNCATE TABLE withdrawals CASCADE');
+    await pool.query('TRUNCATE TABLE deposit_invoices CASCADE');
+    await pool.query('TRUNCATE TABLE crash_history CASCADE');
+    await pool.query('TRUNCATE TABLE game_sessions CASCADE');
+    userCache.clear();
+    
+    await pool.query(
+      `INSERT INTO users(telegram_id, username, first_name, stars, referral_code) 
+       VALUES($1, $2, $3, $4, $5)`,
+      [CONFIG.ADMIN_ID, 'admin', 'Admin', 999999, 'admin_ref']
+    );
+    
+    res.json({ success: true, message: 'База данных сброшена' });
+  } catch (e) {
+    logger.error('Reset DB error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// МИНЫ
+// ================================================================
 const minesSessions = {};
-const pokerSessions = {};
-const blackjackSessions = {};
-const rocketBets = {};
-let crashHistory = [];
-const coinflipBets = {};
 
-// ================================================================
-// МИНЫ (исправлено)
-// ================================================================
 app.post('/api/mines/start', async (req, res) => {
   try {
     const { telegram_id, bet, mines_count } = req.body;
@@ -453,7 +778,7 @@ app.post('/api/mines/cashout', async (req, res) => {
 });
 
 // ================================================================
-// БЛЭКДЖЕК (исправлен - правильный подсчёт очков)
+// БЛЭКДЖЕК
 // ================================================================
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -482,13 +807,14 @@ function calculateHandValue(cards) {
     value += cardValue(card);
     if (card.r === 'A') aces++;
   }
-  // Правильный пересчёт тузов
   while (value > 21 && aces > 0) {
     value -= 10;
     aces--;
   }
   return value;
 }
+
+const blackjackSessions = {};
 
 app.post('/api/blackjack/start', async (req, res) => {
   try {
@@ -559,7 +885,6 @@ app.post('/api/blackjack/stand', async (req, res) => {
     const session = blackjackSessions[telegram_id];
     if (!session || !session.active) return res.status(400).json({ error: 'Нет игры' });
 
-    // Дилер берёт до 17
     while (calculateHandValue(session.dealerCards) < 17) {
       session.dealerCards.push(session.deck.pop());
     }
@@ -594,7 +919,7 @@ app.post('/api/blackjack/stand', async (req, res) => {
 });
 
 // ================================================================
-// ПОКЕР (исправлен - правильные комбинации)
+// ПОКЕР
 // ================================================================
 function rankValue(r) { return RANKS.indexOf(r); }
 
@@ -616,6 +941,8 @@ function evaluateHand(cards) {
   if (counts[0] === 2) return { rank: 1, name: 'Пара' };
   return { rank: 0, name: 'Старшая карта' };
 }
+
+const pokerSessions = {};
 
 app.post('/api/poker/start', async (req, res) => {
   try {
@@ -696,172 +1023,7 @@ app.post('/api/poker/call', async (req, res) => {
 });
 
 // ================================================================
-// РАКЕТА (исправлена - работает всегда)
-// ================================================================
-let rocketState = 'waiting';
-let rocketTimer = 10;
-let rocketMultiplier = 1.00;
-let rocketCrashPoint = 2.00;
-
-function generateCrashPoint() {
-  const r = Math.random();
-  if (r < 0.3) return parseFloat((1.05 + Math.random() * 0.5).toFixed(2));
-  if (r < 0.6) return parseFloat((1.5 + Math.random() * 1.5).toFixed(2));
-  if (r < 0.85) return parseFloat((2.0 + Math.random() * 4.0).toFixed(2));
-  return parseFloat((5.0 + Math.random() * 3.0).toFixed(2));
-}
-
-function getRocketBetsList() {
-  return Object.entries(rocketBets).map(([id, b]) => ({
-    telegram_id: id,
-    name: b.name,
-    avatar: b.avatar,
-    amount: b.amount,
-    cashedOut: b.cashedOut,
-    cashoutMultiplier: b.cashoutMultiplier
-  }));
-}
-
-async function handleRocketCashout(telegram_id, multiplier) {
-  const bet = rocketBets[telegram_id];
-  if (!bet || bet.cashedOut) return false;
-  bet.cashedOut = true;
-  bet.cashoutMultiplier = multiplier;
-  const win = Math.floor(bet.amount * multiplier);
-  await addStars(telegram_id, win, 'Вывод в ракете x' + multiplier);
-  await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.amount, telegram_id]);
-  const user = await getUser(telegram_id);
-  broadcastTo(telegram_id, { type: 'rocket_cashout_success', telegram_id, multiplier, winAmount: win });
-  broadcastTo(telegram_id, { type: 'balance_update', stars: user.stars });
-  return true;
-}
-
-async function rocketLoop() {
-  while (true) {
-    try {
-      // Ожидание
-      rocketState = 'waiting';
-      rocketTimer = 10;
-      Object.keys(rocketBets).forEach(key => delete rocketBets[key]);
-      broadcast({ type: 'rocket_waiting', timer: rocketTimer, bets: [] });
-
-      for (let i = 10; i > 0; i--) {
-        await sleep(1000);
-        rocketTimer = i - 1;
-        broadcast({ type: 'rocket_tick', timer: rocketTimer, bets: getRocketBetsList() });
-      }
-
-      // Даже если нет ставок - ракета летит!
-      rocketState = 'flying';
-      rocketMultiplier = 1.00;
-      rocketCrashPoint = generateCrashPoint();
-      broadcast({ type: 'rocket_start', crashPoint: rocketCrashPoint });
-
-      const interval = 80;
-      const growRate = 0.008;
-      const finalCrashPoint = Math.max(1.05, rocketCrashPoint);
-
-      while (rocketMultiplier < finalCrashPoint) {
-        await sleep(interval);
-        rocketMultiplier = parseFloat((rocketMultiplier * (1 + growRate)).toFixed(2));
-        if (rocketMultiplier >= finalCrashPoint) rocketMultiplier = finalCrashPoint;
-
-        // Автовывод
-        for (const [tid, bet] of Object.entries(rocketBets)) {
-          if (!bet.cashedOut && bet.autoCashout && rocketMultiplier >= bet.autoCashoutValue) {
-            await handleRocketCashout(tid, rocketMultiplier);
-          }
-        }
-
-        broadcast({ type: 'rocket_fly', multiplier: rocketMultiplier, bets: getRocketBetsList() });
-        if (rocketMultiplier >= finalCrashPoint) break;
-      }
-
-      rocketState = 'crashed';
-      broadcast({ type: 'rocket_crash', multiplier: finalCrashPoint });
-      crashHistory.unshift(finalCrashPoint);
-      if (crashHistory.length > 10) crashHistory.pop();
-      await pool.query('INSERT INTO crash_history(multiplier) VALUES($1)', [finalCrashPoint]);
-
-      // Списание проигравших
-      for (const [tid, bet] of Object.entries(rocketBets)) {
-        if (!bet.cashedOut) {
-          await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.amount, tid]);
-        }
-      }
-
-      await sleep(3000);
-    } catch (e) {
-      logger.error('Rocket loop error:', e);
-      await sleep(5000);
-    }
-  }
-}
-
-// ================================================================
-// МОНЕТКА (исправлен луп)
-// ================================================================
-app.post('/api/coinflip/bet', async (req, res) => {
-  try {
-    const { telegram_id, bet, choice } = req.body;
-    if (!checkRateLimit(telegram_id, 'coinflip', 3)) {
-      return res.status(429).json({ error: 'Слишком много запросов' });
-    }
-    const user = await getUser(telegram_id);
-    if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
-    if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
-    if (bet < 10) return res.status(400).json({ error: 'Минимум 10' });
-    if (!['heads', 'tails'].includes(choice)) return res.status(400).json({ error: 'Некорректный выбор' });
-
-    await deductStars(telegram_id, bet, 'Ставка в монетку');
-    await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [telegram_id]);
-
-    coinflipBets[telegram_id] = { bet, choice, name: user.first_name, avatar: user.avatar };
-
-    const u = await getUser(telegram_id);
-    broadcastTo(telegram_id, { type: 'balance_update', stars: u.stars });
-    broadcast({ type: 'coinflip_bet', telegram_id, name: user.first_name, avatar: user.avatar, amount: bet, choice });
-
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-async function coinflipLoop() {
-  while (true) {
-    try {
-      await sleep(10000);
-      const bets = Object.entries(coinflipBets);
-      if (bets.length === 0) continue;
-
-      const result = Math.random() < 0.5 ? 'heads' : 'tails';
-      broadcast({ type: 'coinflip_result', result });
-
-      for (const [tid, bet] of bets) {
-        if (bet.choice === result) {
-          const win = bet.bet * 1.95;
-          await addStars(tid, win, 'Выигрыш в монетке x1.95');
-          await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.bet, tid]);
-          const u = await getUser(tid);
-          broadcastTo(tid, { type: 'balance_update', stars: u.stars });
-          broadcastTo(tid, { type: 'coinflip_win', win, result });
-        } else {
-          await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.bet, tid]);
-        }
-      }
-
-      coinflipBets = {};
-      await sleep(5000);
-    } catch (e) {
-      logger.error('Coinflip loop error:', e);
-      await sleep(5000);
-    }
-  }
-}
-
-// ================================================================
-// КОСТИ (исправлено)
+// КОСТИ
 // ================================================================
 app.post('/api/dice/roll', async (req, res) => {
   try {
@@ -900,7 +1062,231 @@ app.post('/api/dice/roll', async (req, res) => {
 });
 
 // ================================================================
-// МАРКЕТ (исправлен - проверка владельца)
+// МОНЕТКА
+// ================================================================
+let coinflipBets = {};
+
+app.post('/api/coinflip/bet', async (req, res) => {
+  try {
+    const { telegram_id, bet, choice } = req.body;
+    if (!checkRateLimit(telegram_id, 'coinflip', 3)) {
+      return res.status(429).json({ error: 'Слишком много запросов' });
+    }
+    const user = await getUser(telegram_id);
+    if (!user || user.is_banned) return res.status(403).json({ error: 'Запрещено' });
+    if (user.stars < bet) return res.status(400).json({ error: 'Недостаточно звёзд' });
+    if (bet < 10) return res.status(400).json({ error: 'Минимум 10' });
+    if (!['heads', 'tails'].includes(choice)) return res.status(400).json({ error: 'Некорректный выбор' });
+
+    await deductStars(telegram_id, bet, 'Ставка в монетку');
+    await pool.query('UPDATE users SET games_played=games_played+1 WHERE telegram_id=$1', [telegram_id]);
+
+    coinflipBets[telegram_id] = { bet, choice, name: user.first_name, avatar: user.avatar };
+
+    const u = await getUser(telegram_id);
+    broadcastTo(telegram_id, { type: 'balance_update', stars: u.stars });
+    broadcast({ type: 'coinflip_bet', telegram_id, name: user.first_name, avatar: user.avatar, amount: bet, choice });
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// РАКЕТА
+// ================================================================
+let rocketState = 'waiting';
+let rocketTimer = 10;
+let rocketMultiplier = 1.00;
+let rocketCrashPoint = 2.00;
+const rocketBets = {};
+let crashHistory = [];
+
+function generateCrashPoint() {
+  const r = Math.random();
+  if (r < 0.3) return parseFloat((1.05 + Math.random() * 0.5).toFixed(2));
+  if (r < 0.6) return parseFloat((1.5 + Math.random() * 1.5).toFixed(2));
+  if (r < 0.85) return parseFloat((2.0 + Math.random() * 4.0).toFixed(2));
+  return parseFloat((5.0 + Math.random() * 3.0).toFixed(2));
+}
+
+function getRocketBetsList() {
+  return Object.entries(rocketBets).map(([id, b]) => ({
+    telegram_id: id,
+    name: b.name,
+    avatar: b.avatar,
+    amount: b.amount,
+    cashedOut: b.cashedOut,
+    cashoutMultiplier: b.cashoutMultiplier
+  }));
+}
+
+async function handleRocketCashout(telegram_id, multiplier) {
+  const bet = rocketBets[telegram_id];
+  if (!bet || bet.cashedOut) return false;
+  bet.cashedOut = true;
+  bet.cashoutMultiplier = multiplier;
+  const win = Math.floor(bet.amount * multiplier);
+  await addStars(telegram_id, win, 'Вывод в ракете x' + multiplier);
+  await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.amount, telegram_id]);
+  const user = await getUser(telegram_id);
+  broadcastTo(telegram_id, { type: 'rocket_cashout_success', telegram_id, multiplier, winAmount: win });
+  broadcastTo(telegram_id, { type: 'balance_update', stars: user.stars });
+  return true;
+}
+
+async function rocketLoop() {
+  while (true) {
+    try {
+      rocketState = 'waiting';
+      rocketTimer = 10;
+      Object.keys(rocketBets).forEach(key => delete rocketBets[key]);
+      broadcast({ type: 'rocket_waiting', timer: rocketTimer, bets: [] });
+
+      for (let i = 10; i > 0; i--) {
+        await sleep(1000);
+        rocketTimer = i - 1;
+        broadcast({ type: 'rocket_tick', timer: rocketTimer, bets: getRocketBetsList() });
+      }
+
+      rocketState = 'flying';
+      rocketMultiplier = 1.00;
+      rocketCrashPoint = generateCrashPoint();
+      broadcast({ type: 'rocket_start', crashPoint: rocketCrashPoint });
+
+      const interval = 80;
+      const growRate = 0.008;
+      const finalCrashPoint = Math.max(1.05, rocketCrashPoint);
+
+      while (rocketMultiplier < finalCrashPoint) {
+        await sleep(interval);
+        rocketMultiplier = parseFloat((rocketMultiplier * (1 + growRate)).toFixed(2));
+        if (rocketMultiplier >= finalCrashPoint) rocketMultiplier = finalCrashPoint;
+
+        for (const [tid, bet] of Object.entries(rocketBets)) {
+          if (!bet.cashedOut && bet.autoCashout && rocketMultiplier >= bet.autoCashoutValue) {
+            await handleRocketCashout(tid, rocketMultiplier);
+          }
+        }
+
+        broadcast({ type: 'rocket_fly', multiplier: rocketMultiplier, bets: getRocketBetsList() });
+        if (rocketMultiplier >= finalCrashPoint) break;
+      }
+
+      rocketState = 'crashed';
+      broadcast({ type: 'rocket_crash', multiplier: finalCrashPoint });
+      crashHistory.unshift(finalCrashPoint);
+      if (crashHistory.length > 10) crashHistory.pop();
+      await pool.query('INSERT INTO crash_history(multiplier) VALUES($1)', [finalCrashPoint]);
+
+      for (const [tid, bet] of Object.entries(rocketBets)) {
+        if (!bet.cashedOut) {
+          await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.amount, tid]);
+        }
+      }
+
+      await sleep(3000);
+    } catch (e) {
+      logger.error('Rocket loop error:', e);
+      await sleep(5000);
+    }
+  }
+}
+
+// ================================================================
+// РУЛЕТКА
+// ================================================================
+const ROULETTE_SLOTS = [];
+for (let i = 0; i < 30; i++) {
+  if (i === 0 || i === 15) ROULETTE_SLOTS.push('green');
+  else if (i % 2 === 0) ROULETTE_SLOTS.push('red');
+  else ROULETTE_SLOTS.push('blue');
+}
+
+let rouletteState = 'waiting';
+let rouletteTimer = 15;
+let rouletteBet = null;
+
+async function rouletteLoop() {
+  while (true) {
+    try {
+      rouletteState = 'waiting';
+      rouletteTimer = 15;
+      rouletteBet = null;
+      broadcast({ type: 'roulette_tick', timer: 15, bet: null });
+
+      for (let i = 15; i > 0; i--) {
+        await sleep(1000);
+        rouletteTimer = i - 1;
+        broadcast({ type: 'roulette_tick', timer: rouletteTimer, bet: rouletteBet });
+      }
+      if (!rouletteBet) continue;
+
+      const winIndex = Math.floor(Math.random() * ROULETTE_SLOTS.length);
+      const winSlot = ROULETTE_SLOTS[winIndex];
+      const multiplier = winSlot === 'green' ? 10 : 2;
+      const winAmount = rouletteBet.amount * multiplier;
+
+      broadcast({ type: 'roulette_roll', winSlot, winIndex, bet: rouletteBet, winAmount, multiplier });
+
+      if (rouletteBet.color === winSlot) {
+        await addStars(rouletteBet.telegram_id, winAmount, 'Выигрыш в рулетке x' + multiplier);
+        await pool.query('UPDATE users SET games_won=games_won+1 WHERE telegram_id=$1', [rouletteBet.telegram_id]);
+        const user = await getUser(rouletteBet.telegram_id);
+        broadcastTo(rouletteBet.telegram_id, { type: 'balance_update', stars: user.stars });
+        broadcast({ type: 'roulette_result', winner: rouletteBet.telegram_id, winAmount, winSlot });
+      } else {
+        broadcast({ type: 'roulette_result', winner: null, winSlot });
+      }
+
+      await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [rouletteBet.amount, rouletteBet.telegram_id]);
+
+      await sleep(5000);
+    } catch (e) {
+      logger.error('Roulette loop error:', e);
+      await sleep(5000);
+    }
+  }
+}
+
+// ================================================================
+// МОНЕТКА ЛУП
+// ================================================================
+async function coinflipLoop() {
+  while (true) {
+    try {
+      await sleep(10000);
+      const bets = Object.entries(coinflipBets);
+      if (bets.length === 0) continue;
+
+      const result = Math.random() < 0.5 ? 'heads' : 'tails';
+      broadcast({ type: 'coinflip_result', result });
+
+      for (const [tid, bet] of bets) {
+        if (bet.choice === result) {
+          const win = bet.bet * 1.95;
+          await addStars(tid, win, 'Выигрыш в монетке x1.95');
+          await pool.query('UPDATE users SET games_won=games_won+1, total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.bet, tid]);
+          const u = await getUser(tid);
+          broadcastTo(tid, { type: 'balance_update', stars: u.stars });
+          broadcastTo(tid, { type: 'coinflip_win', win, result });
+        } else {
+          await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [bet.bet, tid]);
+        }
+      }
+
+      coinflipBets = {};
+      await sleep(5000);
+    } catch (e) {
+      logger.error('Coinflip loop error:', e);
+      await sleep(5000);
+    }
+  }
+}
+
+// ================================================================
+// МАРКЕТ
 // ================================================================
 app.get('/api/market', async (req, res) => {
   try {
@@ -965,64 +1351,34 @@ app.get('/api/inventory/:telegram_id', async (req, res) => {
   }
 });
 
-// ================================================================
-// РУЛЕТКА (исправлена)
-// ================================================================
-const ROULETTE_SLOTS = [];
-for (let i = 0; i < 30; i++) {
-  if (i === 0 || i === 15) ROULETTE_SLOTS.push('green');
-  else if (i % 2 === 0) ROULETTE_SLOTS.push('red');
-  else ROULETTE_SLOTS.push('blue');
-}
+app.post('/api/inventory/withdraw', async (req, res) => {
+  try {
+    const { telegram_id, nft_id } = req.body;
+    const user = await getUser(telegram_id);
+    if (user.stars < 15) return res.status(400).json({ error: 'Нужно 15 для вывода' });
+    const nft = await pool.query('SELECT * FROM nft_items WHERE id=$1 AND owner_id=$2', [nft_id, telegram_id]);
+    if (!nft.rows[0]) return res.status(403).json({ error: 'Не ваш NFT' });
 
-let rouletteState = 'waiting';
-let rouletteTimer = 15;
-let rouletteBet = null;
+    await deductStars(telegram_id, 15, 'Комиссия за вывод NFT');
+    await pool.query('DELETE FROM nft_items WHERE id=$1', [nft_id]);
 
-async function rouletteLoop() {
-  while (true) {
     try {
-      rouletteState = 'waiting';
-      rouletteTimer = 15;
-      rouletteBet = null;
-      broadcast({ type: 'roulette_tick', timer: 15, bet: null });
+      await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: CONFIG.BANK_ACCOUNT_ID,
+        text: `Запрос на вывод NFT\nПользователь: @${user.username} (${telegram_id})\nNFT: ${nft.rows[0].name}`
+      });
+    } catch (e) { logger.error('Telegram send error:', e.message); }
 
-      for (let i = 15; i > 0; i--) {
-        await sleep(1000);
-        rouletteTimer = i - 1;
-        broadcast({ type: 'roulette_tick', timer: rouletteTimer, bet: rouletteBet });
-      }
-      if (!rouletteBet) continue;
-
-      const winIndex = Math.floor(Math.random() * ROULETTE_SLOTS.length);
-      const winSlot = ROULETTE_SLOTS[winIndex];
-      const multiplier = winSlot === 'green' ? 10 : 2;
-      const winAmount = rouletteBet.amount * multiplier;
-
-      broadcast({ type: 'roulette_roll', winSlot, winIndex, bet: rouletteBet, winAmount, multiplier });
-
-      if (rouletteBet.color === winSlot) {
-        await addStars(rouletteBet.telegram_id, winAmount, 'Выигрыш в рулетке x' + multiplier);
-        await pool.query('UPDATE users SET games_won=games_won+1 WHERE telegram_id=$1', [rouletteBet.telegram_id]);
-        const user = await getUser(rouletteBet.telegram_id);
-        broadcastTo(rouletteBet.telegram_id, { type: 'balance_update', stars: user.stars });
-        broadcast({ type: 'roulette_result', winner: rouletteBet.telegram_id, winAmount, winSlot });
-      } else {
-        broadcast({ type: 'roulette_result', winner: null, winSlot });
-      }
-
-      await pool.query('UPDATE users SET total_wagered=total_wagered+$1 WHERE telegram_id=$2', [rouletteBet.amount, rouletteBet.telegram_id]);
-
-      await sleep(5000);
-    } catch (e) {
-      logger.error('Roulette loop error:', e);
-      await sleep(5000);
-    }
+    const u2 = await getUser(telegram_id);
+    broadcastTo(telegram_id, { type: 'balance_update', stars: u2.stars });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-}
+});
 
 // ================================================================
-// WEBSOCKET (исправлен)
+// WEBSOCKET
 // ================================================================
 wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
